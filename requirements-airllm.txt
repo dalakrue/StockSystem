@@ -1,0 +1,4 @@
+airllm==2.11.0; python_version >= "3.9" and python_version < "3.13"
+transformers>=4.45,<4.50; python_version < "3.13"
+accelerate>=0.34,<2; python_version < "3.13"
+safetensors>=0.4,<1; python_version < "3.13"

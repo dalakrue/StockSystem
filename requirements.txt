@@ -1,0 +1,52 @@
+# Streamlit Cloud / Linux deployment requirements (Python 3.12).
+# The Windows-only MT5 package is intentionally excluded from Linux deployment.
+
+# OpenRouter support uses the lightweight HTTP client below and remains optional; no API key is required for local deterministic fallback.
+# App runtime
+streamlit>=1.35,<2
+pandas>=2.1,<3
+# NumPy must use a Python-3.14 wheel. Keeping <2.3 on Python 3.14 makes uv
+# compile NumPy from source, which can leave Streamlit Cloud at
+# "Resolved packages" for hours. Python 3.12/3.13 keep the original range.
+numpy>=1.26,<2.3; python_version < "3.14"
+numpy>=2.3,<2.4; python_version >= "3.14"
+plotly>=5.18,<7
+requests>=2.31,<3
+ta==0.11.0
+scikit-learn>=1.3,<2
+streamlit-autorefresh==1.0.1
+websocket-client>=1.8,<2
+httpx>=0.27,<1
+joblib>=1.3,<2
+cachetools>=5.3,<8
+psutil>=5.9,<7
+tenacity>=8.2,<10
+cloudpickle>=3.0,<4
+
+# Analytics used by existing tabs and cached engines
+pyarrow>=15,<25
+polars>=0.20,<2
+duckdb>=0.10,<2
+plotly-resampler>=0.10,<0.12
+statsmodels>=0.14,<0.15
+numba>=0.61,<0.66; python_version < "3.14"
+
+# Existing local NLP stack
+nltk>=3.8,<4
+vaderSentiment>=3.3,<4
+
+# Existing UI components
+streamlit-antd-components>=0.3.2,<0.4
+streamlit-option-menu>=0.3.12,<0.5
+streamlit-extras>=0.7,<2
+streamlit-shadcn-ui>=0.1.18,<0.2
+streamlit-modal>=0.1.2,<0.2
+streamlit-aggrid>=1.1,<2
+streamlit-js-eval>=0.1.7,<2
+
+# AirLLM is optional and intentionally excluded from the base deployment.
+
+# Optional AirLLM is installed separately with requirements-airllm.txt on Python 3.12.
+
+# Encrypted local connector-state persistence
+cryptography>=42,<47

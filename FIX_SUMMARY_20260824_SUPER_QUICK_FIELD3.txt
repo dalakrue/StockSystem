@@ -1,0 +1,25 @@
+Super Quick / Field 3 Upgrade — 2026-08-24
+
+- Super Quick no longer falls through to the slow generic instant-run queue when
+  the bounded Field 3 engine reports an error. The click now fails safely,
+  clears stale cooperative locks, and preserves the last valid result.
+- Finder backfill now runs after the Field 3 ranking/evidence frames are staged.
+  Historical regime age, starting price, completed-run count, and average
+  duration are calculated with vectorized pandas operations instead of a
+  Python loop for every candle.
+- A duplicate compact load progress bar is shown directly beneath the top
+  “Load All Selected (Top 30)” action and is updated through completion.
+- Middle Standard CSV/XLSX and Finder CSV/XLSX exports now use the same
+  canonical Field 3 order. SL is immediately after Symbol, followed by
+  Strategy Decision and Weighted Risk Decision.
+- Weighted Risk block selection remains capped at four per calendar hour and
+  selects the largest Risk_Score values first. SL exits remain capped at six per
+  hour and select the largest Weighted_Risk_Score values first.
+- Finder presets include Custom, Last 365 Days, Last 2 Years, and All Loaded
+  History; preset ranges are calculated from the actual loaded history bounds.
+
+Validation:
+- Python compilation passed for all changed modules.
+- tests/test_field3_auth_finder_20260818.py passed.
+- Synthetic cap check: four hourly blocks and six highest-score SL exits.
+- Synthetic export check: SL is column 2 in Middle/Finder CSV output.

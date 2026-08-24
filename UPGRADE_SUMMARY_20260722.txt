@@ -1,0 +1,44 @@
+HISTORICAL NOTE — SUPERSEDED BY THE 2026-07-29 H1 / MIDDLE-AGE / LOAD-UPDATE UPGRADE.
+See README_RUN_FIRST.txt and UPGRADE_SUMMARY_20260729_H1_MIDDLE_AGE_LOAD_UPDATE.txt for current behavior.
+
+UPGRADE SUMMARY — 2026-07-22
+
+1. SUPER QUICK PERFORMANCE
+- Added a dedicated vectorized Field 3 fast runner.
+- Super Quick no longer enters the legacy full calculation pipeline.
+- It calculates and displays only two requested sections:
+  a) Regime Age Ranking — Candle After Regime Start Only
+  b) Higher Standard Summary
+- It performs zero provider/API requests during calculation.
+- Lower/Middle detailed tables, final cross-symbol ranking, Field 10/11, AI,
+  research validation, trust history and institutional layers are deferred to Quick.
+
+2. REGIME AGE RANKING
+- Rank order is newest regime first: lowest candle age = Rank 1.
+- Added columns:
+  - Higher Standard Regime State
+  - Higher Standard Regime Bias
+  - Middle Standard Regime State
+
+3. THREE SELECTOR LOADING
+- Selector 1, 2 and 3 are fault-isolated.
+- One failed selector/key/symbol no longer aborts later selectors.
+- Every valid exact-symbol result is preserved across sequential loads.
+- A valid record from any selector wins over a stale failed duplicate record.
+- Unresolved symbols automatically retry through the alternate configured key
+  and shared key pool without deleting already-ready rows.
+- Partial valid universes remain calculation-ready instead of being blocked by
+  GLOBAL_PUBLICATION_BLOCKED_INCOMPLETE_CALCULATION.
+
+4. PRESET BUTTONS
+First Best 10:
+XAUUSD, AUDUSD, EURUSD, EURCAD, EURCHF, EURGBP, USDCHF, NZDUSD, GBPCHF, GBPAUD
+
+Second Best 10:
+Automatically fills ten different symbols while excluding symbols already
+selected in the other selectors.
+
+5. SIZE CLEANUP
+Removed historical delivery folders, backups, test caches, compiled Python
+cache, archived reports, old manifests and duplicate historical README files.
+Runtime code, migrations, active databases, settings and dependency files remain.

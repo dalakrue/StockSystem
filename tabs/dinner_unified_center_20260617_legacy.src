@@ -1,0 +1,418 @@
+"""One-section Dinner regime + combined intelligence renderer.
+
+The former Regime Summary and Combine Logic inner pages are consolidated here.
+No prediction/calculation is deleted: this renderer reads the same canonical
+run, existing PowerBI regime projection, reliability/regime contexts, KNN /
+Greedy tables, ML tables, NLP/quant packs and original cached details.  It uses
+no nested tabs so Streamlit renders only one Dinner workspace.
+"""
+from __future__ import annotations
+
+from typing import Any, Dict, Iterable, Tuple
+import json
+
+import pandas as pd
+import streamlit as st
+
+from ui.table_ordering_20260618 import newest_first
+
+
+UNIQUE = "dinner_unified_20260617"
+
+
+def _num(value: Any, default: float = 0.0) -> float:
+    try:
+        number = float(value)
+        return number if pd.notna(number) else float(default)
+    except Exception:
+        return float(default)
+
+
+def _shared() -> Dict[str, Any]:
+    try:
+        from core.canonical_runtime_20260617 import shared_from_runtime
+        result = shared_from_runtime(st.session_state)
+        return result if isinstance(result, dict) else {}
+    except Exception:
+        return {}
+
+
+def _canonical() -> Dict[str, Any]:
+    value = st.session_state.get("canonical_decision_result_20260617")
+    return value if isinstance(value, dict) else {}
+
+
+def _priority_table() -> pd.DataFrame:
+    value = st.session_state.get("canonical_priority_table_20260617")
+    if isinstance(value, pd.DataFrame) and not value.empty:
+        # Published canonical tables are immutable for renderers; reuse the same
+        # server-side DataFrame instead of duplicating hundreds of H1 rows.
+        return value
+    shared = _shared()
+    priority = shared.get("priority", {}) if isinstance(shared, dict) else {}
+    if not isinstance(priority, dict):
+        return pd.DataFrame()
+    records = priority.get("table")
+    if isinstance(records, pd.DataFrame):
+        return records.copy()
+    if records is None or (isinstance(records, (list, tuple)) and not records):
+        records = priority.get("rows")
+    if isinstance(records, pd.DataFrame):
+        return records.copy()
+    try:
+        return pd.DataFrame.from_records(records) if isinstance(records, (list, tuple)) and records else pd.DataFrame()
+    except Exception:
+        return pd.DataFrame()
+
+
+def _sort_priority(frame: pd.DataFrame) -> pd.DataFrame:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return pd.DataFrame()
+    sort_cols = [c for c in ("KNN Priority", "Greedy Priority", "Priority Rank 1-14", "priority rank", "Time") if c in frame.columns]
+    if not sort_cols:
+        return frame.copy()
+    ascending = [True] * len(sort_cols)
+    return frame.sort_values(sort_cols, ascending=ascending, kind="stable").reset_index(drop=True)
+
+
+def _best_priority(frame: pd.DataFrame) -> Tuple[str, str, str]:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return "N/A", "N/A", "WAIT"
+    row = _sort_priority(frame).iloc[0]
+    knn = row.get("KNN Priority", row.get("Priority Rank 1-14", row.get("priority rank", "N/A")))
+    greedy = row.get("Greedy Priority", row.get("Priority Rank 1-14", row.get("priority rank", "N/A")))
+    bias = row.get("Less Risky Bias", row.get("Direction", row.get("Decision", "WAIT")))
+    return str(knn), str(greedy), str(bias)
+
+
+def _flatten_scalars(obj: Any, prefix: str = "", depth: int = 0) -> list[dict[str, Any]]:
+    if depth > 4:
+        return []
+    rows: list[dict[str, Any]] = []
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            path = f"{prefix} / {key}" if prefix else str(key)
+            if isinstance(value, (dict, list, tuple, pd.DataFrame, pd.Series)):
+                rows.extend(_flatten_scalars(value, path, depth + 1))
+            else:
+                rows.append({"Group / Metric": path, "Value": value})
+    elif isinstance(obj, pd.Series):
+        rows.extend(_flatten_scalars(obj.to_dict(), prefix, depth + 1))
+    elif isinstance(obj, (list, tuple)):
+        for index, value in enumerate(obj[:80]):
+            rows.extend(_flatten_scalars(value, f"{prefix} [{index}]", depth + 1))
+    return rows
+
+
+def _collect_frames(obj: Any, prefix: str = "", depth: int = 0) -> list[tuple[str, pd.DataFrame]]:
+    if depth > 5:
+        return []
+    frames: list[tuple[str, pd.DataFrame]] = []
+    if isinstance(obj, pd.DataFrame):
+        if not obj.empty:
+            frames.append((prefix or "Table", obj))
+    elif isinstance(obj, pd.Series):
+        frames.append((prefix or "Series", obj.to_frame().reset_index()))
+    elif isinstance(obj, dict):
+        for key, value in obj.items():
+            name = f"{prefix} / {key}" if prefix else str(key)
+            frames.extend(_collect_frames(value, name, depth + 1))
+    elif isinstance(obj, (list, tuple)) and obj and all(isinstance(x, dict) for x in obj[:20]):
+        try:
+            frames.append((prefix or "Records", pd.DataFrame.from_records(obj)))
+        except Exception:
+            pass
+    return frames
+
+
+def _dedupe_frames(frames: Iterable[tuple[str, pd.DataFrame]]) -> list[tuple[str, pd.DataFrame]]:
+    output: list[tuple[str, pd.DataFrame]] = []
+    signatures: set[tuple[Any, ...]] = set()
+    for name, frame in frames:
+        if not isinstance(frame, pd.DataFrame) or frame.empty:
+            continue
+        columns = tuple(map(str, frame.columns))
+        tail_hash = 0
+        try:
+            tail_hash = int(pd.util.hash_pandas_object(frame.tail(5), index=True).sum())
+        except Exception:
+            tail_hash = hash((len(frame), columns))
+        signature = (len(frame), columns, tail_hash)
+        if signature in signatures:
+            continue
+        signatures.add(signature)
+        output.append((name, frame))
+    return output
+
+
+def _render_all_metrics(lifecycle_renderer=None) -> Dict[str, Any]:
+    shared = _shared()
+    canonical = _canonical()
+    decision = shared.get("decision", {}) if isinstance(shared.get("decision"), dict) else {}
+    reliability = shared.get("reliability", {}) if isinstance(shared.get("reliability"), dict) else {}
+    regime_shared = shared.get("regime", {}) if isinstance(shared.get("regime"), dict) else {}
+    nlp = shared.get("nlp", {}) if isinstance(shared.get("nlp"), dict) else {}
+    nlp_summary = nlp.get("summary", {}) if isinstance(nlp.get("summary"), dict) else {}
+
+    try:
+        from core.regime_sync_20260617 import canonical_regime_snapshot
+        regime = canonical_regime_snapshot(days=25)
+    except Exception:
+        regime = {}
+
+    ptable = _priority_table()
+    best_knn, best_greedy, less_risky = _best_priority(ptable)
+    powerbi_value = st.session_state.get("powerbi_calibrated_bundle_20260617")
+    powerbi = powerbi_value if isinstance(powerbi_value, dict) else {}
+    powerbi_summary = powerbi.get("summary", {}) if isinstance(powerbi.get("summary"), dict) else {}
+    base_value = st.session_state.get("dv_pp_base_result")
+    base = base_value if isinstance(base_value, dict) else {}
+
+    st.markdown("#### All Dinner st.metric — one synchronized place")
+    row1 = st.columns(6)
+    row1[0].metric("Current Regime", str(regime.get("regime", regime_shared.get("current_regime", "-"))), str(regime.get("regime_validation", "FALSE / WATCH")))
+    row1[1].metric("Regime Reliability", f"{_num(regime.get('reliability', reliability.get('score', 0))):.1f}%")
+    row1[2].metric("Current Decision", str(decision.get("central_decision", decision.get("decision", canonical.get("decision", "WAIT")))))
+    row1[3].metric("Direction", str(decision.get("direction", canonical.get("direction", "WAIT"))))
+    row1[4].metric("Entry /10", f"{_num(decision.get('entry_score', canonical.get('entry_score', 0))):.2f}")
+    row1[5].metric("Exit Risk /10", f"{_num(decision.get('exit_risk', canonical.get('exit_risk', 0))):.2f}")
+
+    row2 = st.columns(6)
+    row2[0].metric("Best KNN Priority", best_knn, "Ascending")
+    row2[1].metric("Best Greedy Priority", best_greedy, "Ascending")
+    row2[2].metric("Less Risky Bias", less_risky)
+    row2[3].metric("PowerBI Path Reliability", f"{_num(powerbi_summary.get('reliability_pct', reliability.get('score', 0))):.1f}%")
+    row2[4].metric("Path Agreement", f"{_num(powerbi_summary.get('path_agreement_pct', 0)):.1f}%")
+    row2[5].metric("Band Coverage", f"{_num(powerbi_summary.get('estimated_band_coverage_pct', 0)):.1f}%")
+
+    row3 = st.columns(6)
+    selected_forecast = (((canonical.get("forecasts") or {}).get("horizons") or {}).get(
+        f"{((canonical.get('forecasts') or {}).get('selected_horizon') or 3)}h", {}
+    ) if isinstance(canonical, dict) else {})
+    forecast_confidence = _num(selected_forecast.get("reliability"), 0)
+    if forecast_confidence <= 1:
+        forecast_confidence *= 100.0
+    row3[0].metric("Forecast Confidence", f"{forecast_confidence:.1f}%")
+    # Full Metric is the calculation authority; never replace this card with a
+    # locally rebuilt PowerBI master value.
+    row3[1].metric("Master Score", f"{_num(canonical.get('master_score', decision.get('master_score', 0))):.2f}/10")
+    row3[2].metric("Bull Probability", f"{_num(selected_forecast.get('buy_probability_calibrated', 0)) * (100 if _num(selected_forecast.get('buy_probability_calibrated', 0)) <= 1 else 1):.1f}%")
+    row3[3].metric("NLP Direction", str(nlp_summary.get("nlp_direction", "WAIT")))
+    row3[4].metric("NLP Reliability", f"{_num(nlp_summary.get('reliability', 0)):.1f}%")
+    row3[5].metric("NLP Conflict", str(nlp_summary.get("conflict_level", "NO NLP DATA")))
+
+    pattern = canonical.get("pattern_memory", {}) if isinstance(canonical.get("pattern_memory"), dict) else {}
+    transition = canonical.get("transition_risk", {}) if isinstance(canonical.get("transition_risk"), dict) else {}
+    actionability = canonical.get("actionability", {}) if isinstance(canonical.get("actionability"), dict) else {}
+    final = canonical.get("final_decision", {}) if isinstance(canonical.get("final_decision"), dict) else {}
+    row4 = st.columns(6)
+    row4[0].metric("Alpha", f"{_num(canonical.get('alpha', regime.get('alpha', 0))):.3f}")
+    row4[1].metric("Delta", f"{_num(canonical.get('delta', regime.get('delta', 0))):.3f}")
+    row4[2].metric("Pattern Confirmation", str(pattern.get("pattern_confirmation", "NEUTRAL")), f"{_num(pattern.get('pattern_confidence', pattern.get('confidence', 0))) * 100:.1f}%")
+    row4[3].metric("Transition Risk", str(transition.get("status", "WATCH")), f"{_num(transition.get('value', 0)):.2f}")
+    row4[4].metric("Actionability", str(actionability.get("current_label", "WATCH")))
+    row4[5].metric("Expected Value", f"{_num(final.get('expected_value', actionability.get('expected_value', 0))):.5f}")
+
+    try:
+        from core.advanced_analytics_20260615 import render_regime_alpha_delta_metrics
+        st.markdown("##### Regime Alpha / Delta metrics")
+        render_regime_alpha_delta_metrics(__import__("tabs.home", fromlist=["*"]).__dict__, key="dinner_unified_alpha_delta_20260617")
+    except Exception as exc:
+        st.caption(f"Alpha/Delta metrics skipped safely: {exc}")
+
+    try:
+        if not callable(lifecycle_renderer):
+            from ui.decision_product_panel_20260617 import render_regime_lifecycle_panel
+            lifecycle_renderer = render_regime_lifecycle_panel
+        lifecycle_renderer()
+    except Exception as exc:
+        st.caption(f"Regime lifecycle metrics skipped safely: {exc}")
+
+    return {
+        "shared": shared,
+        "canonical": canonical,
+        "regime": regime,
+        "priority": ptable,
+        "powerbi_summary": powerbi_summary,
+        "base": base,
+    }
+
+
+def _render_powerbi_regime_chart(ns: dict) -> None:
+    st.markdown("#### PowerBI regime projection and calculation")
+    try:
+        from tabs.dinner_morning_data_patch_20260614 import _render_powerbi_regime_projection
+        _render_powerbi_regime_projection(ns)
+    except Exception as exc:
+        st.warning(f"PowerBI regime projection skipped safely: {exc}")
+
+
+def _table_height(frame: pd.DataFrame) -> int:
+    rows = len(frame)
+    return int(max(180, min(520, 42 + rows * 28)))
+
+
+def _render_all_tables(context: Dict[str, Any]) -> None:
+    st.markdown("#### All Dinner tables — one synchronized place")
+    frames: list[tuple[str, pd.DataFrame]] = []
+
+    canonical = context.get("canonical", {}) if isinstance(context.get("canonical"), dict) else {}
+    candidate_rows = canonical.get("top_two_daily_candidates") or canonical.get("opportunity_candidates") or []
+    if isinstance(candidate_rows, list) and candidate_rows:
+        frames.append(("Canonical Opportunity Candidates 1 and 2", pd.DataFrame(candidate_rows).head(2)))
+
+    try:
+        analytics = st.session_state.get("regime_window_analytics_20260618") or ((context.get("shared", {}).get("regime", {}) or {}).get("window_analytics") if isinstance(context.get("shared"), dict) else {})
+        tables = analytics.get("tables", {}) if isinstance(analytics, dict) else {}
+        for key, label in (("lower", "Lower Standard Regime Analytics — 1 Day"), ("medium", "Medium Standard Regime Analytics — 5 Days"), ("higher", "Higher Standard Regime Analytics — 25 Days")):
+            table = tables.get(key) if isinstance(tables, dict) else None
+            if isinstance(table, pd.DataFrame) and not table.empty:
+                frames.append((label, table))
+    except Exception:
+        pass
+
+    for key, label in (
+        ("full_metric_regime_history_df", "25-Day Major Regime History"),
+        ("major_regime_history_df", "Major Regime History Source"),
+        ("canonical_priority_table_20260617", "KNN + Greedy Priority History"),
+        ("lunch_powerbi_vertical_projection_points_20260617", "PowerBI Main Path + Bounds + Alpha/Delta"),
+        ("dv_pp_predicted_calibrated_20260617", "Calibrated Future OHLC Projection"),
+        ("dv_pp_bt_hist", "Prediction vs Actual History"),
+        ("dv_pp_regime_hist", "PowerBI Regime History"),
+        ("dv_pp_projection_history", "Historical Projection Paths"),
+    ):
+        value = st.session_state.get(key)
+        if isinstance(value, pd.DataFrame) and not value.empty:
+            frames.append((label, value))
+
+    for source_key, source_label in (
+        ("regime_context_20260614", "Regime Context"),
+        ("reliability_control_center_20260614", "Reliability Control Center"),
+        ("dv_pp_base_result", "PowerBI Five-Layer Result"),
+        ("final_synced_research_merge_pack_20260612", "Final Synced Intelligence"),
+        ("final_merged_intelligence_pack_20260612", "Merged Intelligence"),
+        ("powerbi_calibrated_bundle_20260617", "Calibrated PowerBI Bundle"),
+    ):
+        value = st.session_state.get(source_key)
+        frames.extend(_collect_frames(value, source_label))
+
+    frames = _dedupe_frames(frames)
+    if not frames:
+        try:
+            from core.system_wide_completion_20260618 import readiness_message
+            message = readiness_message(st.session_state, "Lunch Priority")
+        except Exception:
+            message = "Dinner tables are missing from the published generation. Open Settings → Errors / Fix Fast."
+        st.dataframe(pd.DataFrame([{"Status": message}]), use_container_width=True, hide_index=True)
+    else:
+        phone = bool(st.session_state.get("phone_mode", False))
+        row_limit = 48 if phone else 360
+        # On iPhone render only the first non-duplicate core tables. The full
+        # canonical data stays cached/exportable and is not copied into the DOM.
+        render_frames = frames[:10] if phone else frames
+        if phone and len(frames) > len(render_frames):
+            st.caption(f"Phone low-heat view: showing {len(render_frames)} core tables; {len(frames)-len(render_frames)} redundant/deep tables remain in the synchronized audit/export.")
+        for name, frame in render_frames:
+            st.markdown(f"##### {name}")
+            display = newest_first(frame, row_limit)
+            st.dataframe(display, use_container_width=True, hide_index=True, height=_table_height(display))
+
+    scalar_rows: list[dict[str, Any]] = []
+    for key, label in (
+        ("regime_context_20260614", "Regime Context"),
+        ("reliability_control_center_20260614", "Reliability"),
+        ("dv_pp_base_result", "PowerBI"),
+        ("final_synced_research_merge_pack_20260612", "Final Synced Intelligence"),
+        ("final_merged_intelligence_pack_20260612", "Merged Intelligence"),
+    ):
+        scalar_rows.extend(_flatten_scalars(st.session_state.get(key), label))
+    if scalar_rows:
+        scalar_table = pd.DataFrame(scalar_rows).drop_duplicates(subset=["Group / Metric", "Value"], keep="last")
+        with st.expander("Open / Close — All non-table logic values", expanded=False):
+            st.dataframe(scalar_table, use_container_width=True, hide_index=True, height=480)
+
+
+def _render_audit_copy(context: Dict[str, Any]) -> None:
+    with st.expander("Open / Close — Dinner synchronized audit / copy", expanded=False):
+        # Fixed allow-list avoids scanning the complete session-state object on
+        # every Dinner render, which was expensive on phones and could expose
+        # unrelated stale keys in the audit.
+        allowed = (
+            "canonical_decision_result_20260617",
+            "canonical_priority_table_20260617",
+            "regime_window_analytics_20260618",
+            "regime_standard_detail_tables_20260617",
+            "reliability_control_center_20260614",
+            "powerbi_calibrated_bundle_20260617",
+            "causal_quant_support_20260618",
+            "final_synced_research_merge_pack_20260612",
+            "nlp_market_intelligence_result",
+        )
+        source_keys = [key for key in allowed if key in st.session_state]
+        st.dataframe(pd.DataFrame({"Synchronized Source Key": source_keys}), use_container_width=True, hide_index=True, height=300)
+        payload = {
+            "canonical_run_id": context.get("canonical", {}).get("run_id") if isinstance(context.get("canonical"), dict) else None,
+            "regime": context.get("regime"),
+            "powerbi_calibration": context.get("powerbi_summary"),
+            "source_keys": source_keys,
+        }
+        text = json.dumps(payload, indent=2, ensure_ascii=False, default=str)
+        try:
+            from ui.copy_tools import central_copy_button
+            central_copy_button("Copy Dinner Unified Audit", text, "copy_dinner_unified_audit_20260617", show_fallback=True)
+        except Exception:
+            st.text_area("Dinner Unified Audit", text, height=220, key="dinner_unified_audit_fallback_20260617")
+
+
+def render_dinner_unified_center(ns: dict, prev_data=None, lifecycle_renderer=None) -> None:
+    del prev_data  # All original cached data is rendered directly below once.
+    st.markdown("### 🌙 Dinner — Unified Regime + Combined Intelligence")
+    st.caption(
+        "Regime Summary and Combine Logic are merged into one large synchronized section. "
+        "All metrics are grouped first, all tables are grouped next, and no nested Dinner tab is rendered."
+    )
+    with st.container(border=True):
+        context = _render_all_metrics(lifecycle_renderer=lifecycle_renderer)
+        with st.expander("Open / Close — Canonical Full Metric Source-of-Truth", expanded=False):
+            try:
+                from ui.full_metric_shared_renderer_20260618 import render_full_metric_shared
+                render_full_metric_shared(ns)
+            except Exception as exc:
+                st.caption(f"Canonical Full Metric evidence skipped safely: {exc}")
+        st.divider()
+        _render_powerbi_regime_chart(ns)
+        st.divider()
+        _render_all_tables(context)
+        _render_audit_copy(context)
+
+
+def render_dinner_regime_summary(ns: dict, prev_data=None, lifecycle_renderer=None) -> None:
+    """Restored Dinner Regime Summary inner tab using canonical H1 identity."""
+    del prev_data
+    st.markdown("### 🌙 Dinner — Regime Summary")
+    st.caption("Same EURUSD H1 completed candle, run ID, generation and data signature as Full Metric History.")
+    with st.container(border=True):
+        context = _render_all_metrics(lifecycle_renderer=lifecycle_renderer)
+        history = st.session_state.get("full_metric_regime_history_df")
+        if not isinstance(history, pd.DataFrame) or history.empty:
+            history = st.session_state.get("major_regime_history_df")
+        st.markdown("#### Major Regime History — Current H1 First")
+        if isinstance(history, pd.DataFrame) and not history.empty:
+            st.dataframe(newest_first(history, 600), use_container_width=True, hide_index=True, height=440)
+        else:
+            try:
+                from core.system_wide_completion_20260618 import readiness_message
+                st.warning(readiness_message(st.session_state, "Regime History"))
+            except Exception:
+                st.warning("Regime history is missing from the published generation. Open Settings → Errors / Fix Fast.")
+        _render_audit_copy(context)
+
+
+def render_dinner_combined_logic(ns: dict, prev_data=None, lifecycle_renderer=None) -> None:
+    """Restored Dinner Combined Logic inner tab."""
+    render_dinner_unified_center(ns, prev_data, lifecycle_renderer)
+
+
+__all__ = [
+    "render_dinner_unified_center", "render_dinner_regime_summary", "render_dinner_combined_logic"
+]

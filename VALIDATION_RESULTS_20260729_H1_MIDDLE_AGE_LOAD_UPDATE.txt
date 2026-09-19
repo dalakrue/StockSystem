@@ -1,0 +1,23 @@
+ADX Quant Pro Upgrade Validation
+Date: 2026-07-29
+
+PASS — Modified Python modules compile successfully.
+PASS — Super Quick fast engine calculates LOWER, MIDDLE and HIGHER evidence.
+PASS — Lower evidence is no longer marked DEFERRED in the fast result.
+PASS — Higher-age ranking contains Lower Regime Bias, Middle Regime Bias and
+       Higher Standard Regime Bias.
+PASS — Middle-age ranking orders symbols only by Middle Candle After Regime Start.
+PASS — Agreement styling colors the complete matching row, not only the Symbol.
+PASS — Three-column agreement requires valid Lower = Middle = Higher bias.
+PASS — Two-column Middle table agreement requires valid Middle = Lower bias.
+PASS — Load & Update helper force-refreshes Selector 1, Selector 2 and Selector 3.
+PASS — Each selector retains its assigned Twelve Data route.
+PASS — The Load & Update action continues into the existing protected Super Quick
+       activation and queue path in the same click.
+PASS — Settings one-time automatic timeframe migration selects H1.
+PASS — Fast-run version was bumped, preventing reuse of incompatible old cached rows.
+
+Live limitation:
+Actual candle freshness and symbol availability depend on provider response,
+market session, API-key validity, quota and exact-symbol support. The refresh path
+preserves valid exact-symbol/timeframe fallback history when a live request fails.

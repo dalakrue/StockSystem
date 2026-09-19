@@ -1,0 +1,19 @@
+StratLit S1-S6 No-WAIT Upgrade — 2026-09-18
+
+What was fixed
+1. Super Quick now reads every successfully merged selector candle frame from canonical_symbol_candles when a symbol is not present in the last MARKET_RESULTS report.
+2. S1-S6 numeric scores are recalculated from each symbol's own loaded candle history on every Field 3 render/export.
+3. S1-S6 are forced to numeric 0-100 outputs; missing score columns are no longer recreated as WAIT placeholders.
+4. Binary pullback models use NO ENTRY after a completed calculation that has no live trigger, instead of showing WAIT.
+5. Strategy Decision uses the two strongest S1-S6 scores for BUY/SELL directional rows.
+6. Fast-run cache version was bumped so old pre-fix results do not survive the upgrade.
+
+Validation
+- Python compile: PASS
+- S1-S6 regression tests: 2 PASS
+- Architecture validator: PASS
+- Fixed-20 selector validator: PASS
+- Twelve Data four-key round-robin simulation: PASS
+
+Note
+An older validate_final_sync_20260617.py assertion still expects a historical navigation page list. This is unrelated to Field 3, Twelve Data loading, or S1-S6 calculation and was intentionally not used to alter current navigation.

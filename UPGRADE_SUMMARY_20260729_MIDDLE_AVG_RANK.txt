@@ -1,0 +1,30 @@
+ADX Quant Pro — Middle Regime Average-Duration Ranking Upgrade
+Date: 2026-07-29
+
+Updated section:
+Middle Regime Age Ranking — Candle After Middle Regime Start Only
+
+Changes:
+1. Added "Candle After Regime Start" to show the current Middle regime age in completed candles.
+2. Added "Avg Regime Candle Count Before Regime Change".
+   - Calculated from completed historical Middle-regime runs.
+   - The current unfinished trailing regime is excluded.
+   - Completed runs matching the current Middle regime are preferred; when none exist, all completed Middle-regime runs provide the historical baseline.
+3. Added "Completed Regime Samples" so the number of historical completed runs behind the average is visible.
+4. Changed this table's ranking to "Avg Regime Candle Rank".
+   - Rank 1 = highest average completed Middle-regime candle duration before change.
+   - Current Candle After Regime Start is used only as a tie-breaker and does not override the average-duration rank.
+5. Updated both calculation paths:
+   - Super Quick fast Field 3 path.
+   - Quick/Full Hamilton regime engine path.
+6. Bumped the Super Quick calculation version so old cached results are not reused.
+
+Validation completed:
+- Python syntax compilation passed for all changed modules.
+- Historical completed-run statistic unit test passed.
+- Middle table ranking test passed.
+- Super Quick Field 3 generation path test passed.
+- Quick/Full Middle regime engine test passed.
+
+Usage:
+Load symbols, then click Super Quick or Load & Update + Run Super Quick. Open Field 3 and view the updated Middle Regime Age Ranking table.

@@ -1,0 +1,7 @@
+SYSTEM 2 S1-S50 HIGH PULLBACK UPGRADE
+Changes:
+- Existing S1-S30 logic preserved.
+- Added S31-S50 ultra high pullback opportunity layer.
+- Increased entry quality filters.
+- Added conservative TP/SL suggestion layer.
+- No performance claim without running the user's trade CSV backtest.

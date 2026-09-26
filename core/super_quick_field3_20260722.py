@@ -1,0 +1,721 @@
+"""Fast compute-only Field 3 path for the Super Quick button.
+
+This runner intentionally calculates only the compact Field 3 tables requested by the user:
+1) Regime Age Ranking — Candle After Regime Start Only
+2) Middle Regime Age Ranking — Candle After Middle Regime Start Only
+3) Higher Standard Summary
+
+The heavier protected, AI, research, Field 10/11, trust-history and validation
+pipelines remain owned by Quick/Full. No provider call is made here; the runner
+uses only frames already validated by the Settings Load controls.
+"""
+from __future__ import annotations
+
+from collections.abc import Mapping, MutableMapping
+from datetime import datetime, timezone
+from hashlib import sha256
+from pathlib import Path
+from typing import Any
+import json
+import math
+import time
+import uuid
+
+import numpy as np
+import pandas as pd
+
+from core.calculation.run_orchestrator import MARKET_RESULTS_KEY
+from core.field3_three_regime_engine import standard_windows, standardize_candles
+from core.global_symbol_context import get_global_symbol_context, publish_completed_generation
+from core.regime_duration_stats_20260729 import completed_regime_run_stats
+from core.pullback_engine_s1_s3_upgrade import STRATEGY_NAMES, evaluate_pullback_strategies, strategy_decision
+
+FAST_RUN_VERSION = "field3-middle-regime-adaptive-v4-20260926"
+
+
+MIDDLE_HISTORY_STATE_KEY = "field3_middle_regime_history_20260722"
+MIDDLE_HISTORY_FILE = Path("data/field3_middle_regime_history_20260722.parquet")
+MIDDLE_HISTORY_CSV_FILE = Path("data/field3_middle_regime_history_20260722.csv")
+MIDDLE_HISTORY_BACKFILL_SIGNATURE_KEY = "field3_middle_history_backfill_signature_20260818"
+
+
+def _build_fast_historical_strategy_audit(source: pd.DataFrame, higher_bias: pd.Series, middle_bias: pd.Series, *, symbol='UNKNOWN', timeframe='H1') -> pd.DataFrame:
+    from core.strategy_audit_20260924 import build_strategy_audit
+    return build_strategy_audit(source, higher_bias, middle_bias, symbol=symbol, timeframe=timeframe)
+
+
+def _historical_fast_standard(frame: pd.DataFrame, *, window_bars: int) -> pd.DataFrame:
+    """Vectorized historical version of the Super Quick regime state.
+
+    It calculates every loaded completed candle in one pass so Finder history can
+    be populated without replaying the full Super Quick engine once per candle.
+    """
+    df = standardize_candles(frame)
+    if df.empty:
+        return pd.DataFrame()
+
+    close = pd.to_numeric(df["close"], errors="coerce")
+    high = pd.to_numeric(df["high"], errors="coerce")
+    low = pd.to_numeric(df["low"], errors="coerce")
+    valid_close = close.notna()
+    close_filled = close.ffill()
+
+    window = max(8, int(window_bars))
+    fast_span = max(3, window // 5)
+    slow_span = max(fast_span + 2, window // 2)
+    ema_fast = close_filled.ewm(span=fast_span, adjust=False).mean()
+    ema_slow = close_filled.ewm(span=slow_span, adjust=False).mean()
+
+    prev_close = close_filled.shift(1)
+    true_range = pd.concat([
+        (high - low).abs(),
+        (high - prev_close).abs(),
+        (low - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    atr = true_range.ewm(span=max(5, window // 3), adjust=False).mean().replace(0, np.nan)
+    normalized_gap = ((ema_fast - ema_slow) / atr).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+    slope_window = max(5, min(window // 3, 40))
+    slope = close_filled.pct_change(slope_window).fillna(0.0)
+    vol = close_filled.pct_change().rolling(max(8, min(window, 60)), min_periods=5).std().replace(0, np.nan)
+    normalized_slope = (slope / (vol * math.sqrt(max(1, slope_window)))).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    score = 0.72 * normalized_gap + 0.28 * normalized_slope
+
+    raw_states = np.where(score > 0.18, "BULL", np.where(score < -0.18, "BEAR", "NEUTRAL"))
+    states = pd.Series(raw_states, index=df.index, dtype="object")
+    # Match the live fast path: at least 25 observations are required.
+    ready = pd.Series(np.arange(len(df)) >= 24, index=df.index) & valid_close
+    states = states.where(ready, "UNAVAILABLE")
+
+    # Vectorized run-length bookkeeping. The previous row-by-row Python loop
+    # made Finder backfill scale to many minutes for a 60,000-candle frame and
+    # blocked the visible Super Quick result.
+    state_series = pd.Series(states.values, index=df.index, dtype="object")
+    valid_state = state_series.ne("UNAVAILABLE")
+    starts = valid_state & (
+        state_series.ne(state_series.shift(1))
+        | ~valid_state.shift(1, fill_value=False)
+    )
+    run_id = starts.cumsum().astype("Int64").where(valid_state)
+    ages_series = state_series.groupby(run_id, dropna=False).cumcount().add(1).where(valid_state, 0)
+    ages_series = pd.to_numeric(ages_series, errors="coerce").fillna(0).astype(int)
+    run_lengths = ages_series.where(valid_state).groupby(run_id, dropna=True).transform("max")
+    lengths_by_run = (
+        run_lengths.loc[valid_state]
+        .groupby(run_id.loc[valid_state], dropna=True)
+        .first()
+        .astype(float)
+    )
+    run_numbers = list(lengths_by_run.index)
+    prior_counts = {rid: index for index, rid in enumerate(run_numbers)}
+    cumulative_lengths = lengths_by_run.cumsum().shift(1).fillna(0.0)
+    prior_averages = {
+        rid: (float(cumulative_lengths.loc[rid]) / index if index else None)
+        for index, rid in enumerate(run_numbers)
+    }
+    completed_count_series = run_id.map(prior_counts).fillna(0).astype(int)
+    completed_avg_series = run_id.map(prior_averages)
+    open_values = pd.to_numeric(df["open"], errors="coerce")
+    starting_price_series = open_values.groupby(run_id, dropna=True).transform("first").where(valid_state)
+
+    bias = states.map({"BULL": "BUY", "BEAR": "SELL", "NEUTRAL": "NEUTRAL", "UNAVAILABLE": "BLOCKED"})
+    return pd.DataFrame({
+        "Datetime": pd.to_datetime(df["open_time"], errors="coerce"),
+        "State": states.values,
+        "Score": score.values,
+        "Bias": bias.values,
+        "Age": ages_series.values,
+        "Starting Price": starting_price_series.values,
+        "Avg Completed Regime": completed_avg_series.values,
+        "Completed Regime Samples": completed_count_series.values,
+    })
+
+
+def _build_middle_finder_history(frames: Mapping[str, pd.DataFrame], *, timeframe: str) -> pd.DataFrame:
+    from core.finder_history_store_20260924 import completed_only, normalize_candles
+    frames={symbol:completed_only(normalize_candles(frame),timeframe) for symbol,frame in frames.items()}
+    windows = standard_windows(timeframe)
+    all_rows: list[pd.DataFrame] = []
+    for symbol, frame in frames.items():
+        lower = _historical_fast_standard(frame, window_bars=windows["LOWER"])
+        middle = _historical_fast_standard(frame, window_bars=windows["MIDDLE"])
+        higher = _historical_fast_standard(frame, window_bars=windows["HIGHER"])
+        if lower.empty or middle.empty or higher.empty:
+            continue
+        n = min(len(lower), len(middle), len(higher))
+        lower, middle, higher = lower.tail(n).reset_index(drop=True), middle.tail(n).reset_index(drop=True), higher.tail(n).reset_index(drop=True)
+        # Preserve original candle OHLC in Finder history.
+        # Previous versions only stored regime calculations, so Finder CSV
+        # downloads contained empty Open/Close/High/Low columns added later by
+        # the export layer.  Align the source candle frame with the regime tail
+        # so backtesting receives real execution prices.
+        # Use the same normalized candle sequence consumed by the three
+        # historical regime calculations so strategy timestamps remain causal.
+        source_all = standardize_candles(frame)
+        source = source_all.tail(n).reset_index(drop=True).copy()
+
+        def _ohlc_value(names):
+            for name in names:
+                if name in source.columns:
+                    return pd.to_numeric(source[name], errors="coerce").values
+            return np.full(n, np.nan)
+
+        block = pd.DataFrame({
+            "Symbol": str(symbol),
+            "Open Price": _ohlc_value(["Open Price", "open", "Open"]),
+            "Close Price": _ohlc_value(["Close Price", "close", "Close"]),
+            "Highest Price": _ohlc_value(["Highest Price", "high", "High"]),
+            "Lowest Price": _ohlc_value(["Lowest Price", "low", "Low"]),
+            "Lower Regime Bias": lower["Bias"],
+            "Middle Regime Bias": middle["Bias"],
+            "Higher Standard Regime Bias": higher["Bias"],
+            "Candle After Regime Start": pd.to_numeric(middle["Age"], errors="coerce"),
+            "Starting Price": pd.to_numeric(middle["Starting Price"], errors="coerce").round(5),
+            "Avg Regime Candle Count Before Regime Change": pd.to_numeric(middle["Avg Completed Regime"], errors="coerce").round(2),
+            "Completed Regime Samples": pd.to_numeric(middle["Completed Regime Samples"], errors="coerce").astype("Int64"),
+            "Middle Standard Regime State": middle["State"],
+            "Lower Standard Regime State": lower["State"],
+            "Higher Standard Regime State": higher["State"],
+            "Completed Candle": middle["Datetime"],
+            "Timeframe": str(timeframe),
+            "Datetime": middle["Datetime"],
+            "History Source": source["data_source"].fillna("LOADED_OHLC").to_numpy() if "data_source" in source else "LOADED_OHLC",
+        })
+        if not block.empty:
+            # Finder history uses a separate vectorized causal replay.  The
+            # live/current table still uses evaluate_pullback_strategies(), but
+            # rebuilding thousands of historical rows with a Python HMM loop
+            # made the Finder appear to load forever.
+            audit_frame = _build_fast_historical_strategy_audit(
+                source,
+                higher["Bias"],
+                middle["Bias"],
+                symbol=symbol, timeframe=timeframe,
+            )
+            block = pd.concat([block, audit_frame.reindex(block.index)], axis=1)
+        all_rows.append(block)
+
+    if not all_rows:
+        return pd.DataFrame()
+    history = pd.concat(all_rows, ignore_index=True)
+    history["Datetime"] = pd.to_datetime(history["Datetime"], errors="coerce", utc=True).dt.tz_localize(None)
+    history["Completed Candle"] = history["Datetime"]
+    history = history.dropna(subset=["Datetime"])
+    history["Avg Regime Candle Rank"] = (
+        history.groupby("Datetime")["Candle After Regime Start"]
+        .rank(method="min", ascending=True, na_option="bottom")
+        .astype("Int64")
+    )
+    avg_count = pd.to_numeric(history["Avg Regime Candle Count Before Regime Change"], errors="coerce")
+    samples = pd.to_numeric(history["Completed Regime Samples"], errors="coerce")
+    age = pd.to_numeric(history["Candle After Regime Start"], errors="coerce")
+    history["Regime Maturity Score"] = (age.div(avg_count).mul(np.log1p(samples)).where((avg_count > 0) & (samples > 0)).round(2))
+    preferred = [
+        "Strategy Decision", "Legacy Strategy Decision", "Market Regime", "BUY Probability %", "SELL Probability %", "Confidence Score", "Strategy Family", "V4 Direction", "Trade Quality Score", "Expected Reward Risk", "Expected TP Reach %", "Expected SL Hit %", "Suggested TP Price", "Suggested SL Price", "TP Confidence %", "SL Confidence %", "Expected Holding Hours", "Expected TP Before SL %", "Entry Session Valid", "Symbol ATR Threshold", "Symbol Momentum Threshold", "Adaptive Reject Reason", "Suggested TP", "Suggested SL", "Entry Noise Ratio", "Entry Quality Passed", "Strategy Engine", "Strategy Profile", "History Source",
+        *(f"{label} Entry Condition" for label in STRATEGY_NAMES),
+        *(f"{label} Signal" for label in STRATEGY_NAMES),
+        *(f"{label} Reason" for label in STRATEGY_NAMES),
+        *(f"{label} Score" for label in STRATEGY_NAMES),
+        "Avg Regime Candle Rank", "Symbol", "Lower Regime Bias", "Middle Regime Bias",
+        "Higher Standard Regime Bias", "Candle After Regime Start", "Starting Price", "Regime Maturity Score",
+        "Avg Regime Candle Count Before Regime Change", "Completed Regime Samples",
+        "Middle Standard Regime State", "Lower Standard Regime State", "Higher Standard Regime State",
+        "Completed Candle", "Timeframe", "Datetime",
+        "Open Price", "Close Price", "Highest Price", "Lowest Price",
+    ]
+    return history[[c for c in preferred if c in history.columns]].sort_values(["Datetime", "Avg Regime Candle Rank", "Symbol"], kind="mergesort").reset_index(drop=True)
+
+
+def _persist_middle_finder_history(state: MutableMapping[str, Any], frames: Mapping[str, pd.DataFrame], *, timeframe: str, signature: str) -> dict[str, Any]:
+    from core.finder_history_store_20260924 import merge_history, read_history, write_history
+    from core.strategy_audit_20260924 import STRATEGY_ENGINE_VERSION
+    from core.middle_regime_adaptive_v4 import current_profile_id
+    profile_id=current_profile_id()
+    existing=state.get(MIDDLE_HISTORY_STATE_KEY)
+    if not isinstance(existing,pd.DataFrame) or existing.empty:
+        existing,load_warnings=read_history(MIDDLE_HISTORY_FILE,MIDDLE_HISTORY_CSV_FILE)
+        if load_warnings:
+            state["field3_middle_history_load_warnings_20260924"]=load_warnings
+    ready=(not existing.empty and "Strategy Engine" in existing
+           and existing["Strategy Engine"].eq(STRATEGY_ENGINE_VERSION).all()
+           and "Strategy Profile" in existing and existing["Strategy Profile"].eq(profile_id).all()
+           and all(f"{label} Signal" in existing for label in STRATEGY_NAMES))
+    if signature==state.get(MIDDLE_HISTORY_BACKFILL_SIGNATURE_KEY) and ready:
+        state[MIDDLE_HISTORY_STATE_KEY]=existing
+        return {"ok":True,"status":"CACHED","reused":True,"rows":len(existing)}
+    parts=[]; failures={}
+    for symbol,frame in frames.items():
+        try:
+            generated=_build_middle_finder_history({symbol:frame},timeframe=timeframe)
+            if generated.empty:
+                failures[symbol]="NO_VALID_HISTORICAL_ROWS"
+            else:
+                parts.append(generated)
+        except Exception as exc:
+            failures[symbol]=f"{type(exc).__name__}: {exc}"
+    if not parts:
+        return {"ok":False,"status":"NO_LOADED_FRAMES" if not frames else "FINDER_BUILD_FAILED",
+                "rows":len(existing),"failures":failures,
+                "error":"Load completed candles in Settings or import an OHLC CSV in Finder."}
+    generated=pd.concat(parts,ignore_index=True)
+    generated["Avg Regime Candle Rank"]=generated.groupby(["Datetime","Timeframe"])["Candle After Regime Start"].rank(method="min",ascending=True).astype("Int64")
+    # Drop stale overlapping rows; a version change invalidates decisions, not OHLC.
+    if not existing.empty:
+        stale=(~existing.get("Strategy Engine",pd.Series("LEGACY",index=existing.index)).eq(STRATEGY_ENGINE_VERSION)
+               | ~existing.get("Strategy Profile",pd.Series("LEGACY",index=existing.index)).eq(profile_id))
+        existing=existing.loc[~stale].copy()
+    merged=merge_history(existing,generated)
+    state[MIDDLE_HISTORY_STATE_KEY]=merged
+    # Failed symbols remain retryable; no success signature masks partial builds.
+    state[MIDDLE_HISTORY_BACKFILL_SIGNATURE_KEY]=str(signature) if not failures else ""
+    saved=write_history(merged,MIDDLE_HISTORY_FILE,MIDDLE_HISTORY_CSV_FILE)
+    return {"ok":True,"status":"PARTIAL" if failures else "READY","reused":False,
+            "rows":len(merged),"generated_rows":len(generated),"symbols":len(parts),
+            "failures":failures,**saved}
+
+
+def _trailing_run_length(values: pd.Series) -> int:
+    if values.empty:
+        return 0
+    current = values.iloc[-1]
+    count = 0
+    for value in values.iloc[::-1]:
+        if value != current:
+            break
+        count += 1
+    return int(count)
+
+
+def _fast_standard(frame: pd.DataFrame, *, standard: str, window_bars: int) -> dict[str, Any]:
+    # Live and historical regimes use identical fixed horizons and warm-up.
+    df=standardize_candles(frame)
+    history=_historical_fast_standard(df,window_bars=window_bars)
+    base={"standard":standard,"state":"UNAVAILABLE","bias":"BLOCKED","probability":0.0,
+          "persistence":0.0,"expected_duration":0.0,"age":0,"transition_risk":1.0,
+          "reliability":0.0,"sample_count":len(df),"quality_grade":"F","completed_candle":"",
+          "status":"BLOCKED","window_bars":int(window_bars),"score":0.0,"signal_strength":0.0}
+    if history.empty:
+        return base
+    row=history.iloc[-1]
+    base.update(completed_candle=pd.Timestamp(row["Datetime"]).isoformat())
+    if row["State"]=="UNAVAILABLE":
+        return base
+    completeness=min(1.,len(df)/max(45.,float(window_bars)))
+    base.update(state=row["State"],bias=row["Bias"],age=int(row["Age"]),
+                expected_duration=float(row["Age"]),starting_price=row["Starting Price"],
+                avg_regime_candle_count_before_change=row["Avg Completed Regime"],
+                completed_regime_run_count=int(row["Completed Regime Samples"]),
+                avg_regime_duration_basis="Completed prior runs only",transition_risk=0.0,
+                quality_grade="A" if completeness>=.95 else "B" if completeness>=.75 else "C" if completeness>=.5 else "D",
+                status="READY",score=float(row["Score"]),signal_strength=min(1.,abs(float(row["Score"]))))
+    return base
+
+
+def _extract_loaded_frames(state: Mapping[str, Any], requested_symbols: list[str]) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
+    """Return every validated loaded frame needed by Super Quick.
+
+    The selector-owned loader performs three independent load transactions and
+    then merges them into ``canonical_symbol_candles``.  ``MARKET_RESULTS_KEY``
+    can therefore contain only the most recently executed selector even though
+    all 20 symbols are already loaded successfully.  Reading only that report
+    made Super Quick miss earlier selector frames and left downstream strategy
+    columns without the candle history required for S1-S6.
+
+    Prefer the current market report when it has a symbol, then fall back to
+    the canonical merged candle map.  No provider call is made here.
+    """
+    from core.finder_history_store_20260924 import collect_loaded_frames, normalize_symbol
+    all_frames,failures=collect_loaded_frames(state)
+    requested=list(dict.fromkeys(normalize_symbol(s) for s in requested_symbols if str(s).strip()))
+    frames={s:all_frames[s] for s in requested if s in all_frames}
+    return frames,{s:failures.get(s,"MISSING_VALIDATED_PRELOADED_FRAME") for s in requested if s not in frames}
+
+
+def _fast_input_signature(
+    frames: Mapping[str, pd.DataFrame], *, selected: list[str], timeframe: str,
+    failures: Mapping[str, str] | None = None,
+) -> str:
+    """Hash the exact bounded candles used by the fast calculation.
+
+    A repeated Super Quick click with unchanged loaded candles can reuse the
+    already-published tables instead of recalculating or writing SQLite again.
+    """
+    digest = sha256()
+    digest.update(FAST_RUN_VERSION.encode("utf-8"))
+    digest.update(str(timeframe).encode("utf-8"))
+    digest.update("|".join(selected).encode("utf-8"))
+    for symbol in selected:
+        digest.update(symbol.encode("utf-8"))
+        frame = frames.get(symbol)
+        if not isinstance(frame, pd.DataFrame) or frame.empty:
+            digest.update(str((failures or {}).get(symbol, "MISSING")).encode("utf-8"))
+            continue
+        columns = [column for column in ("open_time", "open", "high", "low", "close", "volume") if column in frame.columns]
+        bounded = frame.loc[:, columns]
+        digest.update(str(len(frame)).encode("utf-8"))
+        digest.update(pd.util.hash_pandas_object(bounded, index=False).values.tobytes())
+    return digest.hexdigest()
+
+
+def _build_rows(
+    frames: Mapping[str, pd.DataFrame], *, timeframe: str, run_id: str, generation: int,
+    snapshot_hash: str, progress_callback: Any = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, str]]:
+    windows = standard_windows(timeframe)
+    ranking_rows: list[dict[str, Any]] = []
+    evidence_rows: list[dict[str, Any]] = []
+    failures: dict[str, str] = {}
+    symbols = list(frames)
+    total = max(1, len(symbols))
+
+    for index, symbol in enumerate(symbols, start=1):
+        try:
+            frame = frames[symbol]
+            # Lower is deliberately calculated in the fast lane now. This is a
+            # bounded EMA/ATR/slope calculation, not the heavy Quick/Full
+            # research pipeline, so three-bias agreement can be displayed
+            # truthfully without materially slowing Super Quick.
+            lower = _fast_standard(frame, standard="LOWER", window_bars=windows["LOWER"])
+            middle = _fast_standard(frame, standard="MIDDLE", window_bars=windows["MIDDLE"])
+            higher = _fast_standard(frame, standard="HIGHER", window_bars=windows["HIGHER"])
+            for item in (lower, middle, higher):
+                payload = {
+                    "status": item["status"],
+                    "model": "FAST_EMA_ATR_SLOPE_REGIME",
+                    "fast_lane_version": FAST_RUN_VERSION,
+                    "score": item.get("score"),
+                    "window_bars": item.get("window_bars"),
+                    "avg_regime_candle_count_before_change": item.get("avg_regime_candle_count_before_change"),
+                    "completed_regime_run_count": item.get("completed_regime_run_count"),
+                    "avg_regime_duration_basis": item.get("avg_regime_duration_basis"),
+                }
+                evidence_hash = sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
+                evidence_rows.append({
+                    "Parent Run ID": run_id,
+                    "Generation": int(generation),
+                    "Symbol": symbol,
+                    "Timeframe": timeframe,
+                    "Standard": item["standard"],
+                    "Window Bars": int(item.get("window_bars") or windows[item["standard"]]),
+                    "Regime State": item["state"],
+                    "Bias": item["bias"],
+                    "Posterior Probability": float(item["probability"]),
+                    "Persistence Probability": float(item["persistence"]),
+                    "Expected Duration": float(item["expected_duration"]),
+                    "Regime Age": int(item["age"]),
+                    "Changepoint Probability": float(item["transition_risk"]),
+                    "Transition Risk": float(item["transition_risk"]),
+                    "Calibrated Reliability": float(item["reliability"]),
+                    "Signed Evidence Score": float(item.get("score") or 0.0),
+                    "Sample Count": int(item["sample_count"]),
+                    "Data Quality Grade": item["quality_grade"],
+                    "Completed Candle": item["completed_candle"],
+                    "Evidence Hash": evidence_hash,
+                    "Payload JSON": json.dumps(payload, default=str),
+                })
+
+            higher_state = higher["state"]
+            higher_bias = higher["bias"]
+            middle_state = middle["state"]
+            middle_bias = middle["bias"]
+            lower_state = lower["state"]
+            lower_bias = lower["bias"]
+            composite_bias = higher_bias if higher_bias in {"BUY", "SELL"} else middle_bias
+            decision_strength = float(
+                0.60 * higher.get("signal_strength", 0.0)
+                + 0.25 * middle.get("signal_strength", 0.0)
+                + 0.15 * lower.get("signal_strength", 0.0)
+            )
+            rank_payload = {
+                "fast_lane_version": FAST_RUN_VERSION,
+                "higher": higher,
+                "middle": middle,
+                "lower": lower,
+            }
+            rank_hash = sha256(json.dumps(rank_payload, sort_keys=True, default=str).encode()).hexdigest()
+            ranking_rows.append({
+                "Rank": None,
+                "Symbol": symbol,
+                "Lower Regime": lower_state, "Lower Bias": lower_bias,
+                "Middle Regime": middle_state, "Middle Bias": middle_bias,
+                "Higher Regime": higher_state, "Higher Bias": higher_bias,
+                "Three-Regime Agreement": (
+                    1.0 if lower_bias == middle_bias == higher_bias
+                    else 2.0 / 3.0 if len({lower_bias, middle_bias, higher_bias}) == 2
+                    else 0.0
+                ),
+                "Directional Conflict": "YES" if {"BUY", "SELL"}.issubset({lower_bias, middle_bias, higher_bias}) else "NO",
+                "Dominant Standard": "HIGHER",
+                "DCC Correlation Penalty": 0.0,
+                "HRP Cluster": 0,
+                "Spillover TO": 0.0, "Spillover FROM": 0.0, "Net Spillover": 0.0,
+                "Composite Bias": composite_bias,
+                "Composite Score": float(higher.get("score") or 0.0),
+                "Decision Strength": decision_strength,
+                "Entry Permission": "FAST_SUMMARY_ONLY",
+                "Lower Candle After Regime Start": int(lower["age"]),
+                "Middle Candle After Regime Start": int(middle["age"]),
+                "Starting Price": middle.get("starting_price"),
+                "Middle Avg Regime Candle Count Before Regime Change": middle.get("avg_regime_candle_count_before_change"),
+                "Middle Completed Regime Sample Count": int(middle.get("completed_regime_run_count") or 0),
+                "Higher Candle After Regime Start": int(higher["age"]),
+                "Candle After Regime Start": int(higher["age"]),
+                "Regime Start Standard": "HIGHER",
+                "Block Reason": "HEAVY_VALIDATION_DEFERRED_TO_QUICK",
+                "Completed Candle": higher["completed_candle"],
+                "Parent Run ID": run_id,
+                "Generation": int(generation),
+                "Timeframe": timeframe,
+                "Snapshot Hash": snapshot_hash,
+                "Evidence Hash": rank_hash,
+                "Source Data Hash": "",
+                "Rank Explanation": json.dumps(rank_payload, default=str),
+                "Walk-Forward Decision Threshold": "DEFERRED_TO_QUICK",
+                "Adaptive Decision Threshold": "DEFERRED_TO_QUICK",
+            })
+        except Exception as exc:
+            failures[symbol] = f"{type(exc).__name__}: {exc}"
+
+        if callable(progress_callback):
+            percent = 8.0 + 82.0 * (index / total)
+            completed_set = {row["Symbol"] for row in ranking_rows}
+            progress_callback({
+                "overall_percent": percent,
+                "current_symbol": symbol,
+                "current_stage": "Building fast Lower/Middle/Higher regime state and recent-age ranks",
+                "completed_symbols": index,
+                "total_symbols": total,
+                "symbols": {
+                    s: {
+                        "status": "COMPLETED" if s in completed_set else "FAILED" if s in failures else "WAITING",
+                        "percent": 100 if s in completed_set else 0,
+                        "stage": "Fast three-table Field 3",
+                        "calculation_scope": "LUNCH_CORE",
+                    }
+                    for s in symbols
+                },
+            })
+
+    ranking = pd.DataFrame(ranking_rows)
+    if not ranking.empty:
+        ranking["Rank"] = pd.to_numeric(ranking["Candle After Regime Start"], errors="coerce").rank(
+            method="min", ascending=True, na_option="bottom"
+        ).astype("Int64")
+        ranking = ranking.sort_values(["Rank", "Symbol"], kind="mergesort").reset_index(drop=True)
+    return ranking, pd.DataFrame(evidence_rows), failures
+
+
+def run_super_quick_field3(
+    state: MutableMapping[str, Any], *, symbols: list[str] | None = None,
+    timeframe: str | None = None, progress_callback: Any = None,
+) -> dict[str, Any]:
+    started = time.perf_counter()
+    context = get_global_symbol_context(state)
+    from core.finder_history_store_20260924 import collect_loaded_frames,normalize_symbol
+    tf = str(timeframe or state.get("timeframe") or context.timeframe or "H1").strip().upper() or "H1"
+    available,_=collect_loaded_frames(state,tf)
+    requested=symbols if symbols is not None else list(context.loaded_symbols) or list(available)
+    selected=list(dict.fromkeys(normalize_symbol(s) for s in requested if str(s).strip()))
+    if not selected:
+        raise RuntimeError("NO_LOADED_SYMBOLS_FOR_SUPER_QUICK")
+
+    if callable(progress_callback):
+        progress_callback({"overall_percent": 3.0, "current_symbol": selected[0], "current_stage": "Reading validated loaded candles"})
+
+    frames={s:available[s] for s in selected if s in available}
+    failures={s:"MISSING_VALIDATED_PRELOADED_FRAME" for s in selected if s not in available}
+    if not frames:
+        raise RuntimeError("NO_VALIDATED_PRELOADED_FRAMES_FOR_SUPER_QUICK")
+
+    # Align every symbol to the latest candle shared by all loaded frames. This
+    # prevents a mixed-cutoff publication failure without fetching any data.
+    common_cutoff = min(frame["open_time"].iloc[-1] for frame in frames.values())
+    aligned_frames = {
+        symbol: frame.loc[frame["open_time"] <= common_cutoff].copy().reset_index(drop=True)
+        for symbol, frame in frames.items()
+    }
+    aligned_frames = {symbol: frame for symbol, frame in aligned_frames.items() if not frame.empty}
+    input_signature = _fast_input_signature(
+        aligned_frames, selected=selected, timeframe=tf, failures=failures,
+    )
+    # CRITICAL SPEED FIX:
+    # Super Quick must never rebuild Finder history before checking the Field 3
+    # calculation cache. The previous order caused a long Finder backfill to run
+    # first, so users could wait hours while the already-calculated Field 3 data
+    # was still hidden. Cache validation is now the first operation after loading.
+    cached_result = state.get("super_quick_field3_cached_result_20260727")
+    cached_ranking = state.get("field3_multisymbol_regime_20260708")
+    cached_evidence = state.get("field3_regime_evidence_v2")
+    if (
+        str(state.get("super_quick_field3_input_signature_20260727") or "") == input_signature
+        and isinstance(cached_result, Mapping)
+        and isinstance(cached_ranking, pd.DataFrame) and not cached_ranking.empty
+        and "Symbol" in cached_ranking.columns
+        and isinstance(cached_evidence, pd.DataFrame) and not cached_evidence.empty
+        and set(cached_ranking["Symbol"].astype(str)) == set(aligned_frames)
+    ):
+        elapsed = round(time.perf_counter() - started, 3)
+        reused = {
+            **dict(cached_result),
+            "status": "COMPLETED" if not failures else "PARTIAL",
+            "ok": True,
+            "selected_symbols": list(selected),
+            "elapsed_seconds": elapsed,
+            "provider_requests": 0,
+            "reused_cached_calculation": True,
+            "cache_signature": input_signature,
+        }
+        state["field3_fast_two_table_mode_20260722"] = True
+        state["field3_fast_three_table_mode_20260729"] = True
+        state["field3_last_run_scope_20260722"] = "LUNCH_CORE"
+        state["settings_run_status_20260617"] = reused
+        if callable(progress_callback):
+            progress_callback({
+                "overall_percent": 100.0,
+                "current_symbol": selected[-1],
+                "current_stage": "Unchanged candles — reused cached all-loaded Field 3 result",
+                "completed_symbols": len(aligned_frames),
+                "total_symbols": len(selected),
+            })
+        return reused
+
+    run_id = f"SQF3-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid.uuid4().hex[:8]}"
+    generation = int(context.generation or 1)
+    snapshot_hash = sha256(
+        json.dumps({"run_id": run_id, "symbols": list(aligned_frames), "timeframe": tf, "cutoff": common_cutoff.isoformat()}, sort_keys=True).encode()
+    ).hexdigest()
+
+    ranking, evidence, calculation_failures = _build_rows(
+        aligned_frames, timeframe=tf, run_id=run_id, generation=generation,
+        snapshot_hash=snapshot_hash, progress_callback=progress_callback,
+    )
+    failures.update(calculation_failures)
+    completed_symbols = ranking["Symbol"].astype(str).tolist() if not ranking.empty else []
+    if not completed_symbols:
+        raise RuntimeError("SUPER_QUICK_NO_SYMBOL_COMPLETED")
+
+    state["field3_multisymbol_regime_20260708"] = ranking
+    state["field3_regime_evidence_v2"] = evidence
+    state["field3_research_validation_v2"] = pd.DataFrame()
+    state["field3_fast_two_table_mode_20260722"] = True
+    state["field3_fast_three_table_mode_20260729"] = True
+    state["field3_last_run_scope_20260722"] = "LUNCH_CORE"
+    # A new candle signature requires an explicit Finder rebuild; do not let a
+    # previous Finder view silently reuse stale historical rows.
+    state["field3_middle_finder_history_ready_20260824"] = False
+    state["field3_middle_finder_run_requested_20260824"] = False
+    state["super_quick_field3_run_20260722"] = {
+        "run_id": run_id,
+        "symbols": completed_symbols,
+        "failed": dict(failures),
+        "timeframe": tf,
+        "common_completed_candle": common_cutoff.isoformat(),
+        "version": FAST_RUN_VERSION,
+    }
+
+    # Finder is an explicitly requested secondary workflow.  Never backfill or
+    # read its full historical store from Super Quick: a large loaded candle
+    # set can make that operation expensive enough to hide the instant Field 3
+    # publication.  The Field 3 page exposes a separate Run Finder action that
+    # calls _persist_middle_finder_history only when the user asks for it.
+    state["super_quick_middle_finder_history_20260818"] = {
+        "ok": True,
+        "status": "DEFERRED_UNTIL_RUN_FINDER",
+        "rows": int(len(state.get(MIDDLE_HISTORY_STATE_KEY))) if isinstance(state.get(MIDDLE_HISTORY_STATE_KEY), pd.DataFrame) else 0,
+        "signature": input_signature,
+    }
+
+    # Persist the compact evidence for reloads. Persistence is non-blocking; the
+    # session result remains usable even if the local database is unavailable.
+    persistence_status: dict[str, Any]
+    try:
+        from core.field3_three_regime_engine import persist_field3_v2
+        persistence_status = {"ok": True, **persist_field3_v2(ranking, evidence)}
+    except Exception as exc:
+        persistence_status = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+        state["super_quick_field3_persistence_warning_20260722"] = persistence_status["error"]
+
+    publication_status: dict[str, Any]
+    try:
+        completion_members = {
+            symbol: {
+                "timeframe": tf,
+                "latest_completed_candle": common_cutoff.isoformat(),
+                "data_quality_grade": "FAST_VALIDATED",
+            }
+            for symbol in completed_symbols
+        }
+        published = publish_completed_generation(
+            context.universe_id,
+            completion_members,
+            parent_run_id=run_id,
+            snapshot_hash=snapshot_hash,
+            latest_completed_candle=common_cutoff.isoformat(),
+            calculation_depth="SUPER_QUICK_FIELD3_THREE_TABLES",
+            state=state,
+        )
+        publication_status = {"ok": True, "status": published.publication_status, "generation": published.generation}
+    except Exception as exc:
+        # Unlike the legacy global contract, a publication warning never discards
+        # valid symbol rows. The exact completed rows stay visible in Field 3.
+        publication_status = {"ok": False, "status": "SESSION_RESULT_PUBLISHED", "error": f"{type(exc).__name__}: {exc}"}
+        state["super_quick_field3_publication_warning_20260722"] = publication_status["error"]
+
+    elapsed = round(time.perf_counter() - started, 3)
+    if callable(progress_callback):
+        progress_callback({
+            "overall_percent": 100.0,
+            "current_symbol": completed_symbols[-1],
+            "current_stage": "Fast Field 3 three-table result ready",
+            "completed_symbols": len(completed_symbols),
+            "total_symbols": len(selected),
+        })
+
+    status = "COMPLETED" if not failures else "PARTIAL"
+    result = {
+        "status": status,
+        "ok": bool(completed_symbols),
+        "run_id": run_id,
+        "parent_run_id": run_id,
+        "calculation_generation": generation,
+        "calculation_scope": "SUPER_QUICK_FIELD3_THREE_TABLES",
+        "selected_symbols": selected,
+        "completed_symbol_list": completed_symbols,
+        "completed_symbols": len(completed_symbols),
+        "failed_symbol_list": sorted(failures),
+        "failed_symbols": len(failures),
+        "symbol_status": {
+            symbol: {"status": "COMPLETED" if symbol in completed_symbols else "FAILED", "error": failures.get(symbol, "")}
+            for symbol in selected
+        },
+        "completion_contract": {
+            "ok": bool(completed_symbols),
+            "status": "FAST_THREE_TABLE_READY" if completed_symbols else "FAILED",
+            "selected_count": len(selected),
+            "field3_row_count": len(ranking),
+            "completed_count": len(completed_symbols),
+            "failed_count": len(failures),
+        },
+        "elapsed_seconds": elapsed,
+        "provider_requests": 0,
+        "deferred_to_quick": [
+            "Final Cross-Symbol Ranking", "Field 10/11", "AI/NLP",
+            "research validation", "trust history", "institutional shadow layer",
+        ],
+        "persistence": persistence_status,
+        "global_publication": publication_status,
+        "result_tables": [
+            "Regime Age Ranking — Candle After Regime Start Only",
+            "Middle Regime Age Ranking — Candle After Middle Regime Start Only",
+            "Higher Standard Summary",
+        ],
+        "reused_cached_calculation": False,
+        "cache_signature": input_signature,
+    }
+    state["super_quick_field3_input_signature_20260727"] = input_signature
+    state["super_quick_field3_cached_result_20260727"] = dict(result)
+    state["settings_run_status_20260617"] = result
+    return result
+
+
+__all__ = ["FAST_RUN_VERSION", "run_super_quick_field3"]

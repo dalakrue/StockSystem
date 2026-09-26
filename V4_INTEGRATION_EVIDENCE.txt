@@ -1,0 +1,23 @@
+Middle Regime Adaptive Strategy Engine v4 — integration evidence
+Engine version: middle-regime-adaptive-v4-20260926
+
+Code:
+- core/middle_regime_adaptive_v4.py defines VERSION, the five independent family gates, directional model, adaptive quote-price TP/SL and manage_trade.
+- core/strategy_audit_20260924.py retains S1-S110 audit columns and publishes v4 Adaptive Decision as Strategy Decision.
+- core/super_quick_field3_20260722.py runs the same audit for Finder, enforces completed candles and migrates stale engine-version cache rows.
+- ui/field3_multisymbol_regime_summary_20260722.py runs the same audit for live Field 3 and does not cap protective exits.
+
+Finder smoke output:
+adaptive_v4_ten_symbol_diagnostics.csv (synthetic, NOT market performance data)
+3,600 completed H1 rows across 10 symbols; every Strategy Engine cell equals middle-regime-adaptive-v4-20260926 and every Strategy Profile cell equals BASELINE.
+Contains Market Regime, BUY/SELL Probability %, Strategy Family, TP/SL pip distances and quote-price levels, plus S1-S110 legacy audit columns.
+
+Focused tests:
+python -m pytest -q tests/test_middle_regime_adaptive_v4.py tests/test_finder_s1_s50_repair_20260924.py tests/test_strategy_s1_s6_no_wait_20260918.py tests/test_s1_s20_finder_upgrade_20260923.py
+38 passed.
+
+Additional existing file:
+python -m pytest -q tests/test_field3_auth_finder_20260818.py
+5 passed, 1 failed: test_router_targets_field3 searches for def _open_lunch_ai_after_settings_run in tabs/antd_page_router_20260615.py. This function is absent in both the input ZIP and the delivered file; it is unrelated to the v4 changes.
+
+Research smoke command on synthetic data ran successfully and produced 20 hypothetical settled signals. No improvement claim, cost-aware unseen validation, or forward result is asserted. Candidate family weights can be installed only after the comparison gates approve them; each profile has a later effective date and cache identity. No outcome-trained candidate weights are approved or installed.

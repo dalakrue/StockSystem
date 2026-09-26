@@ -1,0 +1,12 @@
+Middle Standard Pullback Expansion — 2026-09-23
+
+1. Preserved S1-S10 calculations and hard safety gates.
+2. Added independent Middle Standard pullback strategies S11-S15:
+   - S11 VWAP/value reclaim
+   - S12 Fibonacci retracement reclaim
+   - S13 ADX/DMI strength recovery
+   - S14 Donchian midline reclaim
+   - S15 wick-rejection pullback
+3. Strategy Decision now publishes every triggered S1-S15 symbol; there is no top-10/top-2 truncation.
+4. Finder history now calculates S1-S15 per completed historical candle using only candles up to that timestamp.
+5. Finder strategy filters now accept individual S1-S15 labels even when one row contains multiple triggered strategies.

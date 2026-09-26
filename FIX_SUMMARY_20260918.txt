@@ -1,0 +1,46 @@
+StratLit repair — 2026-09-18
+
+Implemented requirements
+- Locked multi-symbol loading to exactly these 20 FX pairs only:
+  AUDCAD AUDCHF AUDJPY AUDNZD AUDUSD CHFJPY EURAUD EURCAD EURCHF EURGBP
+  EURJPY EURNZD EURUSD GBPJPY GBPUSD NZDCAD NZDUSD USDCAD USDCHF USDJPY
+- XAUUSD and all non-target symbols are rejected at selector, group, canonical-loader,
+  Super Quick, and Finder boundaries, including stale persisted state.
+- Fixed S2/S4 confirmation handling: S2 and S4 require at least two confirmations
+  in the same clock hour across the fixed 20-symbol live snapshot.
+- Fixed live pullback lookup to use each symbol's canonical validated candle frame.
+- Preserved the already-existing startup Load All + Super Quick auto-run flow.
+- Reworked Finder loading to avoid duplicate parquet/CSV/session merges and avoid
+  historical row-by-row HMM/pullback replay. Finder uses cached/vectorized history.
+- Removed the Field 3 mobile-card renderer and switched Field 3 to one table renderer.
+- Removed Lower Standard Summary and Middle Standard Summary rendering.
+- Removed Super Quick posterior/persistence/possibility formulas; compatibility fields
+  remain as neutral numeric placeholders only for the existing persistence schema.
+
+Validation performed
+- Python compileall: passed for app.py, core, ui, tabs, tools.
+- Architecture validator: passed.
+- Fixed-20 / S2-S4 regression validator: passed.
+- Fixed 20 boundary + stale XAUUSD filtering test: passed.
+- Synthetic Finder test: 350,400 rows loaded/prepared in ~3.8 seconds in the repair environment.
+
+Environment note
+- A live Streamlit server smoke test could not be launched in the repair container because
+  Streamlit is not installed there. requirements.txt already declares streamlit>=1.35,<2.
+
+Additional S1-S6 no-WAIT repair
+- Fixed the selector-to-Super-Quick handoff: Super Quick now reads every merged
+  canonical_symbol_candles frame when the latest MARKET_RESULTS report only
+  contains the most recently loaded selector batch.
+- Bumped the Super Quick input version so stale pre-fix cached calculations are
+  not reused after this upgrade.
+- Fixed Field 3 strategy enrichment so S1-S6 static scores are recalculated
+  from each symbol's own loaded candle history on every current render/export.
+- Replaced strategy WAIT placeholders with completed terminal states (NO ENTRY)
+  and numeric 0-100 S1-S6 scores.
+- Strategy Decision now displays the two strongest S1-S6 strategies for each
+  directional symbol, using the same freshly recalculated scores.
+- Added S1-S6 score columns to the visible Middle Standard table and canonical
+  CSV/XLSX export order.
+- Added regression coverage for merged 20-symbol candle loading and no-WAIT
+  S1-S6 output.

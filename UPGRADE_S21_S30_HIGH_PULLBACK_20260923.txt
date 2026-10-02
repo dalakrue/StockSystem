@@ -1,0 +1,8 @@
+System 2 High Pullback Upgrade
+
+- S1-S20 preserved.
+- S21-S30 replaced with high-quality pullback opportunity layer.
+- Entry requires trend alignment + pullback + confirmation.
+- Minimum confidence increased to 75.
+- Adaptive TP/SL proposal improved for lower risk.
+- Backtest required before claiming performance improvement.

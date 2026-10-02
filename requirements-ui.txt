@@ -1,0 +1,7 @@
+streamlit-antd-components>=0.3.2
+streamlit-option-menu>=0.3.12
+streamlit-extras>=0.7.0
+streamlit-shadcn-ui>=0.1.18
+streamlit-modal>=0.1.2
+streamlit-aggrid>=1.1.0
+streamlit-js-eval>=0.1.7

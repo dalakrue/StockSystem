@@ -1,0 +1,23 @@
+HISTORICAL NOTE — SUPERSEDED BY THE 2026-07-29 H1 / MIDDLE-AGE / LOAD-UPDATE UPGRADE.
+See README_RUN_FIRST.txt and UPGRADE_SUMMARY_20260729_H1_MIDDLE_AGE_LOAD_UPDATE.txt for current behavior.
+
+ADX Quant Pro Top-30 Upgrade Validation
+Date: 2026-07-27
+
+PASS — Python syntax compilation across the complete extracted project.
+PASS — Canonical selector cap is 30.
+PASS — First, Second, and Third presets contain 10 unique symbols each.
+PASS — The three preset groups combine to 30 unique symbols.
+PASS — Third Best 10 contains DXY.
+PASS — Third Best 10 does not overlap First or Second Best 10.
+PASS — Old empty selector profile upgrades to the new 10 + 10 + 10 defaults.
+PASS — Synthetic 30-symbol Super Quick run completed all 30 symbols.
+PASS — Synthetic Super Quick provider request count was zero.
+PASS — Second unchanged Super Quick run reused the cached calculation.
+PASS — Field 3 phone card marks Top 5 and Higher/Middle regime matches.
+PASS — Desktop Field 3 keeps a safe unstyled fallback if pandas Styler/Jinja2
+       is unavailable.
+
+Live limitation:
+Actual symbol availability and spread depend on the connected broker/provider,
+account type, market session, news conditions, key validity, and API quota.

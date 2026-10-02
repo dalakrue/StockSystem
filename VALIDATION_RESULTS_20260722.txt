@@ -1,0 +1,20 @@
+HISTORICAL NOTE — SUPERSEDED BY THE 2026-07-29 H1 / MIDDLE-AGE / LOAD-UPDATE UPGRADE.
+See README_RUN_FIRST.txt and UPGRADE_SUMMARY_20260729_H1_MIDDLE_AGE_LOAD_UPDATE.txt for current behavior.
+
+VALIDATION RESULTS — 2026-07-22
+
+PASS — Full Python compile check for app.py, adx_dashpoard.py, core, tabs, ui,
+       services and research_quant.
+PASS — Synthetic H4 benchmark with 10 symbols / 597 candles each.
+       Super Quick elapsed: 0.1410 seconds on local synthetic frames.
+       Provider/API requests during Super Quick: 0.
+PASS — Result contains only the two requested table names.
+PASS — Regime age rows sort in ascending candle age; Rank 1 is newest.
+PASS — Requested Higher/Middle contextual columns are present.
+PASS — Valid duplicate result from another selector overrides stale failed record.
+PASS — Load All continues to Selector 2 and Selector 3 when Selector 1 raises.
+
+The 0.1410-second result is a local synthetic calculation benchmark, not a
+network loading guarantee. Explicit market-data loading time still depends on
+provider availability, quota and connection speed. The Super Quick calculation
+itself uses only loaded data and is designed to remain far below five minutes.

@@ -1,0 +1,11 @@
+S1-S20 Middle Standard + Finder Repair — 2026-09-23
+
+1. Expanded the independent Middle Standard pullback strategy contract from S1-S15 to S1-S20.
+2. Added S16 Keltner midline reclaim, S17 RSI-2 reset, S18 pivot reclaim, S19 Ichimoku Kijun reclaim, and S20 OBV/volume momentum pullback.
+3. Existing S1-S15 live strategy logic remains intact; S16-S20 are additive and share only the existing hard safety gates.
+4. Strategy Decision publishes every triggered S1-S20 with no top-10/top-2 truncation.
+5. Finder opening no longer runs the historical replay automatically. The section opens from persisted history immediately.
+6. Finder strategy refresh is a separate action and uses a vectorized causal S1-S20 replay so history does not wait on a per-candle HMM loop.
+7. Finder refresh/reuse accepts only a history snapshot containing Strategy Decision plus S9/S10/S20 audit columns, so legacy S1-S15/older files are rebuilt rather than incorrectly reused.
+8. Middle Standard Ranking and Finder display/export Symbol as the first column, followed by Strategy Decision.
+9. Finder CSV/XLSX and Middle CSV/XLSX use the same S1-S20 audit contract.

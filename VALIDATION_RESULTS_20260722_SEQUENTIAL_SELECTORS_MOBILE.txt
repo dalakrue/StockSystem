@@ -1,0 +1,20 @@
+VALIDATION RESULTS — 2026-07-22
+
+PASS: python -m compileall -q core ui tabs
+PASS: python tools/validate_selector_sequential_fix_20260722.py
+Output: ALL_SELECTOR_SEQUENTIAL_AND_FIELD3_MOBILE_TESTS_PASS
+
+Validated behaviors:
+- Selector-only request can be a subset of the configured global universe.
+- Scheduler receives only the later selector's requested symbol(s).
+- Saved runtime preference retains the complete configured universe.
+- A symbol outside the configured universe is still rejected.
+- EURAUD is in First Best 10; EURUSD is in Second Best 10.
+- Phone mode creates no-horizontal-scroll Field 3 record cards and preserves the
+  full dataframe in a collapsed audit expander.
+
+Environment limitation:
+- Streamlit was not installed in the build container, so the complete interactive
+  app server was not launched here. Streamlit is correctly listed in the included
+  requirements files. All changed Python files and the full core/ui/tabs tree
+  passed compilation.

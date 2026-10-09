@@ -1,0 +1,5 @@
+# Local Windows installation for the restored MT5 connector.
+# Streamlit Cloud/Linux users should continue using requirements.txt because
+# the official MetaTrader5 Python package requires a local Windows MT5 terminal.
+-r requirements.txt
+MetaTrader5>=5.0.45; platform_system == "Windows" and python_version >= "3.10" and python_version < "3.14"

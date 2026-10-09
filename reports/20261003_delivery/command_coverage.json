@@ -1,0 +1,146 @@
+[
+  {
+    "item": "1",
+    "requirement": "Inputs and provenance",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "Attachment/code hashes and separate raw export exist. Session proxy flags non-executable OHLC; broker reconciliation of the claimed 38,104 weekend rows requires absent quotes."
+  },
+  {
+    "item": "2",
+    "requirement": "Timestamp ownership",
+    "status": "IMPLEMENTED",
+    "detail": "UTC bar-open, signal at close, next executable open. Actual Rangoon local checks and stale-signal rejection have fixture checks."
+  },
+  {
+    "item": "3",
+    "requirement": "Shared owners",
+    "status": "IMPLEMENTED WITH LIMITS",
+    "detail": "Specified strategy, target and selection modules own new outputs. Old legacy helpers remain for audit compatibility. Complete before/after market parity is unmeasured."
+  },
+  {
+    "item": "4",
+    "requirement": "Typed schema",
+    "status": "IMPLEMENTED",
+    "detail": "Required fields pass through fast/compact exports. Rule scores are separate from probabilities; unavailable direction probability remains NaN."
+  },
+  {
+    "item": "5",
+    "requirement": "Duplicate votes",
+    "status": "IMPLEMENTED",
+    "detail": "30 aliases carry no votes; 86 possible canonical owners remain after 4 contradictory IDs are disabled. Removal recomputes evidence and rescue masks."
+  },
+  {
+    "item": "6",
+    "requirement": "Inactive/volume rules",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "S87\u2013S90 disabled. Genuine-volume rules suppressed when provenance is missing. Actual inactive frequencies require the missing research input."
+  },
+  {
+    "item": "7",
+    "requirement": "Relaxation / regime gates",
+    "status": "PARTIAL",
+    "detail": "Default 0; four training relaxation candidates and offline ablation exist. Four independent regime-specific strategy gates and plateau selection are not completed."
+  },
+  {
+    "item": "8",
+    "requirement": "Origin / rank-fill comparison",
+    "status": "PARTIAL",
+    "detail": "STRATEGY/RESCUE/RANK_FILL are explicit; zero-hit display cannot execute. A research rank-fill counterfactual and unseen coverage benefit are not established."
+  },
+  {
+    "item": "9",
+    "requirement": "Scheduled portfolio",
+    "status": "IMPLEMENTED",
+    "detail": "Six checks; skip Sunday/Monday and closed proxy sessions; at most two new symbols; inspect four and skip held/ineligible symbols with reasons."
+  },
+  {
+    "item": "10",
+    "requirement": "Removal regeneration",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "Raw strategy removal regenerates rescue masks, scores and all-symbol selection. Comparison to the original exported-candidate policy is not run."
+  },
+  {
+    "item": "11",
+    "requirement": "Final-pair labels",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "Timestamped first-touch outcomes on final adjusted pairs; full-interval release and missing-path censoring tested. Executable bid/ask labels require absent data."
+  },
+  {
+    "item": "12",
+    "requirement": "EV and calibration",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "Actual defined payouts/costs; offline chronological regularized classifier, Brier/bins and empirical comparison runner. No fitted market model or validated uncertainty supplied."
+  },
+  {
+    "item": "13",
+    "requirement": "Structural risk cap",
+    "status": "IMPLEMENTED / BROKER PENDING",
+    "detail": "Required causal invalidation plus buffer; excessive stop rejects, without widening for rebound. Emergency-stop replay exists; broker-side placement needs broker integration."
+  },
+  {
+    "item": "14",
+    "requirement": "Elapsed horizon",
+    "status": "IMPLEMENTED / BROKER PENDING",
+    "detail": "Absolute 24h deadline, pre-closure flatten, no stale last-quote exit, censored missing path. Actual broker session calendars remain to be provided."
+  },
+  {
+    "item": "15",
+    "requirement": "Intrabar uncertainty",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "TP-first portfolio primary, SL-first stress, gap fill at executable open. No lower-timeframe bid/ask path to establish true H1 order."
+  },
+  {
+    "item": "16",
+    "requirement": "Target reach forecast",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "Final-pair candidates, conditional empirical hit horizons and reach quartiles exported. Independent drawdown-based selection and calibrated intervals are unmeasured."
+  },
+  {
+    "item": "17",
+    "requirement": "Account risk",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "Input validation, stop sizing and currency-unit exposure utilities exist. Money/percent drawdown and empirical currency correlations require missing account/quote evidence."
+  },
+  {
+    "item": "18",
+    "requirement": "Kelly diagnostic",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "Binary approximation and bounded-return log-growth diagnostic; no automatic allocation. Conservative fractions/exposure caps have not been paper-tested."
+  },
+  {
+    "item": "19",
+    "requirement": "Chronology",
+    "status": "IMPLEMENTED / FORWARD PENDING",
+    "detail": "Declared 2024 train, 2025 validation, 2026 parameter replay. Fitting excludes post-2024 labels. Older independent history and untouched post-freeze forward data absent."
+  },
+  {
+    "item": "20",
+    "requirement": "Research suite",
+    "status": "PARTIAL / BLOCKED",
+    "detail": "Replay, grid, bootstrap, sensitivity, regimes, LOSO/ablation/cost stresses available. Actual runs, true rolling refit and DSR/PBO remain incomplete; no evidence is fabricated."
+  },
+  {
+    "item": "21",
+    "requirement": "Scenarios",
+    "status": "IMPLEMENTED RUNNER / BLOCKED",
+    "detail": "Eight scenarios, three splits and four removal variants represented as 96 blocked rows. No scenario was selected from market evidence."
+  },
+  {
+    "item": "22",
+    "requirement": "Acceptance gates",
+    "status": "DECLARED / NOT PASSED",
+    "detail": "Fixed thresholds recorded before new forward results. Broker execution, calibrated uncertainty, robustness and affordable account risk are not demonstrated."
+  },
+  {
+    "item": "23",
+    "requirement": "Delivery",
+    "status": "PARTIAL",
+    "detail": "App, Word report, status tables, empty result schemas, diff, runner and software verification included. Actual ledgers/rankings cannot exist without research inputs."
+  },
+  {
+    "item": "24",
+    "requirement": "Measured improvement",
+    "status": "BLOCKED",
+    "detail": "No identical-data before/after portfolio comparison was measured. No live configuration qualifies; next work is broker evidence plus model/regime completion."
+  }
+]

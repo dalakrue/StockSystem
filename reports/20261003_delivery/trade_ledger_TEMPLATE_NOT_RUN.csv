@@ -1,0 +1,1 @@
+trade_id,Symbol,check_at,signal_available_at,entry_at,exit_at,entry_side,entry_price,tp_price,sl_price,exit_price,exit_reason,net_pips,hold_hours,entry_origin,active_strategy_ids

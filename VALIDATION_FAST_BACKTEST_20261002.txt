@@ -1,0 +1,45 @@
+FINAL VALIDATION — 2026-10-02
+
+Full regression suite:
+........................................................................ [ 70%]
+..............................                                           [100%]
+102 passed, 23 warnings in 155.95s (0:02:35)
+
+Focused storage/download/worker tests with PyArrow 24.0.0:
+...................                                                      [100%]
+19 passed, 23 warnings in 66.39s (0:01:06)
+
+Environment: Python 3.12.14; pandas 2.2.3; Streamlit 1.64.0; PyArrow 24.0.0.
+
+10,000 H1 candle benchmark (median of 3 runs per mode):
+{
+  "FULL": {
+    "rows": 10000,
+    "columns": 569,
+    "memory_bytes": 24470014,
+    "runs_seconds": [
+      3.539,
+      3.057,
+      3.264
+    ],
+    "median_seconds": 3.264
+  },
+  "BACKTEST_FAST": {
+    "rows": 10000,
+    "columns": 327,
+    "memory_bytes": 10649971,
+    "runs_seconds": [
+      2.739,
+      2.691,
+      2.764
+    ],
+    "median_seconds": 2.739
+  },
+  "retained_fields_equal": true,
+  "calculation_time_reduction_percent": 16.1,
+  "retained_dataframe_memory_reduction_percent": 56.5
+}
+
+All retained original strategy fields matched. Tests include 20-symbol full engine exports, four entry flags per complete hour, early raw download publication, real two-process spawn, cross-partition selection/exit-state equality, real Streamlit controls, corrupt chunk resume and split remote-file transport.
+
+Live Twelve Data/Supabase/Streamlit Cloud execution was not performed. Changed-input strategy calculations retain a full chronological replay rather than claiming exact finite-warmup incremental state. See FAST_BUILD_DOWNLOADS_READ_ME_20261002.md.

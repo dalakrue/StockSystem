@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-01",
+  "scope": "Fast Build continuous all-symbol candles and professional execution backtest",
+  "tests": {
+    "passed": 64,
+    "failed": 0,
+    "suite": "python -m pytest -q tests",
+    "elapsed_seconds": 68.43
+  },
+  "verified_behaviors": [
+    "Fast Build publishes non-empty raw OHLC chunks as candle_chunk result artifacts",
+    "older completed jobs reconstruct candle inventory from saved chunk checkpoints",
+    "all-symbol candle loading keeps unselected symbols and deduplicates chunk boundaries",
+    "four-entry signal CSV remains exactly the decision file",
+    "professional ZIP includes signals, all-symbol candles, Middle Bias timeline, trade results, summary, and policy README",
+    "future TP and SL are evaluated with later candle High and Low",
+    "same-candle TP and SL uses conservative SL-first ordering",
+    "Middle Bias loss exits at the completed future candle Close",
+    "24-hour cap and 2-pip spread are applied",
+    "MFE, MAE, maximum floating loss, and hold hours are reported",
+    "insufficient future tails are excluded from realized backtest results",
+    "existing hourly four-symbol selection and S1-S110 regression tests remain green"
+  ],
+  "limits": [
+    "Provider access is mocked in automated worker tests; no live Twelve Data call is claimed.",
+    "OHLC cannot reveal tick order inside one candle, so simultaneous TP/SL uses conservative SL-first handling.",
+    "No missing future candle or price is fabricated."
+  ]
+}

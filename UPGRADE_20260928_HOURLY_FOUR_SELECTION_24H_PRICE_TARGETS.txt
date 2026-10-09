@@ -1,0 +1,78 @@
+UPGRADE: Middle Regime Ranking + Historical Finder
+Date: 2026-09-28
+Version: hourly-four-selector-v1-20260928
+
+WHAT CHANGED
+============
+1. EXACTLY FOUR PUBLISHED OPPORTUNITIES PER COMPLETED HOUR
+   - When 4+ symbols are available, the public Strategy Decision layer selects
+     exactly 4 symbols per completed hourly snapshot.
+   - Genuine S1-S110 entry-condition hits are ranked first.
+   - If fewer than 4 genuine hits exist, the remaining slots are filled from
+     the strongest non-hit situations across the other symbols.
+   - Filled rows are explicitly labelled RANK-FILL. The underlying S1-S110
+     audit remains truthful; a rank-fill is NOT fabricated as an S1-S110 hit.
+   - Unselected rows show Strategy Decision = None.
+   - Selected rows receive rank #1/4 ... #4/4 and the selected-first table order.
+   - The same four-row decision publication is applied to the live Middle
+     Standard Regime Ranking and the Historical Finder.
+
+2. MORE ENTRY OPPORTUNITIES WITHOUT REWRITING S1-S110 TRUTH
+   - Existing S1-S110 trigger definitions remain intact.
+   - The previously requested S1-S92 30% relaxation remains in the shared
+     strategy audit.
+   - A causal Near Entry Score is used to compare non-hit symbols and fill
+     unused hourly slots.
+   - Selection scoring considers actual strategy hits, number of hits, best
+     strategy score, near-entry quality, regime alignment, price TP/SL ratio,
+     and volatility-normalized TP potential.
+
+3. DYNAMIC 24-HOUR PRICE TP/SL
+   - Suggested TP / Suggested SL are now actual MARKET PRICES, not pips.
+   - Target distance uses completed-candle information only: ATR, historical
+     24-hour realized range, prior-range P85/P70 statistics, volatility move,
+     directional room, trend strength, and momentum.
+   - A causal upper envelope limits the target to a volatility-aware maximum-
+     likely range instead of allowing a single old spike to dominate forever.
+   - SL uses recent structure plus ATR-based floor/cap and is placed on the
+     correct side of price for BUY/SELL.
+   - Additional visible/export fields include:
+       Suggested TP Price
+       Suggested SL Price
+       TP Price Display
+       SL Price Display
+       24H Historical Range
+       24H Range P85
+       24H Volatility Move
+       24H TP Distance
+       24H TP Upper Envelope
+       24H SL Distance
+       TP Estimate Basis
+       TP:SL Price Ratio
+       TP Within 24H
+
+4. UI / FINDER INTEGRATION
+   - Strategy Decision is shown beside Symbol in the primary ranking layout.
+   - Four selected symbols are promoted to the top of each hourly group.
+   - Finder preview and exports retain the new four-slot fields and price-based
+     target fields.
+   - Finder status text identifies the S1-S110 + hourly four-symbol layer.
+
+DESIGN NOTE
+===========
+The request to make every hour show four opportunities is implemented as a
+separate hourly portfolio-selection layer. It does not falsify the original
+strategy audit by changing False S1-S110 conditions to True. This preserves
+backtest/audit traceability while still guaranteeing four published candidates
+when the loaded universe contains at least four symbols.
+
+VALIDATION
+==========
+- 3 new selector/audit tests: PASS.
+- Existing focused Finder/ranking tests: 10 PASS.
+- Manual synthetic integration: 20 symbols x 190 hourly snapshots produced
+  3,800 rows, with exactly 4 selected and exactly 4 non-None Strategy Decision
+  rows in every hourly snapshot where 20 symbols were present.
+- Full legacy Finder repair test file: 13 PASS; remaining failures were caused
+  by missing optional runtime dependencies in this validation container
+  (pyarrow/fastparquet and streamlit), not by selector assertions.

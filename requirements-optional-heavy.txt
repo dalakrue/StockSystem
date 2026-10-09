@@ -1,0 +1,10 @@
+# Install only for optional research/model-tuning workflows.
+optuna>=3.6,<5
+transformers>=4.41,<5
+torch>=2.2,<3; python_version < "3.13"
+lightgbm>=4.0; python_version < "3.14"
+catboost>=1.2; python_version < "3.13"
+hmmlearn>=0.3; python_version < "3.13"
+
+# Optional explicit-request-only server backend (not part of normal startup).
+airllm==2.11.0; python_version >= "3.9" and python_version < "3.13"

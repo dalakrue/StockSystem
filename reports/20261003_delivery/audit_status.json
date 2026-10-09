@@ -1,0 +1,17 @@
+{
+  "status": "BLOCKED_MISSING_RESEARCH_DATA",
+  "baseline_rows_claimed": 283516,
+  "baseline_symbols_claimed": 20,
+  "weekend_rows_claimed": 38104,
+  "training_winner_claimed": {
+    "TP": 77,
+    "SL": 103
+  },
+  "validation_integer_pairs_claimed": 241081,
+  "baseline_verified": false,
+  "reason": "The attached app ZIP has no matching continuous two-year 20-symbol CSV. Broker executable bid/ask quotes and account inputs are also absent.",
+  "live_configuration_qualifies": false,
+  "portfolio_improvement_measured": false,
+  "forecast_intervals": null,
+  "experiments_run": 0
+}

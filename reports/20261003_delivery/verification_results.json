@@ -1,0 +1,37 @@
+{
+  "regression": {
+    "tests": 121,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 121,
+    "seconds": 151.969
+  },
+  "app_startup": {
+    "exceptions": [],
+    "errors": [],
+    "titles": [
+      "Field 3 \u2014 Multi-Symbol Regime Ranking"
+    ],
+    "passed": true
+  },
+  "software_passed": true,
+  "financial_audit_passed": false,
+  "live_configuration_qualifies": false,
+  "historical_experiments_run": 0,
+  "fixture_tests_are_not_market_validation": true,
+  "synthetic_runner_smoke": {
+    "passed": true,
+    "synthetic_only": true,
+    "input_rows": 192,
+    "input_symbols": 2,
+    "scenario_table_rows": 96,
+    "deployment_enabled": false,
+    "calibration_insufficient_data_correctly_reported": true,
+    "market_performance_claimed": false,
+    "note": "Workflow smoke only. No synthetic returns or ranks are delivered as historical evidence."
+  },
+  "runtime_python": "3.12.14",
+  "test_migrations": "Obsolete expectations for forced zero-hit signals, 40% default relaxation, guaranteed 24h TP reach and inactive scores were updated to the uploaded command. Numerical and prefix-causality checks were added.",
+  "earlier_verification": "A prior full run had 8 failures/107 passes; five were a raw-finalizer variable-scope bug, two obsolete display assertions, and one malformed stop fixture. These were corrected. The next full run had 1 obsolete display assertion/116 passes. A subsequent run had 120 passes and a UI fixture state-isolation failure after startup persisted state; the fixture was isolated. A new targeted bundle check exposed a missing typed bias timestamp; fixed before final run."
+}

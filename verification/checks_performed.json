@@ -1,0 +1,15 @@
+{
+  "replacement": "S1\u2013S240 exclusively; fixed 20 symbols \u00d712 Myanmar months",
+  "equations": "Exact JSON, 69 preserved +171 replacements; no fitting/optimization",
+  "syntax": "Full app Python compile checks passed",
+  "imports": "App entry point, ranking/Finder, worker, monthly adapters and replay imported",
+  "pytest": "29 relevant regression tests passed (monthly integration and four-year raw loader)",
+  "streamlit": "App entry point, populated Ranking, Strategy Decision, strict-mode rerun and replay/download UI: zero uncaught exceptions or error elements",
+  "timing": "Research signals use completed executable bars; mixed/later availability, forming-candle exclusion, Myanmar schedule/month boundaries checked",
+  "execution": "Top-four held skip, rank-before-held, one entry/check, max20, no duplicate holdings, persisted check dedup, TP/SL freeze, ATR clips, neutral/opposite bias, danger, Friday close, hold cap, dual-touch SL first, adverse stop gap, censorship and once-only costs checked",
+  "row_preservation": "All531840 raw rows and17 original columns preserved; every output has240 signed columns, only \u00b11/0; at most one nonzero per row",
+  "parity": "14932 raw opportunities;9289 prior independent research entry signals match;480 live/replay symbol checks match;4853 selected trades match C++ research fills/exits/costs/censorship",
+  "validation": "Historical Pip_Check YES all240. Strict_Valid NO all240. Test period reused; no fresh unseen validation.",
+  "differences": "Holdings are observed at check time, not later replay fill, so combined totals differ from earlier standalone research portfolio. Recovered research Middle Bias differs from heavy app regime display.",
+  "unverified": "Actual authenticated Twelve Data downloads and broker orders were not exercised. App journal sends no orders. A real executable bid/ask feed is required for live prices. Censored P/L is unknown; reported DD is realized completed-trade DD."
+}

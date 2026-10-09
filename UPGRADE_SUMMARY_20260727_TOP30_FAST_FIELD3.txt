@@ -1,0 +1,48 @@
+HISTORICAL NOTE — SUPERSEDED BY THE 2026-07-29 H1 / MIDDLE-AGE / LOAD-UPDATE UPGRADE.
+See README_RUN_FIRST.txt and UPGRADE_SUMMARY_20260729_H1_MIDDLE_AGE_LOAD_UPDATE.txt for current behavior.
+
+ADX QUANT PRO — TOP-30 + FAST ALL-LOADED FIELD 3 UPGRADE
+Date: 2026-07-27
+
+1. CANONICAL TOP-30
+- Selector 1 limit: 10
+- Selector 2 limit: 10
+- Selector 3 limit: 10
+- Canonical unique limit: 30
+- Load All Selected now loads all three selectors before merging the canonical board.
+
+2. THIRD BEST 10
+- Selector 3 has a dedicated "Third Best 10 — Spread <25 + DXY" button.
+- Symbols: AUDCAD, AUDCHF, AUDNZD, CADCHF, CADJPY, CHFJPY, NZDCAD,
+  NZDCHF, NZDJPY, DXY.
+- The under-25 spread statement is shown only with the Third Best 10 choice.
+- Live broker spread must still be confirmed because spread changes by broker,
+  account type, session, news, and liquidity.
+
+3. SUPER QUICK CORRECTNESS + SPEED
+- Super Quick consumes the cumulative exact-symbol loaded universe from all
+  three selectors, not Selector 1 only.
+- The old First/Super Quick, Second/Quick, Third/Full status wording was removed.
+- Selector cards now show load diagnostics; a fourth card shows the all-run-button
+  cumulative READY count.
+- Super Quick performs zero market API requests.
+- Repeated runs with unchanged candles reuse the existing calculated result.
+- Live progress table redraws are throttled to reduce mobile UI overhead.
+
+4. FIELD 3 COLOR VISUALIZATION
+- Green rows: Top 5.
+- Red rows: Last 5.
+- Blue Symbol: Higher and Middle regime states match.
+- The same rules work on desktop tables and iPhone-friendly cards.
+
+5. BRAND PANEL
+- Updated to "Top-30 Multi-Symbol Decision App".
+- Highlights three-selector loading and the all-loaded Super Quick path.
+
+VALIDATION
+- Full project Python syntax compilation: PASS
+- Canonical 10 + 10 + 10 deduplication: PASS
+- Selector 3 preset contains DXY and does not overlap First/Second: PASS
+- Synthetic 30-symbol Super Quick calculation: PASS
+- Unchanged-result cache reuse: PASS
+- Field 3 phone color classes: PASS

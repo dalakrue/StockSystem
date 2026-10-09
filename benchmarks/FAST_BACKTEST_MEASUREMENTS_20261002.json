@@ -1,0 +1,27 @@
+{
+  "FULL": {
+    "rows": 10000,
+    "columns": 569,
+    "memory_bytes": 24470014,
+    "runs_seconds": [
+      3.539,
+      3.057,
+      3.264
+    ],
+    "median_seconds": 3.264
+  },
+  "BACKTEST_FAST": {
+    "rows": 10000,
+    "columns": 327,
+    "memory_bytes": 10649971,
+    "runs_seconds": [
+      2.739,
+      2.691,
+      2.764
+    ],
+    "median_seconds": 2.739
+  },
+  "retained_fields_equal": true,
+  "calculation_time_reduction_percent": 16.1,
+  "retained_dataframe_memory_reduction_percent": 56.5
+}

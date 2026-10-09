@@ -1,0 +1,1442 @@
+[
+  {
+    "column": "S1",
+    "symbol": "AUDCAD",
+    "month": 1,
+    "equation_id": "AUDCAD-01-R05E7"
+  },
+  {
+    "column": "S2",
+    "symbol": "AUDCAD",
+    "month": 2,
+    "equation_id": "AUDCAD-02-N1R032E11"
+  },
+  {
+    "column": "S3",
+    "symbol": "AUDCAD",
+    "month": 3,
+    "equation_id": "AUDCAD-03-N1R002E02"
+  },
+  {
+    "column": "S4",
+    "symbol": "AUDCAD",
+    "month": 4,
+    "equation_id": "AUDCAD-04-N1R017E08"
+  },
+  {
+    "column": "S5",
+    "symbol": "AUDCAD",
+    "month": 5,
+    "equation_id": "AUDCAD-05-N1R019E11"
+  },
+  {
+    "column": "S6",
+    "symbol": "AUDCAD",
+    "month": 6,
+    "equation_id": "AUDCAD-06-R62E4"
+  },
+  {
+    "column": "S7",
+    "symbol": "AUDCAD",
+    "month": 7,
+    "equation_id": "AUDCAD-07-N1R041E11"
+  },
+  {
+    "column": "S8",
+    "symbol": "AUDCAD",
+    "month": 8,
+    "equation_id": "AUDCAD-08-N1R035E05"
+  },
+  {
+    "column": "S9",
+    "symbol": "AUDCAD",
+    "month": 9,
+    "equation_id": "AUDCAD-09-N1R067E02"
+  },
+  {
+    "column": "S10",
+    "symbol": "AUDCAD",
+    "month": 10,
+    "equation_id": "AUDCAD-10-N1R058E03"
+  },
+  {
+    "column": "S11",
+    "symbol": "AUDCAD",
+    "month": 11,
+    "equation_id": "AUDCAD-11-N1R098E10"
+  },
+  {
+    "column": "S12",
+    "symbol": "AUDCAD",
+    "month": 12,
+    "equation_id": "AUDCAD-12-N1R136E10"
+  },
+  {
+    "column": "S13",
+    "symbol": "AUDCHF",
+    "month": 1,
+    "equation_id": "AUDCHF-01-N1R069E03"
+  },
+  {
+    "column": "S14",
+    "symbol": "AUDCHF",
+    "month": 2,
+    "equation_id": "AUDCHF-02-N1R138E09"
+  },
+  {
+    "column": "S15",
+    "symbol": "AUDCHF",
+    "month": 3,
+    "equation_id": "AUDCHF-03-N1R092E07"
+  },
+  {
+    "column": "S16",
+    "symbol": "AUDCHF",
+    "month": 4,
+    "equation_id": "AUDCHF-04-N1R078E06"
+  },
+  {
+    "column": "S17",
+    "symbol": "AUDCHF",
+    "month": 5,
+    "equation_id": "AUDCHF-05-N1R081E02"
+  },
+  {
+    "column": "S18",
+    "symbol": "AUDCHF",
+    "month": 6,
+    "equation_id": "AUDCHF-06-N1R087E05"
+  },
+  {
+    "column": "S19",
+    "symbol": "AUDCHF",
+    "month": 7,
+    "equation_id": "AUDCHF-07-N1R082E10"
+  },
+  {
+    "column": "S20",
+    "symbol": "AUDCHF",
+    "month": 8,
+    "equation_id": "AUDCHF-08-N1R001E12"
+  },
+  {
+    "column": "S21",
+    "symbol": "AUDCHF",
+    "month": 9,
+    "equation_id": "AUDCHF-09-N1R135E09"
+  },
+  {
+    "column": "S22",
+    "symbol": "AUDCHF",
+    "month": 10,
+    "equation_id": "AUDCHF-10-N1R082E03"
+  },
+  {
+    "column": "S23",
+    "symbol": "AUDCHF",
+    "month": 11,
+    "equation_id": "AUDCHF-11-R08E3"
+  },
+  {
+    "column": "S24",
+    "symbol": "AUDCHF",
+    "month": 12,
+    "equation_id": "AUDCHF-12-N1R089E11"
+  },
+  {
+    "column": "S25",
+    "symbol": "AUDJPY",
+    "month": 1,
+    "equation_id": "AUDJPY-01-N1R055E07"
+  },
+  {
+    "column": "S26",
+    "symbol": "AUDJPY",
+    "month": 2,
+    "equation_id": "AUDJPY-02-N1R087E02"
+  },
+  {
+    "column": "S27",
+    "symbol": "AUDJPY",
+    "month": 3,
+    "equation_id": "AUDJPY-03-N1R122E12"
+  },
+  {
+    "column": "S28",
+    "symbol": "AUDJPY",
+    "month": 4,
+    "equation_id": "AUDJPY-04-N1R001E06"
+  },
+  {
+    "column": "S29",
+    "symbol": "AUDJPY",
+    "month": 5,
+    "equation_id": "AUDJPY-05-N1R001E05"
+  },
+  {
+    "column": "S30",
+    "symbol": "AUDJPY",
+    "month": 6,
+    "equation_id": "AUDJPY-06-N1R004E08"
+  },
+  {
+    "column": "S31",
+    "symbol": "AUDJPY",
+    "month": 7,
+    "equation_id": "AUDJPY-07-N1R002E06"
+  },
+  {
+    "column": "S32",
+    "symbol": "AUDJPY",
+    "month": 8,
+    "equation_id": "AUDJPY-08-N1R029E11"
+  },
+  {
+    "column": "S33",
+    "symbol": "AUDJPY",
+    "month": 9,
+    "equation_id": "AUDJPY-09-N1R075E04"
+  },
+  {
+    "column": "S34",
+    "symbol": "AUDJPY",
+    "month": 10,
+    "equation_id": "AUDJPY-10-R22E5"
+  },
+  {
+    "column": "S35",
+    "symbol": "AUDJPY",
+    "month": 11,
+    "equation_id": "AUDJPY-11-N1R066E01"
+  },
+  {
+    "column": "S36",
+    "symbol": "AUDJPY",
+    "month": 12,
+    "equation_id": "AUDJPY-12-N1R122E07"
+  },
+  {
+    "column": "S37",
+    "symbol": "AUDNZD",
+    "month": 1,
+    "equation_id": "AUDNZD-01-N1R016E02"
+  },
+  {
+    "column": "S38",
+    "symbol": "AUDNZD",
+    "month": 2,
+    "equation_id": "AUDNZD-02-R57E7"
+  },
+  {
+    "column": "S39",
+    "symbol": "AUDNZD",
+    "month": 3,
+    "equation_id": "AUDNZD-03-N1R104E02"
+  },
+  {
+    "column": "S40",
+    "symbol": "AUDNZD",
+    "month": 4,
+    "equation_id": "AUDNZD-04-N1R020E12"
+  },
+  {
+    "column": "S41",
+    "symbol": "AUDNZD",
+    "month": 5,
+    "equation_id": "AUDNZD-05-R52E7"
+  },
+  {
+    "column": "S42",
+    "symbol": "AUDNZD",
+    "month": 6,
+    "equation_id": "AUDNZD-06-N1R124E01"
+  },
+  {
+    "column": "S43",
+    "symbol": "AUDNZD",
+    "month": 7,
+    "equation_id": "AUDNZD-07-N1R135E09"
+  },
+  {
+    "column": "S44",
+    "symbol": "AUDNZD",
+    "month": 8,
+    "equation_id": "AUDNZD-08-N1R012E06"
+  },
+  {
+    "column": "S45",
+    "symbol": "AUDNZD",
+    "month": 9,
+    "equation_id": "AUDNZD-09-R20E8"
+  },
+  {
+    "column": "S46",
+    "symbol": "AUDNZD",
+    "month": 10,
+    "equation_id": "AUDNZD-10-N1R079E09"
+  },
+  {
+    "column": "S47",
+    "symbol": "AUDNZD",
+    "month": 11,
+    "equation_id": "AUDNZD-11-R01E7"
+  },
+  {
+    "column": "S48",
+    "symbol": "AUDNZD",
+    "month": 12,
+    "equation_id": "AUDNZD-12-N1R136E12"
+  },
+  {
+    "column": "S49",
+    "symbol": "AUDUSD",
+    "month": 1,
+    "equation_id": "AUDUSD-01-N1R106E06"
+  },
+  {
+    "column": "S50",
+    "symbol": "AUDUSD",
+    "month": 2,
+    "equation_id": "AUDUSD-02-N1R070E09"
+  },
+  {
+    "column": "S51",
+    "symbol": "AUDUSD",
+    "month": 3,
+    "equation_id": "AUDUSD-03-N1R032E07"
+  },
+  {
+    "column": "S52",
+    "symbol": "AUDUSD",
+    "month": 4,
+    "equation_id": "AUDUSD-04-N1R033E11"
+  },
+  {
+    "column": "S53",
+    "symbol": "AUDUSD",
+    "month": 5,
+    "equation_id": "AUDUSD-05-N1R048E10"
+  },
+  {
+    "column": "S54",
+    "symbol": "AUDUSD",
+    "month": 6,
+    "equation_id": "AUDUSD-06-R47E8"
+  },
+  {
+    "column": "S55",
+    "symbol": "AUDUSD",
+    "month": 7,
+    "equation_id": "AUDUSD-07-N1R054E05"
+  },
+  {
+    "column": "S56",
+    "symbol": "AUDUSD",
+    "month": 8,
+    "equation_id": "AUDUSD-08-N1R011E04"
+  },
+  {
+    "column": "S57",
+    "symbol": "AUDUSD",
+    "month": 9,
+    "equation_id": "AUDUSD-09-N1R065E11"
+  },
+  {
+    "column": "S58",
+    "symbol": "AUDUSD",
+    "month": 10,
+    "equation_id": "AUDUSD-10-N1R085E10"
+  },
+  {
+    "column": "S59",
+    "symbol": "AUDUSD",
+    "month": 11,
+    "equation_id": "AUDUSD-11-N1R102E10"
+  },
+  {
+    "column": "S60",
+    "symbol": "AUDUSD",
+    "month": 12,
+    "equation_id": "AUDUSD-12-R13E8"
+  },
+  {
+    "column": "S61",
+    "symbol": "CHFJPY",
+    "month": 1,
+    "equation_id": "CHFJPY-01-N1R040E10"
+  },
+  {
+    "column": "S62",
+    "symbol": "CHFJPY",
+    "month": 2,
+    "equation_id": "CHFJPY-02-R60E8"
+  },
+  {
+    "column": "S63",
+    "symbol": "CHFJPY",
+    "month": 3,
+    "equation_id": "CHFJPY-03-N1R071E12"
+  },
+  {
+    "column": "S64",
+    "symbol": "CHFJPY",
+    "month": 4,
+    "equation_id": "CHFJPY-04-R22E3"
+  },
+  {
+    "column": "S65",
+    "symbol": "CHFJPY",
+    "month": 5,
+    "equation_id": "CHFJPY-05-N1R017E06"
+  },
+  {
+    "column": "S66",
+    "symbol": "CHFJPY",
+    "month": 6,
+    "equation_id": "CHFJPY-06-N1R001E08"
+  },
+  {
+    "column": "S67",
+    "symbol": "CHFJPY",
+    "month": 7,
+    "equation_id": "CHFJPY-07-N1R080E04"
+  },
+  {
+    "column": "S68",
+    "symbol": "CHFJPY",
+    "month": 8,
+    "equation_id": "CHFJPY-08-N1R118E01"
+  },
+  {
+    "column": "S69",
+    "symbol": "CHFJPY",
+    "month": 9,
+    "equation_id": "CHFJPY-09-R60E8"
+  },
+  {
+    "column": "S70",
+    "symbol": "CHFJPY",
+    "month": 10,
+    "equation_id": "CHFJPY-10-R53E8"
+  },
+  {
+    "column": "S71",
+    "symbol": "CHFJPY",
+    "month": 11,
+    "equation_id": "CHFJPY-11-R26E5"
+  },
+  {
+    "column": "S72",
+    "symbol": "CHFJPY",
+    "month": 12,
+    "equation_id": "CHFJPY-12-N1R099E01"
+  },
+  {
+    "column": "S73",
+    "symbol": "EURAUD",
+    "month": 1,
+    "equation_id": "EURAUD-01-N1R099E11"
+  },
+  {
+    "column": "S74",
+    "symbol": "EURAUD",
+    "month": 2,
+    "equation_id": "EURAUD-02-N1R028E06"
+  },
+  {
+    "column": "S75",
+    "symbol": "EURAUD",
+    "month": 3,
+    "equation_id": "EURAUD-03-R19E8"
+  },
+  {
+    "column": "S76",
+    "symbol": "EURAUD",
+    "month": 4,
+    "equation_id": "EURAUD-04-N1R114E10"
+  },
+  {
+    "column": "S77",
+    "symbol": "EURAUD",
+    "month": 5,
+    "equation_id": "EURAUD-05-N1R124E05"
+  },
+  {
+    "column": "S78",
+    "symbol": "EURAUD",
+    "month": 6,
+    "equation_id": "EURAUD-06-N1R057E05"
+  },
+  {
+    "column": "S79",
+    "symbol": "EURAUD",
+    "month": 7,
+    "equation_id": "EURAUD-07-N1R091E08"
+  },
+  {
+    "column": "S80",
+    "symbol": "EURAUD",
+    "month": 8,
+    "equation_id": "EURAUD-08-N1R050E06"
+  },
+  {
+    "column": "S81",
+    "symbol": "EURAUD",
+    "month": 9,
+    "equation_id": "EURAUD-09-R07E6"
+  },
+  {
+    "column": "S82",
+    "symbol": "EURAUD",
+    "month": 10,
+    "equation_id": "EURAUD-10-R05E8"
+  },
+  {
+    "column": "S83",
+    "symbol": "EURAUD",
+    "month": 11,
+    "equation_id": "EURAUD-11-N1R083E06"
+  },
+  {
+    "column": "S84",
+    "symbol": "EURAUD",
+    "month": 12,
+    "equation_id": "EURAUD-12-N1R004E07"
+  },
+  {
+    "column": "S85",
+    "symbol": "EURCAD",
+    "month": 1,
+    "equation_id": "EURCAD-01-N1R088E03"
+  },
+  {
+    "column": "S86",
+    "symbol": "EURCAD",
+    "month": 2,
+    "equation_id": "EURCAD-02-N1R077E12"
+  },
+  {
+    "column": "S87",
+    "symbol": "EURCAD",
+    "month": 3,
+    "equation_id": "EURCAD-03-N1R034E04"
+  },
+  {
+    "column": "S88",
+    "symbol": "EURCAD",
+    "month": 4,
+    "equation_id": "EURCAD-04-R47E8"
+  },
+  {
+    "column": "S89",
+    "symbol": "EURCAD",
+    "month": 5,
+    "equation_id": "EURCAD-05-N1R137E11"
+  },
+  {
+    "column": "S90",
+    "symbol": "EURCAD",
+    "month": 6,
+    "equation_id": "EURCAD-06-N1R003E03"
+  },
+  {
+    "column": "S91",
+    "symbol": "EURCAD",
+    "month": 7,
+    "equation_id": "EURCAD-07-N1R067E08"
+  },
+  {
+    "column": "S92",
+    "symbol": "EURCAD",
+    "month": 8,
+    "equation_id": "EURCAD-08-R58E8"
+  },
+  {
+    "column": "S93",
+    "symbol": "EURCAD",
+    "month": 9,
+    "equation_id": "EURCAD-09-N1R096E06"
+  },
+  {
+    "column": "S94",
+    "symbol": "EURCAD",
+    "month": 10,
+    "equation_id": "EURCAD-10-R29E8"
+  },
+  {
+    "column": "S95",
+    "symbol": "EURCAD",
+    "month": 11,
+    "equation_id": "EURCAD-11-R25E8"
+  },
+  {
+    "column": "S96",
+    "symbol": "EURCAD",
+    "month": 12,
+    "equation_id": "EURCAD-12-N1R022E06"
+  },
+  {
+    "column": "S97",
+    "symbol": "EURCHF",
+    "month": 1,
+    "equation_id": "EURCHF-01-N1R048E03"
+  },
+  {
+    "column": "S98",
+    "symbol": "EURCHF",
+    "month": 2,
+    "equation_id": "EURCHF-02-N1R030E03"
+  },
+  {
+    "column": "S99",
+    "symbol": "EURCHF",
+    "month": 3,
+    "equation_id": "EURCHF-03-N1R045E06"
+  },
+  {
+    "column": "S100",
+    "symbol": "EURCHF",
+    "month": 4,
+    "equation_id": "EURCHF-04-N1R052E11"
+  },
+  {
+    "column": "S101",
+    "symbol": "EURCHF",
+    "month": 5,
+    "equation_id": "EURCHF-05-R55E5"
+  },
+  {
+    "column": "S102",
+    "symbol": "EURCHF",
+    "month": 6,
+    "equation_id": "EURCHF-06-N2R040E04"
+  },
+  {
+    "column": "S103",
+    "symbol": "EURCHF",
+    "month": 7,
+    "equation_id": "EURCHF-07-N1R050E12"
+  },
+  {
+    "column": "S104",
+    "symbol": "EURCHF",
+    "month": 8,
+    "equation_id": "EURCHF-08-R41E7"
+  },
+  {
+    "column": "S105",
+    "symbol": "EURCHF",
+    "month": 9,
+    "equation_id": "EURCHF-09-N1R086E04"
+  },
+  {
+    "column": "S106",
+    "symbol": "EURCHF",
+    "month": 10,
+    "equation_id": "EURCHF-10-N1R139E10"
+  },
+  {
+    "column": "S107",
+    "symbol": "EURCHF",
+    "month": 11,
+    "equation_id": "EURCHF-11-R46E4"
+  },
+  {
+    "column": "S108",
+    "symbol": "EURCHF",
+    "month": 12,
+    "equation_id": "EURCHF-12-N1R139E11"
+  },
+  {
+    "column": "S109",
+    "symbol": "EURGBP",
+    "month": 1,
+    "equation_id": "EURGBP-01-N1R066E01"
+  },
+  {
+    "column": "S110",
+    "symbol": "EURGBP",
+    "month": 2,
+    "equation_id": "EURGBP-02-N1R032E05"
+  },
+  {
+    "column": "S111",
+    "symbol": "EURGBP",
+    "month": 3,
+    "equation_id": "EURGBP-03-N1R102E09"
+  },
+  {
+    "column": "S112",
+    "symbol": "EURGBP",
+    "month": 4,
+    "equation_id": "EURGBP-04-N1R123E11"
+  },
+  {
+    "column": "S113",
+    "symbol": "EURGBP",
+    "month": 5,
+    "equation_id": "EURGBP-05-N1R007E04"
+  },
+  {
+    "column": "S114",
+    "symbol": "EURGBP",
+    "month": 6,
+    "equation_id": "EURGBP-06-N1R117E03"
+  },
+  {
+    "column": "S115",
+    "symbol": "EURGBP",
+    "month": 7,
+    "equation_id": "EURGBP-07-N1R120E10"
+  },
+  {
+    "column": "S116",
+    "symbol": "EURGBP",
+    "month": 8,
+    "equation_id": "EURGBP-08-N1R090E12"
+  },
+  {
+    "column": "S117",
+    "symbol": "EURGBP",
+    "month": 9,
+    "equation_id": "EURGBP-09-R23E8"
+  },
+  {
+    "column": "S118",
+    "symbol": "EURGBP",
+    "month": 10,
+    "equation_id": "EURGBP-10-R22E8"
+  },
+  {
+    "column": "S119",
+    "symbol": "EURGBP",
+    "month": 11,
+    "equation_id": "EURGBP-11-N1R015E01"
+  },
+  {
+    "column": "S120",
+    "symbol": "EURGBP",
+    "month": 12,
+    "equation_id": "EURGBP-12-N1R118E09"
+  },
+  {
+    "column": "S121",
+    "symbol": "EURJPY",
+    "month": 1,
+    "equation_id": "EURJPY-01-N1R034E08"
+  },
+  {
+    "column": "S122",
+    "symbol": "EURJPY",
+    "month": 2,
+    "equation_id": "EURJPY-02-R33E2"
+  },
+  {
+    "column": "S123",
+    "symbol": "EURJPY",
+    "month": 3,
+    "equation_id": "EURJPY-03-N1R045E05"
+  },
+  {
+    "column": "S124",
+    "symbol": "EURJPY",
+    "month": 4,
+    "equation_id": "EURJPY-04-N1R005E05"
+  },
+  {
+    "column": "S125",
+    "symbol": "EURJPY",
+    "month": 5,
+    "equation_id": "EURJPY-05-N1R017E06"
+  },
+  {
+    "column": "S126",
+    "symbol": "EURJPY",
+    "month": 6,
+    "equation_id": "EURJPY-06-N1R001E02"
+  },
+  {
+    "column": "S127",
+    "symbol": "EURJPY",
+    "month": 7,
+    "equation_id": "EURJPY-07-N1R115E03"
+  },
+  {
+    "column": "S128",
+    "symbol": "EURJPY",
+    "month": 8,
+    "equation_id": "EURJPY-08-N1R019E08"
+  },
+  {
+    "column": "S129",
+    "symbol": "EURJPY",
+    "month": 9,
+    "equation_id": "EURJPY-09-N1R132E12"
+  },
+  {
+    "column": "S130",
+    "symbol": "EURJPY",
+    "month": 10,
+    "equation_id": "EURJPY-10-N1R107E01"
+  },
+  {
+    "column": "S131",
+    "symbol": "EURJPY",
+    "month": 11,
+    "equation_id": "EURJPY-11-N1R074E12"
+  },
+  {
+    "column": "S132",
+    "symbol": "EURJPY",
+    "month": 12,
+    "equation_id": "EURJPY-12-N1R016E11"
+  },
+  {
+    "column": "S133",
+    "symbol": "EURNZD",
+    "month": 1,
+    "equation_id": "EURNZD-01-N1R117E11"
+  },
+  {
+    "column": "S134",
+    "symbol": "EURNZD",
+    "month": 2,
+    "equation_id": "EURNZD-02-N1R137E06"
+  },
+  {
+    "column": "S135",
+    "symbol": "EURNZD",
+    "month": 3,
+    "equation_id": "EURNZD-03-R19E8"
+  },
+  {
+    "column": "S136",
+    "symbol": "EURNZD",
+    "month": 4,
+    "equation_id": "EURNZD-04-N1R045E02"
+  },
+  {
+    "column": "S137",
+    "symbol": "EURNZD",
+    "month": 5,
+    "equation_id": "EURNZD-05-R05E6"
+  },
+  {
+    "column": "S138",
+    "symbol": "EURNZD",
+    "month": 6,
+    "equation_id": "EURNZD-06-N1R049E08"
+  },
+  {
+    "column": "S139",
+    "symbol": "EURNZD",
+    "month": 7,
+    "equation_id": "EURNZD-07-R13E2"
+  },
+  {
+    "column": "S140",
+    "symbol": "EURNZD",
+    "month": 8,
+    "equation_id": "EURNZD-08-N1R135E11"
+  },
+  {
+    "column": "S141",
+    "symbol": "EURNZD",
+    "month": 9,
+    "equation_id": "EURNZD-09-R05E8"
+  },
+  {
+    "column": "S142",
+    "symbol": "EURNZD",
+    "month": 10,
+    "equation_id": "EURNZD-10-R61E5"
+  },
+  {
+    "column": "S143",
+    "symbol": "EURNZD",
+    "month": 11,
+    "equation_id": "EURNZD-11-R15E1"
+  },
+  {
+    "column": "S144",
+    "symbol": "EURNZD",
+    "month": 12,
+    "equation_id": "EURNZD-12-R19E5"
+  },
+  {
+    "column": "S145",
+    "symbol": "EURUSD",
+    "month": 1,
+    "equation_id": "EURUSD-01-R32E4"
+  },
+  {
+    "column": "S146",
+    "symbol": "EURUSD",
+    "month": 2,
+    "equation_id": "EURUSD-02-N1R032E11"
+  },
+  {
+    "column": "S147",
+    "symbol": "EURUSD",
+    "month": 3,
+    "equation_id": "EURUSD-03-N1R045E07"
+  },
+  {
+    "column": "S148",
+    "symbol": "EURUSD",
+    "month": 4,
+    "equation_id": "EURUSD-04-N1R021E08"
+  },
+  {
+    "column": "S149",
+    "symbol": "EURUSD",
+    "month": 5,
+    "equation_id": "EURUSD-05-R46E8"
+  },
+  {
+    "column": "S150",
+    "symbol": "EURUSD",
+    "month": 6,
+    "equation_id": "EURUSD-06-N1R028E07"
+  },
+  {
+    "column": "S151",
+    "symbol": "EURUSD",
+    "month": 7,
+    "equation_id": "EURUSD-07-N1R005E12"
+  },
+  {
+    "column": "S152",
+    "symbol": "EURUSD",
+    "month": 8,
+    "equation_id": "EURUSD-08-R60E7"
+  },
+  {
+    "column": "S153",
+    "symbol": "EURUSD",
+    "month": 9,
+    "equation_id": "EURUSD-09-R51E4"
+  },
+  {
+    "column": "S154",
+    "symbol": "EURUSD",
+    "month": 10,
+    "equation_id": "EURUSD-10-R32E3"
+  },
+  {
+    "column": "S155",
+    "symbol": "EURUSD",
+    "month": 11,
+    "equation_id": "EURUSD-11-N1R115E06"
+  },
+  {
+    "column": "S156",
+    "symbol": "EURUSD",
+    "month": 12,
+    "equation_id": "EURUSD-12-N1R137E06"
+  },
+  {
+    "column": "S157",
+    "symbol": "GBPJPY",
+    "month": 1,
+    "equation_id": "GBPJPY-01-R56E5"
+  },
+  {
+    "column": "S158",
+    "symbol": "GBPJPY",
+    "month": 2,
+    "equation_id": "GBPJPY-02-N1R037E11"
+  },
+  {
+    "column": "S159",
+    "symbol": "GBPJPY",
+    "month": 3,
+    "equation_id": "GBPJPY-03-N1R052E03"
+  },
+  {
+    "column": "S160",
+    "symbol": "GBPJPY",
+    "month": 4,
+    "equation_id": "GBPJPY-04-N1R049E07"
+  },
+  {
+    "column": "S161",
+    "symbol": "GBPJPY",
+    "month": 5,
+    "equation_id": "GBPJPY-05-R56E3"
+  },
+  {
+    "column": "S162",
+    "symbol": "GBPJPY",
+    "month": 6,
+    "equation_id": "GBPJPY-06-N1R001E04"
+  },
+  {
+    "column": "S163",
+    "symbol": "GBPJPY",
+    "month": 7,
+    "equation_id": "GBPJPY-07-R56E8"
+  },
+  {
+    "column": "S164",
+    "symbol": "GBPJPY",
+    "month": 8,
+    "equation_id": "GBPJPY-08-N1R069E03"
+  },
+  {
+    "column": "S165",
+    "symbol": "GBPJPY",
+    "month": 9,
+    "equation_id": "GBPJPY-09-N1R071E02"
+  },
+  {
+    "column": "S166",
+    "symbol": "GBPJPY",
+    "month": 10,
+    "equation_id": "GBPJPY-10-R53E3"
+  },
+  {
+    "column": "S167",
+    "symbol": "GBPJPY",
+    "month": 11,
+    "equation_id": "GBPJPY-11-R59E5"
+  },
+  {
+    "column": "S168",
+    "symbol": "GBPJPY",
+    "month": 12,
+    "equation_id": "GBPJPY-12-R53E4"
+  },
+  {
+    "column": "S169",
+    "symbol": "GBPUSD",
+    "month": 1,
+    "equation_id": "GBPUSD-01-R14E8"
+  },
+  {
+    "column": "S170",
+    "symbol": "GBPUSD",
+    "month": 2,
+    "equation_id": "GBPUSD-02-N1R070E09"
+  },
+  {
+    "column": "S171",
+    "symbol": "GBPUSD",
+    "month": 3,
+    "equation_id": "GBPUSD-03-N1R061E03"
+  },
+  {
+    "column": "S172",
+    "symbol": "GBPUSD",
+    "month": 4,
+    "equation_id": "GBPUSD-04-R52E5"
+  },
+  {
+    "column": "S173",
+    "symbol": "GBPUSD",
+    "month": 5,
+    "equation_id": "GBPUSD-05-N1R042E08"
+  },
+  {
+    "column": "S174",
+    "symbol": "GBPUSD",
+    "month": 6,
+    "equation_id": "GBPUSD-06-N1R029E06"
+  },
+  {
+    "column": "S175",
+    "symbol": "GBPUSD",
+    "month": 7,
+    "equation_id": "GBPUSD-07-N1R071E08"
+  },
+  {
+    "column": "S176",
+    "symbol": "GBPUSD",
+    "month": 8,
+    "equation_id": "GBPUSD-08-R45E3"
+  },
+  {
+    "column": "S177",
+    "symbol": "GBPUSD",
+    "month": 9,
+    "equation_id": "GBPUSD-09-N1R087E08"
+  },
+  {
+    "column": "S178",
+    "symbol": "GBPUSD",
+    "month": 10,
+    "equation_id": "GBPUSD-10-N1R082E12"
+  },
+  {
+    "column": "S179",
+    "symbol": "GBPUSD",
+    "month": 11,
+    "equation_id": "GBPUSD-11-R16E8"
+  },
+  {
+    "column": "S180",
+    "symbol": "GBPUSD",
+    "month": 12,
+    "equation_id": "GBPUSD-12-N1R006E08"
+  },
+  {
+    "column": "S181",
+    "symbol": "NZDCAD",
+    "month": 1,
+    "equation_id": "NZDCAD-01-R41E7"
+  },
+  {
+    "column": "S182",
+    "symbol": "NZDCAD",
+    "month": 2,
+    "equation_id": "NZDCAD-02-N1R013E12"
+  },
+  {
+    "column": "S183",
+    "symbol": "NZDCAD",
+    "month": 3,
+    "equation_id": "NZDCAD-03-N1R007E09"
+  },
+  {
+    "column": "S184",
+    "symbol": "NZDCAD",
+    "month": 4,
+    "equation_id": "NZDCAD-04-R57E4"
+  },
+  {
+    "column": "S185",
+    "symbol": "NZDCAD",
+    "month": 5,
+    "equation_id": "NZDCAD-05-N1R096E10"
+  },
+  {
+    "column": "S186",
+    "symbol": "NZDCAD",
+    "month": 6,
+    "equation_id": "NZDCAD-06-R16E5"
+  },
+  {
+    "column": "S187",
+    "symbol": "NZDCAD",
+    "month": 7,
+    "equation_id": "NZDCAD-07-N1R025E10"
+  },
+  {
+    "column": "S188",
+    "symbol": "NZDCAD",
+    "month": 8,
+    "equation_id": "NZDCAD-08-N1R085E12"
+  },
+  {
+    "column": "S189",
+    "symbol": "NZDCAD",
+    "month": 9,
+    "equation_id": "NZDCAD-09-N1R140E07"
+  },
+  {
+    "column": "S190",
+    "symbol": "NZDCAD",
+    "month": 10,
+    "equation_id": "NZDCAD-10-R13E4"
+  },
+  {
+    "column": "S191",
+    "symbol": "NZDCAD",
+    "month": 11,
+    "equation_id": "NZDCAD-11-R16E4"
+  },
+  {
+    "column": "S192",
+    "symbol": "NZDCAD",
+    "month": 12,
+    "equation_id": "NZDCAD-12-R30E3"
+  },
+  {
+    "column": "S193",
+    "symbol": "NZDUSD",
+    "month": 1,
+    "equation_id": "NZDUSD-01-R42E4"
+  },
+  {
+    "column": "S194",
+    "symbol": "NZDUSD",
+    "month": 2,
+    "equation_id": "NZDUSD-02-N1R136E10"
+  },
+  {
+    "column": "S195",
+    "symbol": "NZDUSD",
+    "month": 3,
+    "equation_id": "NZDUSD-03-N1R038E03"
+  },
+  {
+    "column": "S196",
+    "symbol": "NZDUSD",
+    "month": 4,
+    "equation_id": "NZDUSD-04-N1R067E05"
+  },
+  {
+    "column": "S197",
+    "symbol": "NZDUSD",
+    "month": 5,
+    "equation_id": "NZDUSD-05-N1R116E10"
+  },
+  {
+    "column": "S198",
+    "symbol": "NZDUSD",
+    "month": 6,
+    "equation_id": "NZDUSD-06-N1R088E12"
+  },
+  {
+    "column": "S199",
+    "symbol": "NZDUSD",
+    "month": 7,
+    "equation_id": "NZDUSD-07-N1R087E08"
+  },
+  {
+    "column": "S200",
+    "symbol": "NZDUSD",
+    "month": 8,
+    "equation_id": "NZDUSD-08-N1R032E03"
+  },
+  {
+    "column": "S201",
+    "symbol": "NZDUSD",
+    "month": 9,
+    "equation_id": "NZDUSD-09-N1R132E12"
+  },
+  {
+    "column": "S202",
+    "symbol": "NZDUSD",
+    "month": 10,
+    "equation_id": "NZDUSD-10-R37E7"
+  },
+  {
+    "column": "S203",
+    "symbol": "NZDUSD",
+    "month": 11,
+    "equation_id": "NZDUSD-11-N1R016E03"
+  },
+  {
+    "column": "S204",
+    "symbol": "NZDUSD",
+    "month": 12,
+    "equation_id": "NZDUSD-12-N1R086E05"
+  },
+  {
+    "column": "S205",
+    "symbol": "USDCAD",
+    "month": 1,
+    "equation_id": "USDCAD-01-N1R065E10"
+  },
+  {
+    "column": "S206",
+    "symbol": "USDCAD",
+    "month": 2,
+    "equation_id": "USDCAD-02-N1R067E02"
+  },
+  {
+    "column": "S207",
+    "symbol": "USDCAD",
+    "month": 3,
+    "equation_id": "USDCAD-03-R22E8"
+  },
+  {
+    "column": "S208",
+    "symbol": "USDCAD",
+    "month": 4,
+    "equation_id": "USDCAD-04-R27E8"
+  },
+  {
+    "column": "S209",
+    "symbol": "USDCAD",
+    "month": 5,
+    "equation_id": "USDCAD-05-N1R004E11"
+  },
+  {
+    "column": "S210",
+    "symbol": "USDCAD",
+    "month": 6,
+    "equation_id": "USDCAD-06-N1R069E08"
+  },
+  {
+    "column": "S211",
+    "symbol": "USDCAD",
+    "month": 7,
+    "equation_id": "USDCAD-07-N1R065E06"
+  },
+  {
+    "column": "S212",
+    "symbol": "USDCAD",
+    "month": 8,
+    "equation_id": "USDCAD-08-N1R123E11"
+  },
+  {
+    "column": "S213",
+    "symbol": "USDCAD",
+    "month": 9,
+    "equation_id": "USDCAD-09-R55E7"
+  },
+  {
+    "column": "S214",
+    "symbol": "USDCAD",
+    "month": 10,
+    "equation_id": "USDCAD-10-N1R008E12"
+  },
+  {
+    "column": "S215",
+    "symbol": "USDCAD",
+    "month": 11,
+    "equation_id": "USDCAD-11-N1R100E01"
+  },
+  {
+    "column": "S216",
+    "symbol": "USDCAD",
+    "month": 12,
+    "equation_id": "USDCAD-12-N1R014E02"
+  },
+  {
+    "column": "S217",
+    "symbol": "USDCHF",
+    "month": 1,
+    "equation_id": "USDCHF-01-N1R086E04"
+  },
+  {
+    "column": "S218",
+    "symbol": "USDCHF",
+    "month": 2,
+    "equation_id": "USDCHF-02-R27E8"
+  },
+  {
+    "column": "S219",
+    "symbol": "USDCHF",
+    "month": 3,
+    "equation_id": "USDCHF-03-N1R016E11"
+  },
+  {
+    "column": "S220",
+    "symbol": "USDCHF",
+    "month": 4,
+    "equation_id": "USDCHF-04-N1R079E03"
+  },
+  {
+    "column": "S221",
+    "symbol": "USDCHF",
+    "month": 5,
+    "equation_id": "USDCHF-05-N1R111E08"
+  },
+  {
+    "column": "S222",
+    "symbol": "USDCHF",
+    "month": 6,
+    "equation_id": "USDCHF-06-N1R136E05"
+  },
+  {
+    "column": "S223",
+    "symbol": "USDCHF",
+    "month": 7,
+    "equation_id": "USDCHF-07-N1R131E12"
+  },
+  {
+    "column": "S224",
+    "symbol": "USDCHF",
+    "month": 8,
+    "equation_id": "USDCHF-08-N1R121E08"
+  },
+  {
+    "column": "S225",
+    "symbol": "USDCHF",
+    "month": 9,
+    "equation_id": "USDCHF-09-N1R102E09"
+  },
+  {
+    "column": "S226",
+    "symbol": "USDCHF",
+    "month": 10,
+    "equation_id": "USDCHF-10-R56E7"
+  },
+  {
+    "column": "S227",
+    "symbol": "USDCHF",
+    "month": 11,
+    "equation_id": "USDCHF-11-N1R121E11"
+  },
+  {
+    "column": "S228",
+    "symbol": "USDCHF",
+    "month": 12,
+    "equation_id": "USDCHF-12-N1R120E10"
+  },
+  {
+    "column": "S229",
+    "symbol": "USDJPY",
+    "month": 1,
+    "equation_id": "USDJPY-01-N1R050E01"
+  },
+  {
+    "column": "S230",
+    "symbol": "USDJPY",
+    "month": 2,
+    "equation_id": "USDJPY-02-R15E5"
+  },
+  {
+    "column": "S231",
+    "symbol": "USDJPY",
+    "month": 3,
+    "equation_id": "USDJPY-03-N1R118E11"
+  },
+  {
+    "column": "S232",
+    "symbol": "USDJPY",
+    "month": 4,
+    "equation_id": "USDJPY-04-N1R033E05"
+  },
+  {
+    "column": "S233",
+    "symbol": "USDJPY",
+    "month": 5,
+    "equation_id": "USDJPY-05-N1R033E08"
+  },
+  {
+    "column": "S234",
+    "symbol": "USDJPY",
+    "month": 6,
+    "equation_id": "USDJPY-06-R50E8"
+  },
+  {
+    "column": "S235",
+    "symbol": "USDJPY",
+    "month": 7,
+    "equation_id": "USDJPY-07-R16E8"
+  },
+  {
+    "column": "S236",
+    "symbol": "USDJPY",
+    "month": 8,
+    "equation_id": "USDJPY-08-N1R016E12"
+  },
+  {
+    "column": "S237",
+    "symbol": "USDJPY",
+    "month": 9,
+    "equation_id": "USDJPY-09-R60E8"
+  },
+  {
+    "column": "S238",
+    "symbol": "USDJPY",
+    "month": 10,
+    "equation_id": "USDJPY-10-R54E8"
+  },
+  {
+    "column": "S239",
+    "symbol": "USDJPY",
+    "month": 11,
+    "equation_id": "USDJPY-11-R35E8"
+  },
+  {
+    "column": "S240",
+    "symbol": "USDJPY",
+    "month": 12,
+    "equation_id": "USDJPY-12-N1R030E11"
+  }
+]

@@ -1,0 +1,1 @@
+EMPTY SCHEMAS ONLY. No historical trades, rankings, rebound results or forecasts were measured. The matching continuous two-year research dataset is absent. Run research/audit_runner.py with the actual CSVs to generate real results. Scenario rows are blocked statuses, not zero-return experiments. Old bundled reports belong to earlier versions.

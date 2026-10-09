@@ -1,0 +1,4 @@
+Clean extracted app ZIP: 29 passed.
+python -m pytest -q tests/test_monthly_equations_integration.py tests/test_raw_ohlc_four_year_20261005.py
+Full Python syntax compilation and app/worker/UI import checks: PASS.
+CLI replay and CSV/Parquet/mapping/trade/check ZIP exports: PASS.

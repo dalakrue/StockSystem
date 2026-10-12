@@ -1,0 +1,56 @@
+{
+  "date": "2026-09-30",
+  "tests": {
+    "passed": 59,
+    "failed": 0,
+    "suite": "python -m pytest -q tests",
+    "deployment_range_run": {
+      "python": "3.12.14",
+      "numpy": "2.2.6",
+      "pandas": "2.2.3",
+      "pyarrow": "24.0.0",
+      "streamlit": "1.49.1"
+    }
+  },
+  "stress_test": {
+    "provider": "MOCKED; synthetic fixture OHLC, not market data",
+    "candle_rows": 600000,
+    "symbols": 12,
+    "maximum_rows_in_one_symbol_calculation": 50000,
+    "build_seconds": 83.55,
+    "worker_peak_rss_mb": 543.3,
+    "finder_artifacts": 120,
+    "maximum_rows_per_artifact": 5000,
+    "full_compact_range_seconds": 7.27,
+    "hourly_selection_seconds": 33.95,
+    "compact_frame_mb": 135.0,
+    "range_and_selection_process_peak_rss_mb": 1520.8,
+    "four_selected_entries_per_available_hour": true
+  },
+  "normalization": {
+    "rows": 5000,
+    "before_seconds": 0.0738,
+    "after_seconds": 0.0168,
+    "speedup": 4.38
+  },
+  "limits": [
+    "No live Twelve Data calls were made.",
+    "No deployed Streamlit Cloud instance was available.",
+    "Measured timings exclude live network and API-quota waits.",
+    "The 600k target is across symbols; one symbol is capped at 50k candles.",
+    "Additional app state and users can change total resource use."
+  ],
+  "verified_behaviors": [
+    "compact price-based decisions",
+    "timestamp-based 12-hour Middle-bias exit notices",
+    "simultaneous entry and exit text",
+    "four-symbol selection and causal prefix invariance",
+    "live/Finder direction and target parity",
+    "full audit attachment for selected entries",
+    "Fast Build configuration persistence and UI worker launch",
+    "incremental cache refresh and account isolation",
+    "chunk recovery after simulated interruption",
+    "valid FX API symbols and payload-level 429 cooldowns",
+    "matching-date artifact filtering and explicit corruption errors"
+  ]
+}

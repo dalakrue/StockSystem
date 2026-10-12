@@ -1,0 +1,2937 @@
+--- original/README.md
++++ audited/README.md
+@@ -1,3 +1,5 @@
++> **3 October 2026 audited build:** Read [README_AUDITED_BUILD.md](README_AUDITED_BUILD.md) for the current policy, TP checks, duplicate strategy handling, verification and evidence limitations. Earlier dated reports below describe previous versions.
++
+ > **24 September 2026 repair:** Finder now builds all S1–S50, shares the ranking audit, supports saved-candle/CSV recovery, and keeps its controls visible after failures. Read [FIX_REPORT_20260924.md](FIX_REPORT_20260924.md) for run steps, validation and model changes.
+ 
+ # ADX Quant Pro — Top-30 Multi-Symbol Decision Package
+--- original/README_AUDITED_BUILD.md
++++ audited/README_AUDITED_BUILD.md
+@@ -0,0 +1,101 @@
++# Audited H1 application — 3 October 2026
++
++This package updates the attached application and includes regression checks,
++an audit runner, a code diff and a Word report. Read this file before older dated
++upgrade notes, which describe earlier behavior.
++
++## Start the application
++
++Use Python 3.12, create a virtual environment, then run:
++
++```sh
++python -m pip install -r requirements.txt
++streamlit run app.py
++```
++
++Keep your existing provider and account configuration. No new credentials are
++included. Original application modules and supplied data are preserved. Finder
++has raw all-symbol OHLC, calculated first-half and second-half downloads, and an
++optional complete calculated CSV. The halves split at the requested time-window
++midpoint; concatenate them to recover the complete export without a duplicate
++boundary.
++
++## Current execution policy
++
++`config/audited_execution.json` owns the policy: UTC checks at 04:00, 08:00,
++12:00, 14:00, 16:00 and 18:00; skip Sunday and Monday entries; at most two new
++symbols per check; four display slots; maximum 24 elapsed hours. `Asia/Rangoon`
++uses those actual local times, including half-hour UTC checks. An H1 bar is
++available at its close, then filled at the next executable open. Stale signals
++and missing execution quotes are rejected or censored. The NY weekly calendar
++is a conservative session proxy, not proof of a broker-executable quote.
++
++The 103-pip / 2.9-ATR stop ceiling and other thresholds are declared research
++defaults, not optimized recommendations. Required structural stops exceeding
++the budget are rejected. Relaxation defaults to 0; 0, .10, .20 and .40 can be
++compared in training only.
++
++## What changed
++
++- TP columns include 21 boolean checks, pass counts, rejection reasons,
++  conditional reach forecasts and separate research/live eligibility.
++- Thirty duplicate strategy IDs remain as aliases without votes. S87–S90 are
++  disabled for contradictory gates. There are 86 possible canonical owners;
++  actual activity must be measured. Missing real volume disables volume rules.
++- Typed fields own execution. STRATEGY, RESCUE and RANK_FILL are explicit.
++  Zero-hit display slots show `None` and cannot become orders. Held symbols are
++  skipped; the third and fourth candidates are inspected.
++- Portfolio replay, fixed-grid search, final-pair labels, offline chronological
++  classifier calibration, empirical forecasts and account-risk utilities are
++  included. Portfolio H1 ambiguity is TP-first; SL-first is a separate stress.
++  Target forecasting uses the conservative SL-first convention.
++- Labels require the full interval and mature after the endpoint bar closes:
++  normally 25 hours after entry for a 24-hour holding limit. This availability
++  delay prevents endpoint-open lookahead.
++
++## Evidence and limitations
++
++The attachment lacks the referenced 283,516-row, 20-symbol two-year OHLC dataset.
++The claimed TP=77 / SL=103 winner, 38,104 weekend rows and unprofitable
++241,081-pair validation search have **not been reproduced**. Old saved state is
++not substituted for that dataset. Portfolio improvement, conditional forecast
++intervals and live acceptance are unmeasured.
++
++Broker bid/ask and lower-timeframe paths, an untouched post-freeze forward
++period, longer independent training history and account inputs are also missing.
++Four separate regime-specific strategy gates, a rank-fill counterfactual, true
++walk-forward refitting, a controlled legacy comparison, DSR/PBO and empirical
++currency correlations remain incomplete. The report records these gaps.
++**No live configuration qualifies in this delivery.**
++
++Live `entry_eligible` stays false without verified broker data, calibrated model
++evidence and a matching independent acceptance manifest. The offline runner
++does not generate that manifest. Money/percent results require currency,
++equity, lot rules, conversion quotes and broker pip values.
++
++## Reproduce the checks
++
++```sh
++python -m pip install -r requirements-test.txt
++python -m pytest tests -q --junitxml=reports/verification.xml
++python research/audit_runner.py --output reports/attachment_audit
++```
++
++With the actual research CSVs:
++
++```sh
++python research/audit_runner.py --csv first.csv --csv second.csv --output reports/research_run --full-suite --exhaustive-grid
++```
++
++The large run performs full regeneration and training-selected removals, eight
++scenarios over three splits, weekly block bootstrap, cost/intrabar stresses,
++target sensitivity, symbol reallocation and ablations. The exhaustive grid is
++the new engine's research grid, not reproduction of the missing legacy policy.
++Pairs above the stop budget are search diagnostics only. Classification fits
++matured pre-2025 labels; validation/2026 are evaluated without fitting them.
++Research CSVs do not automatically prove broker prices or untouched forward data.
++
++See `reports/20261003_delivery/Audit_Report.docx`, `verification_results.json`,
++`input_inventory.json`, `changed_files.json`, and `code_changes.diff`. The
++scenario table records 96 blocked combinations. Empty CSVs explicitly named
++templates contain no fabricated trades or performance.
+--- original/config/audited_execution.json
++++ audited/config/audited_execution.json
+@@ -0,0 +1,12 @@
++{
++  "entry_timezone": "UTC",
++  "check_hours": [4, 8, 12, 14, 16, 18],
++  "skip_entry_weekdays": [6, 0],
++  "max_new_symbols": 2,
++  "relaxation": 0.0,
++  "spread_pips": 2.0,
++  "slippage_pips": 0.5,
++  "max_stop_pips": 103.0,
++  "max_hold_hours": 24,
++  "allow_rank_fill_orders": false
++}
+--- original/core/account_risk_20261003.py
++++ audited/core/account_risk_20261003.py
+@@ -0,0 +1,65 @@
++"""Explicit account sizing and currency exposure; never infer account inputs."""
++from dataclasses import dataclass
++import numpy as np
++import pandas as pd
++
++@dataclass(frozen=True)
++class AccountInputs:
++    account_currency: str
++    initial_equity: float
++    stop_risk_fraction: float
++    pip_value_per_lot_in_account: dict
++    units_per_lot: dict
++    currency_to_account_quotes: dict
++    lot_steps: dict
++    minimum_lots: dict
++    maximum_lots: dict
++
++    def __post_init__(self):
++        if self.initial_equity<=0 or not 0<self.stop_risk_fraction<=.02:
++            raise ValueError('Require positive initial equity and a stop-risk budget <=2%')
++        if not self.account_currency or not all((self.pip_value_per_lot_in_account,self.units_per_lot,self.currency_to_account_quotes,self.lot_steps)):
++            raise ValueError('Account currency, broker pip values, lot sizes/steps and conversion quotes are required')
++
++
++def position_lots(account,symbol,stop_pips,*,equity=None,cost_pips=0.):
++    if symbol not in account.pip_value_per_lot_in_account:raise ValueError('Missing broker pip value in account currency')
++    pip_value=account.pip_value_per_lot_in_account[symbol];step=account.lot_steps[symbol]
++    if min(stop_pips,pip_value,step)<=0:raise ValueError('A positive executable stop and broker lot step are required')
++    budget=(equity or account.initial_equity)*account.stop_risk_fraction
++    lots=np.floor(budget/((stop_pips+cost_pips)*pip_value)/step)*step
++    if lots<account.minimum_lots[symbol]:return 0.
++    return min(float(lots),account.maximum_lots[symbol])
++
++
++def currency_exposure(positions,account):
++    """Signed currency inventory in explicit units and account money equivalent."""
++    exposure={}
++    for r in positions.to_dict('records'):
++        sym=r['Symbol'].replace('/','')
++        if len(sym)!=6:raise ValueError('Currency exposure requires explicit six-letter FX pairs')
++        if sym not in account.units_per_lot:raise ValueError('Missing contract size')
++        units=r['lots']*account.units_per_lot[sym]*(1 if r['entry_side']=='BUY' else -1)
++        base,quote=sym[:3],sym[3:]
++        exposure[base]=exposure.get(base,0)+units
++        exposure[quote]=exposure.get(quote,0)-units*r['entry_price']
++    rows=[]
++    for currency,units in exposure.items():
++        if currency not in account.currency_to_account_quotes:raise ValueError('Missing currency conversion quote: '+currency)
++        rows.append({'currency':currency,'signed_units':units,'account_currency_equivalent':units*account.currency_to_account_quotes[currency]})
++    return pd.DataFrame(rows)
++
++
++def diagnostic_kelly(win_probability,mean_win,mean_loss):
++    if not 0<=win_probability<=1 or min(mean_win,mean_loss)<=0:raise ValueError('Invalid estimated payout inputs')
++    raw=win_probability-(1-win_probability)/(mean_win/mean_loss)
++    return {'binary_approximation':raw,'nonnegative_reference_fraction':max(0.,raw),'allocation_authorized':False}
++
++
++def bounded_log_growth_fraction(returns,max_fraction=.25):
++    """Single uncorrelated return diagnostic; cannot size a correlated FX book."""
++    r=np.asarray(returns,float)
++    if not len(r) or not np.isfinite(r).all() or r.min()<-1:raise ValueError('Require bounded-loss account returns')
++    grid=np.linspace(0,max_fraction,251)
++    growth=np.array([np.log1p(f*r).mean() for f in grid])
++    return float(grid[np.argmax(growth)])
+--- original/core/advanced_tpsl_engine_20261002.py
++++ audited/core/advanced_tpsl_engine_20261002.py
+@@ -201,7 +201,7 @@
+     }
+ 
+ 
+-def add_advanced_tpsl_targets(
++def _legacy_add_advanced_tpsl_targets(
+     frame: pd.DataFrame,
+     bias: pd.Series | str,
+     *,
+@@ -680,3 +680,160 @@
+     "HORIZON_HOURS", "PAIR_MIN_SAMPLES", "MAX_HOLD_HOURS",
+     "add_advanced_tpsl_targets", "_released_excursions", "_released_pair_statistics",
+ ]
++
++
++def add_advanced_tpsl_targets(frame,bias,*,timeframe='H1',symbol=None,policy=None):
++    """Owner of final structural target prices and explicit entry filters.
++
++    The former grid estimator is retained privately for audit comparison. Runtime
++    probabilities/EV always label the final prices, with a hard elapsed deadline.
++    Without verified broker data and independent validation, live eligibility is
++    false. Research eligibility remains available for transparent comparisons.
++    """
++    from core.execution_policy_20261003 import get_policy,quote_metadata,VERSION
++    from core.final_pair_forecast_20261003 import final_pair_labels,causal_empirical_forecast
++    import json
++    from pathlib import Path
++    p=policy or get_policy()
++    from core.calibrated_target_model_20261003 import load_validated_model,infer_model
++    calibrated=load_validated_model(p)
++    if frame.empty: return frame.copy()
++    out=frame.copy(); idx=out.index
++    for col in ('open','high','low','close'): out[col]=_num(out.get(col,np.nan),idx)
++    metadata=quote_metadata(out,timeframe)
++    out=out.drop(columns=[c for c in metadata if c in out],errors='ignore')
++    out=pd.concat((out,metadata),axis=1)
++    side_s=pd.Series(bias,index=idx) if isinstance(bias,str) else pd.Series(bias).reindex(idx)
++    out['bias']=side_s.astype(str).str.upper()
++    sign=pd.Series(np.where(out.bias=='BUY',1.,np.where(out.bias=='SELL',-1.,0.)),index=idx)
++    symbols=symbol.reindex(idx).astype(str) if isinstance(symbol,pd.Series) else pd.Series(str(symbol or ''),index=idx)
++    pip=pd.Series([_pip_size(s) for s in symbols],index=idx)
++    out['pip_size']=pip
++    atr,tr=_atr(out.high,out.low,out.close)
++    adx=_num(out.get('ADX',np.nan),idx)
++    regime=pd.Series(np.where(adx.ge(18),'PULLBACK_CONTINUATION',np.where(adx.lt(14),'RANGE_REVERSION','TRANSITION')),index=idx)
++    out['regime_family']=regime
++    out['volatility_bucket']=np.where(atr.gt(atr.shift(1).rolling(160,min_periods=30).median()),'HIGH','LOW')
++    # Causal confirmed swings and measured prior wick noise only; rebound history
++    # never widens the stop. Buffer covers at least spread and adverse execution.
++    prev=out.close.shift(1)
++    low_level=out.low.shift(1).rolling(12,min_periods=4).min()
++    high_level=out.high.shift(1).rolling(12,min_periods=4).max()
++    structural=pd.Series(np.where(sign>0,out.close-low_level,high_level-out.close),index=idx)
++    prior_wicks=pd.concat((out.high-out[['open','close']].max(axis=1),out[['open','close']].min(axis=1)-out.low),axis=1).max(axis=1)
++    buffer=pd.concat((prior_wicks.shift(1).rolling(48,min_periods=12).quantile(.75),.20*atr,p.costs*pip),axis=1).max(axis=1)
++    required=structural+buffer
++    allowed=pd.concat((p.max_stop_atr*atr,pd.Series(p.max_stop_pips,index=idx)*pip),axis=1).min(axis=1)
++    sl_distance=required  # reject, never clip invalidation inside the level
++    sl_price=(out.close-sign*sl_distance).where(structural.gt(0))
++    barrier_high=out.high.shift(1).rolling(48,min_periods=12).max()
++    barrier_low=out.low.shift(1).rolling(48,min_periods=12).min()
++    barrier=pd.Series(np.where(sign>0,barrier_high,barrier_low),index=idx)
++    room=sign*(barrier-out.close)
++    breakout=adx.ge(24)&(sign*out.close.diff()).gt(.55*atr)
++    matrices=[]; forecasts=[]; prices=[]; labels=[]
++    for multiple in (0.9,1.2,1.5,1.85,2.25):
++        distance=(multiple*atr).clip(lower=p.min_tp_pips*pip,upper=p.max_tp_pips*pip)
++        obstructed=room.gt(0)&distance.ge(room)&~breakout
++        distance=distance.where(~obstructed,.90*room)
++        target=out.close+sign*distance
++        prices.append(target)
++        if str(timeframe).upper()=='H1' and out.bar_open_time.notna().all() and out.bar_open_time.is_monotonic_increasing:
++            lab=final_pair_labels(out,sign,target,sl_price,policy=p,ambiguity='SL_FIRST',bias_exit=True)
++            fc=causal_empirical_forecast(out,lab,policy=p)
++        else:
++            lab=pd.DataFrame(index=idx)
++            fc=pd.DataFrame({c:np.nan for c in ['expected_net_pips','expected_net_pips_lower_bound','forecast_sample_count','p_tp','p_sl','p_bias','p_timeout',
++                'expected_reach_hours','reach_p25_hours','reach_p75_hours','p_tp_4h','p_tp_8h','p_tp_12h','p_tp_18h','p_tp_24h']},index=idx)
++            fc['direction_probability']=np.nan; fc['probability_calibration_version']='NO_ELAPSED_TIME_HISTORY';fc['forecast_training_end']='2025-01-01T00:00:00Z'
++        if calibrated is not None:
++            model_forecast=infer_model(calibrated,out,distance,sl_distance,pip)
++            apply=model_forecast.calibrated_model_applied.astype(bool)
++            for col in model_forecast:
++                if col not in fc: fc[col]=False if col=='calibrated_model_applied' else np.nan
++                fc.loc[apply,col]=model_forecast.loc[apply,col]
++        else: fc['calibrated_model_applied']=False
++        forecasts.append(fc);labels.append(lab)
++        utility=fc.expected_net_pips_lower_bound.to_numpy(float)
++        matrices.append(np.where(np.isfinite(utility),utility,-1e9))
++    # Conservative EV objective. Default shortest candidate if no model is ready.
++    winner=np.argmax(np.column_stack(matrices),axis=1)
++    rows=np.arange(len(out));tp_price=pd.Series(np.column_stack(prices)[rows,winner],index=idx)
++    forecast=pd.DataFrame({col:np.column_stack([f[col].to_numpy() for f in forecasts])[rows,winner] for col in forecasts[0]},index=idx)
++    tp_distance=sign*(tp_price-out.close)
++    tp_pips=tp_distance/pip;sl_pips=sl_distance/pip;rr=(tp_pips-p.costs)/(sl_pips+p.costs)
++    bar_valid=out.market_executable
++    filters={
++        'Timestamp':out.bar_open_time.notna(),
++        'Executable Session':bar_valid,
++        'Direction':sign.ne(0),
++        'ATR':atr.gt(0)&np.isfinite(atr),
++        'Positive Prices':tp_price.gt(0)&sl_price.gt(0),
++        'Structural Stop':structural.gt(0)&sl_distance.ge(required),
++        'Hard Stop Budget':sl_distance.le(allowed)&sl_distance.gt(0),
++        'Target Distance':tp_pips.between(p.min_tp_pips,p.max_tp_pips),
++        'Net Reward Risk':rr.ge(p.min_net_reward_risk),
++        'Spread ATR':(p.spread_pips*pip/atr).le(p.max_spread_atr),
++        'Spike':(tr/atr.shift(1)).le(p.max_spike_atr),
++        'Gap':((out.open-prev).abs()/atr.shift(1)).le(p.max_gap_atr),
++        'Barrier':room.le(0)|tp_distance.lt(room)|breakout,
++        'Horizon':pd.Series(str(timeframe).upper()=='H1',index=idx),
++        'Causal Samples':pd.to_numeric(forecast.forecast_sample_count,errors='coerce').ge(p.min_samples),
++        'Reach Probability':pd.to_numeric(forecast.p_tp_24h,errors='coerce').ge(p.min_tp_probability_24h),
++        'Net EV':pd.to_numeric(forecast.expected_net_pips,errors='coerce').gt(p.min_ev_pips),
++        'Conservative EV':pd.to_numeric(forecast.expected_net_pips_lower_bound,errors='coerce').gt(p.min_ev_lower_bound),
++        'Broker Verified':out.broker_quote_verified,
++    }
++    # A manifest cannot substitute for a calibrated model. Require both,
++    # including engine/version/chronology guards; default package has none.
++    validated=False
++    if p.validation_manifest:
++        manifest_path=Path(p.validation_manifest)
++        if not manifest_path.is_absolute(): manifest_path=Path(__file__).resolve().parents[1]/manifest_path
++        try:
++            m=json.loads(manifest_path.read_text())
++            validated=(m.get('decision_engine_version')==VERSION and m.get('all_acceptance_gates_passed') is True
++                and m.get('untouched_forward_verified') is True and m.get('calibrated_model_sha256'))
++        except (OSError,ValueError): validated=False
++    # Classifier application occurs only through an independently verified
++    # calibrated model artifact. Empirical estimates are not win probabilities.
++    filters['Validated Calibration']=forecast.calibrated_model_applied.astype(bool)
++    filters['Independent Acceptance']=pd.Series(bool(validated),index=idx)
++    fframe=pd.DataFrame({f'TP Filter {k}':pd.Series(v,index=idx).fillna(False).astype(bool) for k,v in filters.items()},index=idx)
++    hardware=[c for c in fframe if not any(x in c for x in ('Causal Samples','Reach Probability','Net EV','Conservative EV','Broker Verified','Validated Calibration','Independent Acceptance'))]
++    research_ok=fframe[hardware].all(axis=1)
++    all_ok=fframe.all(axis=1)
++    reasons=['; '.join(c.removeprefix('TP Filter ') for c in fframe if not bool(fframe.at[i,c])) for i in idx]
++    tp_price=tp_price.mask(sign.eq(0));sl_price=sl_price.mask(sign.eq(0))
++    additions={
++        'Suggested TP':tp_price,'Suggested SL':sl_price,'Suggested TP Price':tp_price,'Suggested SL Price':sl_price,
++        'tp_price':tp_price,'sl_price':sl_price,'Suggested TP Pips':tp_pips,'Suggested SL Pips':sl_pips,
++        'TP Price Display':[_price_string(v,s,c) for v,s,c in zip(tp_price,symbols,out.close)],
++        'SL Price Display':[_price_string(v,s,c) for v,s,c in zip(sl_price,symbols,out.close)],
++        'TP Target Horizon Hours':24,'horizon_hours':24,'max_hold_hours':p.max_hold_hours,'Max Hold Hours':p.max_hold_hours,
++        'Time Exit Enabled':True,'Time Exit Hours':p.max_hold_hours,'Preferred TP Horizon':'24H',
++        'Expected TP Hours':forecast.expected_reach_hours,'TP Median Reach Hours':forecast.expected_reach_hours,'TP P75 Reach Hours':forecast.reach_p75_hours,
++        'TP First Rate':pd.to_numeric(forecast.p_tp,errors='coerce')*100,'SL First Rate':pd.to_numeric(forecast.p_sl,errors='coerce')*100,
++        'Neither Touch Rate':pd.to_numeric(forecast.p_timeout,errors='coerce')*100,
++        'TP/SL Sample Count':pd.to_numeric(forecast.forecast_sample_count,errors='coerce').astype('Int64'),
++        '24H Estimated Net Pip Potential':forecast.expected_net_pips,
++        '24H TP Distance':tp_distance,'24H SL Distance':sl_distance,'TP:SL Price Ratio':tp_distance/sl_distance,
++        'Required Structural SL':required,'Allowed Maximum SL':allowed,'SL Adaptive Invalidation Buffer':buffer,
++        'SL Risk Cap Passed':filters['Hard Stop Budget'],'SL Reject Reason':np.where(filters['Hard Stop Budget'],'','Required stop exceeds hard budget'),
++        'Nearest TP Barrier Price':barrier,'TP Barrier Distance':room,'TP Barrier Quality Passed':filters['Barrier'],
++        'TP Within 24H':False,  # no deterministic reach guarantee
++        'TP Estimate Basis':'Final-price H1 empirical policy; uncalibrated; training frozen before 2025',
++        'TP/SL Engine':VERSION,'Exit Scenario':'Dynamic TP + Middle Bias Exit + Emergency SL',
++        'TP Filters Passed':all_ok,'TP Research Filters Passed':research_ok,'TP Filter Reasons':reasons,
++        'TP Filter Pass Count':fframe.sum(axis=1),'TP Filter Total Count':len(fframe.columns),
++        'spread_pips':p.spread_pips,'slippage_pips':p.slippage_pips,'commission_pips':p.commission_pips,
++        'financing_pips_per_day':p.financing_pips_per_day,
++        'forecast_resolution':'H1_AGGREGATE_STRESS_SL_FIRST','decision_engine_version':VERSION,
++        # Compatibility score names explicitly describe checks, not probabilities.
++        'TP/SL Pair Quality Score':fframe.sum(axis=1)/len(fframe.columns)*100,
++        'TP Quality Score':fframe[hardware].mean(axis=1)*100,'SL Quality Score':filters['Hard Stop Budget'].astype(float)*100,
++        'TP/SL Quality Reason':reasons,'24H TP Confidence':np.nan,
++    }
++    new=pd.concat((pd.DataFrame(additions,index=idx),forecast,fframe),axis=1)
++    out=out.drop(columns=[c for c in new if c in out],errors='ignore')
++    return pd.concat((out,new),axis=1)
+--- original/core/audited_portfolio_replay_20261003.py
++++ audited/core/audited_portfolio_replay_20261003.py
+@@ -0,0 +1,176 @@
++"""Scheduled portfolio replay from typed signals and separate raw H1 quotes."""
++from __future__ import annotations
++from dataclasses import replace
++import numpy as np
++import pandas as pd
++from core.execution_policy_20261003 import get_policy,quote_metadata,checks_between,latest_completed,closure_deadline,truthy
++from core.hourly_four_symbol_selector_20260928 import select_portfolio_entries
++
++SCENARIOS=(
++    'Fixed TP/SL','Dynamic TP/Dynamic SL','Dynamic TP/Middle Bias (no normal SL)',
++    'Dynamic TP/Middle Bias + Emergency SL','Fixed TP/Middle Bias (no normal SL)',
++    'Fixed TP/Printed Dynamic SL','Fixed TP/Higher Bias (no normal SL)',
++    'Fixed TP/Lower Bias (no normal SL)',
++)
++
++def normalize_quotes(frame):
++    aliases={'Datetime':'open_time','Open Price':'open','Open':'open','Highest Price':'high','High Price':'high','High':'high',
++        'Lowest Price':'low','Low Price':'low','Low':'low','Close Price':'close','Close':'close','Volume':'volume','symbol':'Symbol'}
++    f=frame.rename(columns={k:v for k,v in aliases.items() if k in frame and v not in frame}).copy()
++    if not {'Symbol','open_time','open','high','low','close'}.issubset(f): raise ValueError('Raw quotes need Symbol, open_time and OHLC')
++    f['Symbol']=f.Symbol.astype(str).str.upper().str.replace(r'[/_ ]','',regex=True)
++    f['open_time']=pd.to_datetime(f.open_time,errors='coerce',utc=True)
++    for col in ('open','high','low','close'): f[col]=pd.to_numeric(f[col],errors='coerce')
++    pieces=[]
++    for sym,g in f.groupby('Symbol',sort=True):
++        g=g.sort_values('open_time',kind='mergesort').reset_index(drop=True)
++        metadata=quote_metadata(g)
++        g=g.drop(columns=[c for c in metadata if c in g],errors='ignore')
++        pieces.append(pd.concat((g,metadata),axis=1))
++    return pd.concat(pieces,ignore_index=True)
++
++
++def _pip(sym): return .01 if 'JPY' in sym else .0001
++
++
++def _trade(signal,quotes,biases,check_at,scenario,tp_pips,sl_pips,p,ambiguity):
++    sym=signal.Symbol; side=1 if signal.entry_side=='BUY' else -1;pip=_pip(sym)
++    q=quotes.loc[quotes.market_executable & quotes.bar_open_time.ge(check_at)].copy()
++    if q.empty: return None,'NO_EXECUTABLE_ENTRY'
++    first=q.iloc[0];entry_at=first.bar_open_time
++    if (entry_at-check_at).total_seconds()/60>p.max_signal_age_minutes: return None,'STALE_NEXT_EXECUTABLE_OPEN'
++    price=float(first.open)
++    tp=float(signal.tp_price) if scenario.startswith('Dynamic') else price+side*tp_pips*pip
++    normal_stop=scenario in {'Fixed TP/SL','Dynamic TP/Dynamic SL','Fixed TP/Printed Dynamic SL','Dynamic TP/Middle Bias + Emergency SL'}
++    sl=float(signal.sl_price) if scenario!='Fixed TP/SL' else price-side*sl_pips*pip
++    if side*(tp-price)<=0 or (normal_stop and side*(price-sl)<=0): return None,'TARGET_INVALID_AT_ACTUAL_FILL'
++    if normal_stop and abs(price-sl)/pip>p.max_stop_pips: return None,'STOP_BUDGET_AT_ACTUAL_FILL'
++    deadline,closed=closure_deadline(entry_at,p.max_hold_hours)
++    if closed and p.flatten_before_closure: deadline-=pd.Timedelta(hours=1)
++    else: deadline=entry_at+pd.Timedelta(hours=p.max_hold_hours)
++    bias_col='Higher Standard Regime Bias' if 'Higher' in scenario else 'Lower Regime Bias' if 'Lower' in scenario else 'Middle Regime Bias'
++    uses_bias='Bias' in scenario
++    future=q.loc[q.bar_open_time.le(deadline)]
++    exit_reason='CENSORED';exit_price=np.nan;exit_at=pd.NaT;mae=0.;mfe=0.;amb=False;gap=False;stop_seen=False;rebounded=False
++    # Full broker gaps are execution defects even when a favourable last quote exists.
++    expected_at=entry_at
++    for _,bar in future.iterrows():
++        at=bar.bar_open_time
++        if at!=expected_at: break  # unresolved execution path, never skip a quote gap
++        expected_at=at+pd.Timedelta(hours=1)
++        if at>=deadline:
++            if at==deadline: exit_reason='PRE_CLOSURE' if closed else 'TIMEOUT';exit_price=float(bar.open);exit_at=at
++            break
++        if uses_bias:
++            known=biases.loc[pd.to_datetime(biases.signal_available_at,utc=True).le(at)]
++            current=str(known.iloc[-1].get(bias_col,'NEUTRAL')) if len(known) else 'NEUTRAL'
++            if current!=signal.entry_side:
++                exit_reason='BIAS';exit_price=float(bar.open);exit_at=at;break
++        if bar.bar_close_time>deadline: break
++        favourable=side*(float(bar.high if side>0 else bar.low)-price)/pip
++        adverse=side*(float(bar.low if side>0 else bar.high)-price)/pip
++        mfe=max(mfe,favourable);mae=min(mae,adverse)
++        hit_tp=side*(float(bar.high if side>0 else bar.low)-tp)>=0
++        hit_sl=normal_stop and side*(sl-float(bar.low if side>0 else bar.high))>=0
++        open_tp=side*(float(bar.open)-tp)>=0
++        open_sl=normal_stop and side*(sl-float(bar.open))>=0
++        both=hit_tp and hit_sl and not open_tp and not open_sl
++        amb |= both
++        stop_seen |= hit_sl
++        if open_sl or (hit_sl and not open_tp and (not hit_tp or ambiguity=='SL_FIRST')):
++            exit_reason='SL';exit_price=float(bar.open) if open_sl else sl;exit_at=at if open_sl else bar.bar_close_time;gap=open_sl;break
++        if open_tp or hit_tp:
++            exit_reason='TP';exit_price=tp;exit_at=at if open_tp else bar.bar_close_time;break
++    # Stop-then-rebound is diagnostic; never adds any profit to a stopped trade.
++    if exit_reason=='SL':
++        after=future.loc[future.bar_open_time.ge(exit_at)]
++        rebounded=bool(((after.high>=tp) if side>0 else (after.low<=tp)).any())
++    resolved=pd.notna(exit_at)
++    net=side*(exit_price-price)/pip-p.costs if resolved else np.nan
++    return dict(Symbol=sym,check_at=check_at,signal_available_at=signal.signal_available_at,entry_at=entry_at,exit_at=exit_at,
++        entry_side=signal.entry_side,entry_price=price,tp_price=tp,sl_price=sl if normal_stop else np.nan,
++        exit_price=exit_price,exit_reason=exit_reason,net_pips=net,
++        hold_hours=(exit_at-entry_at).total_seconds()/3600 if resolved else np.nan,
++        deadline_at=deadline,max_adverse_pips=mae,max_favourable_pips=mfe,ambiguous=amb,stop_gap=gap,stop_then_rebound=rebounded,
++        spread_pips=p.spread_pips,slippage_pips=p.slippage_pips,commission_pips=p.commission_pips,financing_pips=p.financing_pips_per_day,
++        active_strategy_ids=signal.get('active_strategy_ids','[]'),active_strategy_family_ids=signal.get('active_strategy_family_ids','[]'),
++        unique_family_count=signal.get('unique_family_count',0),entry_origin=signal.get('entry_origin','RANK_FILL'),
++        regime_family=signal.get('regime_family','UNKNOWN'),volatility_bucket=signal.get('volatility_bucket','UNKNOWN'),
++        fill_resolution='H1_AGGREGATE_'+ambiguity,broker_verified=bool(first.get('broker_quote_verified',False)),scenario=scenario),'ENTERED'
++
++
++def replay_portfolio(signals,raw_quotes,*,scenario='Dynamic TP/Middle Bias + Emergency SL',tp_pips=77,sl_pips=103,
++        policy=None,entry_start=None,entry_end=None,ambiguity='TP_FIRST',research=True,removed_symbols=()):
++    p=policy or get_policy()
++    if scenario not in SCENARIOS: raise ValueError('Unknown exit scenario')
++    if ambiguity not in {'TP_FIRST','SL_FIRST'}: raise ValueError('Unknown ambiguity convention')
++    q=normalize_quotes(raw_quotes);s=signals.copy()
++    required={'Symbol','signal_available_at','entry_side','entry_eligible','research_entry_eligible','tp_price','sl_price','unique_family_count'}
++    if not required.issubset(s): raise ValueError('Typed signal columns missing: '+','.join(sorted(required-set(s))))
++    s['signal_available_at']=pd.to_datetime(s.signal_available_at,utc=True,errors='coerce')
++    for col in ('entry_eligible','research_entry_eligible'): s[col]=truthy(s[col])
++    s['Symbol']=s.Symbol.astype(str).str.upper().str.replace(r'[/_ ]','',regex=True)
++    s=s.loc[~s.Symbol.isin(removed_symbols)]
++    qs={sym:g.sort_values('bar_open_time') for sym,g in q.groupby('Symbol')}
++    bs={sym:g.sort_values('signal_available_at') for sym,g in s.groupby('Symbol')}
++    start=pd.Timestamp(entry_start) if entry_start is not None else s.signal_available_at.min()
++    end=pd.Timestamp(entry_end) if entry_end is not None else s.signal_available_at.max()
++    if pd.isna(start) or pd.isna(end): return {'trades':pd.DataFrame(),'skips':pd.DataFrame(),'hourly_equity':pd.DataFrame(),'metrics':metrics(pd.DataFrame())}
++    holdings={};trades=[];skips=[]
++    eligibility='research_entry_eligible' if research else 'entry_eligible'
++    for check in checks_between(start,end,p):
++        for sym,trade in list(holdings.items()):
++            # An unresolved position retains its slot; it is never flattened at a stale quote.
++            if pd.notna(trade['exit_at']) and trade['exit_at']<=check: del holdings[sym]
++        snapshot=latest_completed(s,check,p)
++        # No entries during broker closures, independent of display state.
++        from core.execution_policy_20261003 import fx_session_open
++        if not fx_session_open([check]).iloc[0]:
++            skips.append({'check_at':check,'Symbol':'ALL','reason':'BROKER_CLOSED_PROXY'});continue
++        picked,why=select_portfolio_entries(snapshot,holdings,policy=p,eligibility_column=eligibility)
++        if len(why): skips.extend(why.assign(check_at=check).to_dict('records'))
++        for _,signal in picked.iterrows():
++            if signal.Symbol not in qs: skips.append({'check_at':check,'Symbol':signal.Symbol,'reason':'NO_RAW_QUOTES'});continue
++            trade,reason=_trade(signal,qs[signal.Symbol],bs[signal.Symbol],check,scenario,tp_pips,sl_pips,p,ambiguity)
++            if trade is None: skips.append({'check_at':check,'Symbol':signal.Symbol,'reason':reason});continue
++            trade['trade_id']=len(trades)+1;trades.append(trade);holdings[signal.Symbol]=trade
++    ledger=pd.DataFrame(trades);equity=hourly_equity(ledger,qs,p)
++    return {'trades':ledger,'skips':pd.DataFrame(skips),'hourly_equity':equity,'metrics':metrics(ledger,equity)}
++
++
++def hourly_equity(trades,quotes,policy):
++    if trades.empty: return pd.DataFrame()
++    rows=[]
++    lo=trades.entry_at.min();hi=trades.exit_at.max()
++    if pd.isna(hi): hi=max(g.bar_open_time.max() for g in quotes.values())
++    for at in pd.date_range(lo.floor('h'),hi.ceil('h'),freq='h',tz='UTC'):
++        closed=trades.loc[trades.exit_at.le(at)]
++        realized=float(closed.net_pips.sum());floating=0.;missing=0
++        open_trades=trades.loc[trades.entry_at.le(at)&(trades.exit_at.gt(at)|trades.exit_at.isna())]
++        for _,trade in open_trades.iterrows():
++            bar=quotes[trade.Symbol].loc[quotes[trade.Symbol].bar_open_time.eq(at)&quotes[trade.Symbol].market_executable]
++            if bar.empty: missing+=1;continue
++            side=1 if trade.entry_side=='BUY' else -1
++            floating+=side*(float(bar.iloc[0].open)-trade.entry_price)/_pip(trade.Symbol)-policy.costs
++        rows.append({'time':at,'realized_pips':realized,'floating_pips':floating if not missing else np.nan,
++            'equity_pips':realized+floating if not missing else np.nan,'open_positions':len(open_trades),'unpriced_positions':missing})
++    out=pd.DataFrame(rows)
++    out['drawdown_pips']=out.equity_pips-out.equity_pips.cummax().clip(lower=0)
++    return out
++
++
++def metrics(ledger,equity=None):
++    if ledger.empty: return {'Trades':0,'Net Pip':0.,'Max DD':0.,'Win Rate':np.nan,'Profit Factor':np.nan,'Avg Hold':np.nan,'EV':np.nan,'Kelly Diagnostic':np.nan,'Censored Trades':0,'Max Float Loss':np.nan}
++    completed=ledger.loc[ledger.net_pips.notna()].sort_values('exit_at',kind='mergesort')
++    net=completed.net_pips;wins=net[net>0];loss=-net[net<0]
++    path=net.cumsum();dd=path-path.cummax().clip(lower=0)
++    p=len(wins)/len(net) if len(net) else np.nan
++    mean_win=wins.mean();mean_loss=loss.mean()
++    k=p-(1-p)/(mean_win/mean_loss) if len(wins) and len(loss) else np.nan
++    edd=equity.drawdown_pips.min() if equity is not None and len(equity) else dd.min()
++    return {'Trades':len(completed),'Net Pip':float(net.sum()),'Max DD':float(edd) if pd.notna(edd) else np.nan,
++        'Realized Max DD':float(dd.min()) if len(dd) else np.nan,'Win Rate':p*100,'Profit Factor':float(wins.sum()/loss.sum()) if loss.sum()>0 else np.nan,
++        'Avg Hold':completed.hold_hours.mean(),'Max Actual Hold':completed.hold_hours.max(),'EV':net.mean(),'Kelly Diagnostic':k,
++        'Censored Trades':int(ledger.net_pips.isna().sum()),'Max Float Loss':equity.floating_pips.min() if equity is not None and len(equity) else np.nan,
++        'Unpriced Equity Hours':int(equity.unpriced_positions.gt(0).sum()) if equity is not None and len(equity) else 0,
++        'Ambiguous Trades':int(completed.ambiguous.sum()),'Stop Gap Trades':int(completed.stop_gap.sum())}
+--- original/core/calibrated_target_model_20261003.py
++++ audited/core/calibrated_target_model_20261003.py
+@@ -0,0 +1,69 @@
++"""Guarded numerical model inference for the FINAL target recipe only."""
++from pathlib import Path
++from dataclasses import asdict
++import hashlib,json
++import numpy as np
++import pandas as pd
++from core.execution_policy_20261003 import VERSION
++
++
++def load_validated_model(policy):
++    if not policy.validation_manifest:return None
++    root=Path(__file__).resolve().parents[1]
++    path=Path(policy.validation_manifest)
++    if not path.is_absolute():path=root/path
++    try:
++        manifest=json.loads(path.read_text())
++        if not (manifest.get('all_acceptance_gates_passed') is True and manifest.get('untouched_forward_verified') is True and manifest.get('decision_engine_version')==VERSION):return None
++        model_path=Path(manifest['calibrated_model_json'])
++        if not model_path.is_absolute():model_path=root/model_path
++        payload=model_path.read_bytes()
++        if hashlib.sha256(payload).hexdigest()!=manifest['calibrated_model_sha256']:return None
++        m=json.loads(payload)
++        semantics=asdict(policy);semantics['validation_manifest']=''
++        expected=hashlib.sha256(json.dumps(semantics,sort_keys=True).encode()).hexdigest()
++        if m['engine']!=VERSION or m['pair_recipe']!='FINAL_STRUCTURAL_V1' or m['policy_sha256']!=expected:return None
++        if set(m['classes'])!={'TP','SL','BIAS','TIMEOUT'}:return None
++        if any(x is None for x in m['sigmoid']):return None
++        return m
++    except (OSError,ValueError,KeyError,TypeError):return None
++
++
++def infer_model(m,frame,tp_distance,sl_distance,pip):
++    values=frame.copy()
++    values['Suggested TP Pips']=tp_distance/pip;values['Suggested SL Pips']=sl_distance/pip
++    x=values.reindex(columns=m['features']).apply(pd.to_numeric,errors='coerce').to_numpy(float)
++    impute=np.asarray(m['impute'],float)
++    x=np.where(np.isfinite(x),x,impute)
++    x=(x-np.asarray(m['scale_mean']))/np.maximum(np.asarray(m['scale_std']),1e-12)
++    logits=x@np.asarray(m['coef']).T+np.asarray(m['intercept'])
++    if len(m['classes'])==2 and logits.shape[1]==1:
++        prob=1/(1+np.exp(-np.clip(logits[:,0],-35,35)));probs=np.column_stack((1-prob,prob))
++    else:
++        logits-=logits.max(axis=1)[:,None];probs=np.exp(logits);probs/=probs.sum(axis=1)[:,None]
++    for j,c in enumerate(m['classes']):
++        sigmoid=m['sigmoid'][j];logit=np.log(np.clip(probs[:,j],1e-6,1-1e-6)/(1-np.clip(probs[:,j],1e-6,1-1e-6)))
++        probs[:,j]=1/(1+np.exp(-np.clip(sigmoid['coef']*logit+sigmoid['intercept'],-35,35)))
++    probs/=probs.sum(axis=1)[:,None]
++    payouts=[];variances=[];counts=[]
++    for j,c in enumerate(m['classes']):
++        pay=m['payouts'][c];payouts.append(x@np.asarray(pay['coef'])+pay['intercept'])
++        variances.append(pay['residual_std']**2);counts.append(pay['sample_count'])
++    payout=np.column_stack(payouts)
++    # A TP payout cannot exceed the printed distance less total modeled costs.
++    # The SL term includes adverse gap risk; it cannot predict a smaller loss
++    # than the printed stop. Other terms use actual observed exit regressions.
++    costs=float(m.get('round_trip_cost_pips',0.))
++    for j,c in enumerate(m['classes']):
++        if c=='TP':payout[:,j]=np.minimum(payout[:,j],np.asarray(tp_distance/pip)-costs)
++        if c=='SL':payout[:,j]=np.minimum(payout[:,j],-np.asarray(sl_distance/pip)-costs)
++    ev=(probs*payout).sum(axis=1)
++    uncertainty=np.sqrt((probs*np.asarray(variances)).sum(axis=1)/max(1,min(counts)))
++    result=pd.DataFrame(index=frame.index)
++    result['expected_net_pips']=ev;result['expected_net_pips_lower_bound']=ev-1.96*uncertainty
++    result['forecast_sample_count']=min(counts)
++    result['probability_calibration_version']=m['version'];result['direction_probability']=np.nan
++    for c in ('TP','SL','BIAS','TIMEOUT'):
++        result['p_'+c.lower()]=probs[:,m['classes'].index(c)] if c in m['classes'] else 0.
++    result['calibrated_model_applied']=pd.to_datetime(frame.signal_available_at,utc=True).ge(pd.Timestamp(m['training_end']))
++    return result
+--- original/core/compact_strategy_decision_20260930.py
++++ audited/core/compact_strategy_decision_20260930.py
+@@ -20,7 +20,7 @@
+     out = frame.copy() if copy else frame
+     if out.empty:
+         return out
+-    time_col = next((c for c in ("Completed Candle", "Datetime", "_FinderDatetime", "open_time") if c in out), None)
++    time_col = next((c for c in ("signal_available_at", "bar_close_time", "Completed Candle", "Datetime", "_FinderDatetime", "open_time") if c in out), None)
+     if time_col is None or "Middle Regime Bias" not in out:
+         return out
+     ts = pd.to_datetime(out[time_col], errors="coerce", utc=True)
+--- original/core/execution_policy_20261003.py
++++ audited/core/execution_policy_20261003.py
+@@ -0,0 +1,176 @@
++"""Explicit candle ownership, conservative FX sessions and independent order state."""
++from __future__ import annotations
++from dataclasses import dataclass, asdict, fields
++from pathlib import Path
++from zoneinfo import ZoneInfo
++import json
++import numpy as np
++import pandas as pd
++
++VERSION = 'audited-h1-v1-20261003'
++
++@dataclass(frozen=True)
++class AuditPolicy:
++    entry_timezone: str = 'UTC'
++    check_hours: tuple = (4, 8, 12, 14, 16, 18)
++    skip_entry_weekdays: tuple = (6, 0)  # Sunday, Monday in entry_timezone
++    max_new_symbols: int = 2
++    display_slots: int = 4
++    max_hold_hours: int = 24
++    relaxation: float = 0.0
++    spread_pips: float = 2.0
++    slippage_pips: float = 0.5  # total round-trip adverse allowance
++    commission_pips: float = 0.0
++    financing_pips_per_day: float = 0.0
++    max_stop_pips: float = 103.0  # research budget, not an optimized recommendation
++    max_stop_atr: float = 2.9
++    min_tp_pips: float = 5.0
++    max_tp_pips: float = 500.0
++    min_net_reward_risk: float = 0.5
++    max_spread_atr: float = 0.25
++    max_spike_atr: float = 3.0
++    max_gap_atr: float = 1.0
++    min_samples: int = 40
++    min_tp_probability_24h: float = 0.25
++    min_ev_pips: float = 0.0
++    min_ev_lower_bound: float = 0.0
++    max_signal_age_minutes: int = 90
++    flatten_before_closure: bool = True
++    allow_rank_fill_orders: bool = False
++    validation_manifest: str = ''
++
++    def __post_init__(self):
++        ZoneInfo(self.entry_timezone)
++        if self.relaxation not in (0.0, 0.1, 0.2, 0.4):
++            raise ValueError('Relaxation must be one of 0, .10, .20, .40; select in training only')
++        if not 1 <= self.max_hold_hours <= 24 or not 0 <= self.max_new_symbols <= 2:
++            raise ValueError('Authorized policy: hold <=24 elapsed hours and <=2 new symbols')
++        if len(self.check_hours) != 6 or any(not 0 <= x <= 23 for x in self.check_hours):
++            raise ValueError('Configure six distinct local check hours')
++        if len(set(self.check_hours)) != 6 or any(x not in range(7) for x in self.skip_entry_weekdays):
++            raise ValueError('Invalid schedule')
++        if min(self.spread_pips,self.slippage_pips,self.commission_pips,self.financing_pips_per_day) < 0:
++            raise ValueError('Trading costs cannot be negative')
++        if self.max_stop_pips <= 0 or self.max_stop_atr <= 0 or self.min_samples < 2:
++            raise ValueError('Invalid stop budget/sample floor')
++
++    @property
++    def costs(self):
++        return self.spread_pips+self.slippage_pips+self.commission_pips+self.financing_pips_per_day
++
++
++def get_policy(overrides=None):
++    raw = {}
++    path = Path(__file__).resolve().parents[1] / 'config' / 'audited_execution.json'
++    if path.exists():
++        raw = json.loads(path.read_text())
++    raw.update(overrides or {})
++    accepted = {f.name for f in fields(AuditPolicy)}
++    if set(raw)-accepted:
++        raise ValueError('Unknown policy fields: '+', '.join(sorted(set(raw)-accepted)))
++    return AuditPolicy(**raw)
++
++
++def timeframe_delta(timeframe='H1'):
++    t = str(timeframe).upper()
++    if t.startswith('H'): return pd.Timedelta(hours=float(t[1:]))
++    if t.startswith('M'): return pd.Timedelta(minutes=float(t[1:]))
++    if t == 'D1': return pd.Timedelta(days=1)
++    raise ValueError('Unknown candle interval: '+t)
++
++
++def truthy(value):
++    return value.astype(str).str.strip().str.lower().isin({'true','1','1.0','yes'})
++
++
++def fx_session_open(times):
++    """NY Sunday 17:00 to Friday 17:00 proxy, DST aware. Not broker verification."""
++    s = pd.Series(pd.to_datetime(times, utc=True))
++    local = s.dt.tz_convert('America/New_York')
++    day = local.dt.dayofweek
++    minutes = local.dt.hour*60+local.dt.minute
++    return s.notna() & ((day.between(0,3)) | ((day==4)&(minutes<1020)) | ((day==6)&(minutes>=1020)))
++
++
++def quote_metadata(frame, timeframe='H1'):
++    out = frame.copy()
++    col = next((c for c in ('bar_open_time','open_time','Datetime','time','datetime') if c in out), None)
++    times = pd.to_datetime(out[col], errors='coerce', utc=True) if col else pd.Series(pd.NaT,index=out.index,dtype='datetime64[ns, UTC]')
++    close_times = times + timeframe_delta(timeframe)
++    prices = pd.DataFrame({k:pd.to_numeric(out.get(k,pd.Series(np.nan,index=out.index)),errors='coerce') for k in ('open','high','low','close')})
++    valid = np.isfinite(prices).all(axis=1) & prices.gt(0).all(axis=1)
++    valid &= prices.high.ge(prices[['open','low','close']].max(axis=1)) & prices.low.le(prices[['open','high','close']].min(axis=1))
++    duplicate = times.duplicated(keep=False) & times.notna()
++    session = fx_session_open(times).set_axis(out.index)
++    executable = valid & times.notna() & ~duplicate & session
++    # Explicit false rows can never be upgraded by a calendar proxy.
++    explicit = out.get('market_executable')
++    if explicit is not None: executable &= truthy(explicit)
++    verified = truthy(out.get('broker_quote_verified',pd.Series(False,index=out.index)))
++    if 'broker_session_open' in out:
++        executable &= truthy(out['broker_session_open'])
++    quality = np.select([times.isna(),duplicate,~valid,~session,~executable,~verified],
++        ['MISSING_TIMESTAMP','DUPLICATE_TIMESTAMP','INVALID_OHLC','BROKER_CLOSED_PROXY','EXPLICIT_NON_EXECUTABLE','UNVERIFIED_BROKER_QUOTES'], default='OK')
++    return pd.DataFrame({'bar_open_time':times,'bar_close_time':close_times,'signal_available_at':close_times,
++        'market_executable':executable,'broker_quote_verified':verified,'data_quality_flag':quality,
++        'quote_timezone':'UTC','timestamp_owner':'BAR_OPEN'},index=out.index)
++
++
++def checks_between(start,end,policy=None):
++    p = policy or get_policy()
++    lo, hi = pd.Timestamp(start), pd.Timestamp(end)
++    lo = lo.tz_localize('UTC') if lo.tzinfo is None else lo.tz_convert('UTC')
++    hi = hi.tz_localize('UTC') if hi.tzinfo is None else hi.tz_convert('UTC')
++    dates = pd.date_range(lo.tz_convert(p.entry_timezone).normalize(),hi.tz_convert(p.entry_timezone).normalize(),freq='D')
++    return pd.DatetimeIndex(sorted(t.tz_convert('UTC') for d in dates for h in p.check_hours
++        if d.dayofweek not in p.skip_entry_weekdays for t in [d+pd.Timedelta(hours=h)] if lo <= t.tz_convert('UTC') <= hi))
++
++
++def latest_completed(frame,check_time,policy=None):
++    p=policy or get_policy()
++    ts=pd.Timestamp(check_time)
++    ts=ts.tz_localize('UTC') if ts.tzinfo is None else ts.tz_convert('UTC')
++    col='signal_available_at' if 'signal_available_at' in frame else 'bar_close_time'
++    available=pd.to_datetime(frame[col],errors='coerce',utc=True)
++    valid=frame.loc[available.le(ts)].copy()
++    if valid.empty: return valid
++    valid['_at']=available.loc[valid.index]
++    valid=valid.sort_values(['_at','Symbol'],kind='mergesort').drop_duplicates('Symbol',keep='last')
++    valid['signal_age_minutes']=(ts-valid['_at']).dt.total_seconds()/60
++    valid.loc[valid.signal_age_minutes.gt(p.max_signal_age_minutes),'entry_eligible']=False
++    if 'research_entry_eligible' in valid:
++        valid.loc[valid.signal_age_minutes.gt(p.max_signal_age_minutes),'research_entry_eligible']=False
++    return valid.drop(columns='_at')
++
++
++def closure_deadline(entry_time,max_hold_hours=24):
++    t=pd.Timestamp(entry_time).tz_convert('UTC')
++    deadline=t+pd.Timedelta(hours=max_hold_hours)
++    local=t.tz_convert('America/New_York')
++    days=(4-local.dayofweek)%7
++    friday=local.normalize()+pd.DateOffset(days=days)+pd.Timedelta(hours=17)
++    if friday <= local: friday+=pd.DateOffset(days=7)
++    closure=friday.tz_convert('UTC')
++    return min(deadline,closure), closure <= deadline
++
++
++def select_new_entries(candidates,held_symbols,*,policy=None,eligibility_column='entry_eligible'):
++    """Selection owner delegates here. State supplied by holdings, never display rows."""
++    p=policy or get_policy()
++    held={str(s).upper() for s in held_symbols}
++    rank=candidates.copy()
++    rank['_families']=pd.to_numeric(rank.get('unique_family_count',pd.Series(0,index=rank.index)),errors='coerce').fillna(0)
++    rank['_ev']=pd.to_numeric(rank.get('expected_net_pips',pd.Series(np.nan,index=rank.index)),errors='coerce').fillna(-np.inf)
++    rank=rank.sort_values(['_families','_ev','Symbol'],ascending=[False,False,True],kind='mergesort').drop_duplicates('Symbol')
++    selected=[]; skipped=[]
++    for pos,(idx,row) in enumerate(rank.head(p.display_slots).iterrows(),1):
++        sym=str(row.Symbol).upper()
++        origin=row.get('entry_origin','RANK_FILL')
++        reason=''
++        if sym in held: reason='ALREADY_HELD'
++        elif not bool(row.get(eligibility_column,False)): reason='INELIGIBLE: '+str(row.get('TP Filter Reasons','SIGNAL_GATE'))
++        elif origin=='RANK_FILL' and not p.allow_rank_fill_orders: reason='DISPLAY_RANK_FILL_ONLY'
++        elif len(selected)>=p.max_new_symbols: reason='NEW_ENTRY_LIMIT'
++        if reason: skipped.append({'Symbol':sym,'candidate_rank':pos,'reason':reason})
++        else: selected.append(idx); held.add(sym)
++    return rank.loc[selected].drop(columns=['_families','_ev']),pd.DataFrame(skipped,columns=['Symbol','candidate_rank','reason'])
+--- original/core/final_pair_forecast_20261003.py
++++ audited/core/final_pair_forecast_20261003.py
+@@ -0,0 +1,158 @@
++"""Final-price, elapsed-time H1 labels and causal empirical forecasts.
++
++Labels are research approximations from H1 aggregate OHLC with adverse cost
++allowances. They are never described as observed broker bid/ask first touches.
++Full intervals are released before fitting. Missing bars censor the interval.
++"""
++from __future__ import annotations
++import numpy as np
++import pandas as pd
++from core.execution_policy_20261003 import get_policy,closure_deadline
++
++EXITS=('TP','SL','BIAS','TIMEOUT')
++
++def final_pair_labels(frame,side,tp_price,sl_price,*,policy=None,ambiguity='SL_FIRST',bias_exit=True):
++    p=policy or get_policy()
++    if ambiguity not in {'TP_FIRST','SL_FIRST'}: raise ValueError('Unknown ambiguity convention')
++    n=len(frame); idx=frame.index
++    t=pd.to_datetime(frame['bar_open_time'],utc=True).astype('int64').to_numpy()
++    available=pd.to_datetime(frame['signal_available_at'],utc=True).astype('int64').to_numpy()
++    o,h,l,c=(pd.to_numeric(frame[k],errors='coerce').to_numpy(float) for k in ('open','high','low','close'))
++    executable=frame.market_executable.to_numpy(bool)
++    side=np.asarray(side,float); tp=np.asarray(tp_price,float); sl=np.asarray(sl_price,float)
++    bias=frame.get('bias',pd.Series('NEUTRAL',index=idx)).astype(str).str.upper().to_numpy()
++    hour=int(pd.Timedelta(hours=1).value)
++    # The next executable open. Excessively stale signals are censored.
++    exec_idx=np.flatnonzero(executable)
++    entry_idx=np.full(n,n,dtype=int)
++    if len(exec_idx):
++        pos=np.searchsorted(t[exec_idx],available,side='left')
++        ok=pos<len(exec_idx)
++        entry_idx[ok]=exec_idx[pos[ok]]
++    safe=np.minimum(entry_idx,max(0,n-1))
++    entry=o[safe]; start=t[safe]
++    usable=(entry_idx<n)&executable&(side!=0)&np.isfinite(tp)&np.isfinite(sl)
++    usable &= (start>=available)&(start-available<=p.max_signal_age_minutes*60*10**9)
++    usable &= side*(tp-entry)>0; usable &= side*(entry-sl)>0
++    deadlines=start+p.max_hold_hours*hour
++    # Proactive flatten at the start of the final executable H1 bar before closure.
++    if p.flatten_before_closure:
++        local=pd.DatetimeIndex(pd.to_datetime(start,utc=True)).tz_convert('America/New_York')
++        naive=local.tz_localize(None)
++        days=(4-local.dayofweek)%7
++        close_naive=naive.normalize()+pd.to_timedelta(days,unit='D')+pd.Timedelta(hours=17)
++        past=close_naive<=naive
++        close_naive=close_naive+pd.to_timedelta(np.where(past,7,0),unit='D')
++        closures=close_naive.tz_localize('America/New_York').tz_convert('UTC').astype('int64').to_numpy()
++        deadlines=np.where(closures<=deadlines,closures-hour,deadlines)
++    outcomes=np.full(n,'CENSORED',object); net=np.full(n,np.nan); at=np.full(n,np.nan)
++    tp_at=np.full(n,np.nan); ambiguous=np.zeros(n,bool); gap=np.zeros(n,bool)
++    integrity=usable.copy(); finished=np.zeros(n,bool); rebounded=np.zeros(n,bool)
++    seen_sl=np.zeros(n,bool)
++    for step in range(p.max_hold_hours+1):
++        j=entry_idx+step; inside=j<n; js=np.minimum(j,max(0,n-1))
++        expected=start+step*hour
++        active=usable & (expected<=deadlines)
++        # A scheduled open is required at every point; NY-closed endpoints
++        # have already been moved to the final pre-closure open.
++        valid=inside & executable[js] & (t[js]==expected)
++        integrity &= (~active | valid)
++        now=active & valid
++        timeout=now & (expected==deadlines)
++        bias_flip=np.zeros(n,bool)
++        if bias_exit and step>0:
++            prev=np.maximum(js-1,0)
++            direction=np.where(bias[prev]=='BUY',1,np.where(bias[prev]=='SELL',-1,0))
++            bias_flip=now & (side!=direction)
++        early=now & ~finished & (timeout|bias_flip)
++        outcomes[early]=np.where(timeout[early],'TIMEOUT','BIAS')
++        net[early]=side[early]*(o[js[early]]-entry[early])/0.0001  # replace pip vector below
++        at[early]=(expected[early]-start[early])/hour
++        finished |= early
++        path=now & (expected+hour<=deadlines)
++        tp_touch=path & np.where(side>0,h[js]>=tp,l[js]<=tp)
++        sl_touch=path & np.where(side>0,l[js]<=sl,h[js]>=sl)
++        # Opening gaps have known order before the H1 range.
++        tp_gap=path & (side*(o[js]-tp)>=0)
++        sl_gap=path & (side*(sl-o[js])>=0)
++        both=tp_touch&sl_touch & ~tp_gap & ~sl_gap
++        ambiguous |= both & ~finished
++        wins=(tp_gap | (tp_touch & ~sl_gap & (~sl_touch | (ambiguity=='TP_FIRST')))) & ~finished
++        losses=(sl_gap | (sl_touch & ~tp_gap & (~tp_touch | (ambiguity=='SL_FIRST')))) & ~finished & ~wins
++        outcomes[wins]='TP'; net[wins]=side[wins]*(tp[wins]-entry[wins])/0.0001
++        # Stops gap at first executable open; TP is conservatively paid at its price.
++        stop_price=np.where(sl_gap,o[js],sl)
++        outcomes[losses]='SL'; net[losses]=side[losses]*(stop_price[losses]-entry[losses])/0.0001
++        gap |= losses & sl_gap
++        exits=wins|losses
++        at[exits]=(expected[exits]+hour-start[exits])/hour
++        tp_at[wins]=at[wins]
++        rebounded |= tp_touch & seen_sl
++        seen_sl |= sl_touch
++        finished |= exits
++    pip=frame.get('pip_size',pd.Series(.0001,index=idx)).to_numpy(float)
++    net=net*.0001/pip-p.costs
++    # The endpoint open is known only once its H1 source record is complete.
++    # Delay release one extra hour so a full frame and a completed-bar prefix
++    # use identical evidence, including timeout prices and endpoint integrity.
++    release=start+(p.max_hold_hours+1)*hour
++    # Never train on the tail or on an incomplete interval after an early win.
++    integrity &= release<= (t[-1]+hour if n else 0)
++    integrity &= finished
++    outcomes[~integrity]='CENSORED'; net[~integrity]=np.nan; at[~integrity]=np.nan
++    return pd.DataFrame({'outcome':outcomes,'net_pips':net,'hold_hours':at,'tp_reach_hours':tp_at,
++        'ambiguous':ambiguous,'stop_gap':gap,'stop_then_rebound':rebounded,
++        'entry_at':pd.to_datetime(start,utc=True),'label_available_at':pd.to_datetime(release,utc=True),
++        'label_complete':integrity,'fill_resolution':'H1_OHLC_'+ambiguity},index=idx)
++
++
++def causal_empirical_forecast(frame,labels,*,policy=None,training_end='2025-01-01T00:00:00Z'):
++    """Estimate the actual adjusted pair policy by side/regime using matured labels.
++
++    This is an empirical estimator, not a calibrated classifier. Training freezes
++    before 2025; validation/2026 labels cannot update live estimates by default.
++    """
++    p=policy or get_policy(); idx=frame.index; n=len(frame)
++    available=pd.to_datetime(frame.signal_available_at,utc=True)
++    release=pd.to_datetime(labels.label_available_at,utc=True)
++    cutoff=pd.Timestamp(training_end) if training_end else None
++    regime=frame.get('regime_family',pd.Series('TRANSITION',index=idx)).astype(str)
++    direction=frame.bias.astype(str)
++    key=direction+'|'+regime
++    family=frame.get('strategy_family_key',pd.Series('UNSPECIFIED',index=idx)).astype(str)
++    volatility=frame.get('volatility_bucket',pd.Series('UNSPECIFIED',index=idx)).astype(str)
++    key=key+'|'+family+'|'+volatility
++    names=['expected_net_pips','expected_net_pips_lower_bound','forecast_sample_count',
++        'p_tp','p_sl','p_bias','p_timeout','expected_reach_hours','reach_p25_hours','reach_p75_hours',
++        'p_tp_4h','p_tp_8h','p_tp_12h','p_tp_18h','p_tp_24h']
++    result=pd.DataFrame(np.nan,index=idx,columns=names)
++    limit=available.where(available.le(cutoff),cutoff) if cutoff is not None else available
++    good=labels.label_complete & labels.net_pips.notna()
++    for group,targets in key.groupby(key,sort=False).groups.items():
++        origins=key.index[(key==group)&good]
++        if len(origins)==0:
++            result.loc[targets,'forecast_sample_count']=0
++            continue
++        history=labels.loc[origins].sort_values('label_available_at',kind='mergesort')
++        value=history.net_pips
++        rolling=value.rolling(240,min_periods=1)
++        stats=pd.DataFrame(index=history.index)
++        stats['forecast_sample_count']=rolling.count()
++        stats['expected_net_pips']=rolling.mean()
++        stats['expected_net_pips_lower_bound']=rolling.mean()-1.96*rolling.std()/np.sqrt(rolling.count())
++        for outcome in EXITS:
++            stats['p_'+outcome.lower()]=history.outcome.eq(outcome).astype(float).rolling(240,min_periods=1).mean()
++        reach=history.tp_reach_hours.where(history.outcome.eq('TP'))
++        rr=reach.rolling(240,min_periods=1)
++        stats['expected_reach_hours']=rr.mean();stats['reach_p25_hours']=rr.quantile(.25);stats['reach_p75_hours']=rr.quantile(.75)
++        for h in (4,8,12,18,24): stats[f'p_tp_{h}h']=(history.outcome.eq('TP')&history.tp_reach_hours.le(h)).astype(float).rolling(240,min_periods=1).mean()
++        small=stats.forecast_sample_count.lt(p.min_samples)
++        stats.loc[small,[c for c in names if c!='forecast_sample_count']]=np.nan
++        positions=np.searchsorted(pd.to_datetime(history.label_available_at,utc=True).astype('int64').to_numpy(),limit.loc[targets].astype('int64').to_numpy(),side='right')-1
++        ready=positions>=0
++        result.loc[targets,'forecast_sample_count']=0
++        result.loc[np.asarray(targets)[ready],names]=stats[names].to_numpy()[positions[ready]]
++    result['probability_calibration_version']='EMPIRICAL_FINAL_POLICY_UNCALIBRATED'
++    result['direction_probability']=np.nan
++    result['forecast_training_end']=training_end
++    return result
+--- original/core/hourly_four_symbol_selector_20260928.py
++++ audited/core/hourly_four_symbol_selector_20260928.py
+@@ -26,7 +26,8 @@
+ SELECTOR_VERSION = "hourly-four-selector-v4-20261002-pair-quality"
+ SELECTOR_MAX_SYMBOLS = 4
+ MAX_HOLD_HOURS = 24
+-ENTRY_FILTER_RELAXATION = 0.40
++from core.execution_policy_20261003 import get_policy
++ENTRY_FILTER_RELAXATION = get_policy().relaxation
+ ENTRY_FILTER_MULTIPLIER = 1.0 - ENTRY_FILTER_RELAXATION
+ LOW_FREQUENCY_COVERAGE_SYMBOLS = frozenset({
+     "EURUSD", "AUDUSD", "AUDNZD", "AUDJPY", "NZDUSD",
+@@ -343,6 +344,7 @@
+     *,
+     timeframe: str = "H1",
+     symbol: pd.Series | str | None = None,
++    policy=None,
+ ) -> pd.DataFrame:
+     """Attach the shared structural, causal 4H-24H TP/SL pair model.
+ 
+@@ -357,6 +359,7 @@
+         bias,
+         timeframe=timeframe,
+         symbol=symbol,
++        policy=policy,
+     )
+ 
+ 
+@@ -412,254 +415,54 @@
+     return labels
+ 
+ 
+-def attach_hourly_four_selection(
+-    frame: pd.DataFrame,
+-    *,
+-    timestamp_columns: tuple[str, ...] = ("Completed Candle", "Datetime", "_FinderDatetime"),
+-    max_symbols: int = SELECTOR_MAX_SYMBOLS,
+-    coverage_state: dict | None = None,
+-    copy: bool = True,
+-) -> pd.DataFrame:
+-    """Select the hourly opportunity set with strategy-first quality balancing.
+-
+-    Actual S1-S120 hits remain the only genuine strategy origin.  Among those
+-    hits, the selector now balances recent coverage so low-frequency symbols
+-    with many valid signals are not systematically starved.  Coverage bonus is
+-    only active when the candidate still clears strong quality/risk gates, so it
+-    cannot turn a weak row into a false strategy signal.
++def attach_hourly_four_selection(frame,*,timestamp_columns=('signal_available_at','Completed Candle','Datetime','_FinderDatetime'),max_symbols=4,coverage_state=None,copy=True):
++    """Display selector only; never owns held positions or creates order eligibility.
++
++    Rank independent families, empirical/calibrated EV, then deterministic symbol.
++    Zero-hit display slots have RANK_FILL origin and never produce an order.
+     """
+-    if not isinstance(frame, pd.DataFrame) or frame.empty:
+-        return pd.DataFrame()
+-    out = frame.copy() if copy else frame
+-    if out.columns.duplicated().any():
+-        out = out.loc[:, ~out.columns.duplicated(keep="last")].copy()
+-    out.reset_index(drop=True, inplace=True)
+-    from core.compact_strategy_decision_20260930 import annotate_middle_bias_exits, apply_exit_notice, compact_entry
+-    out = annotate_middle_bias_exits(out, copy=False)
+-    idx = out.index
+-
+-    ts_col = next((c for c in timestamp_columns if c in out.columns), None)
+-    if ts_col is not None:
+-        timestamps = pd.to_datetime(out[ts_col], errors="coerce", utc=True)
+-        group_key = timestamps.dt.floor("h")
+-    else:
+-        group_key = pd.Series(pd.Timestamp("1970-01-01", tz="UTC"), index=idx)
+-
+-    condition_cols = [c for c in out.columns if re.fullmatch(r"S\d+ Entry Condition", str(c))]
+-    score_cols = [c for c in out.columns if re.fullmatch(r"S\d+ Score", str(c))]
+-    if condition_cols:
+-        cond_df = pd.DataFrame({
+-            c: out[c].astype(str).str.strip().str.lower().isin({"true", "1", "1.0"}) for c in condition_cols
+-        }, index=idx)
+-        hit_count = cond_df.sum(axis=1).astype(int)
+-    else:
+-        hit_count = _num(out.get("Strategy Hit Count", pd.Series(0, index=idx)), idx, default=0).astype(int)
+-    if score_cols:
+-        score_df = pd.DataFrame({c: pd.to_numeric(out[c], errors="coerce").fillna(0) for c in score_cols}, index=idx)
+-        best_score = score_df.max(axis=1).fillna(0)
+-    else:
+-        best_score = _num(out.get("Best Strategy Score", pd.Series(0, index=idx)), idx, default=0)
+-
+-    near_score = _num(out.get("Near Entry Score", pd.Series(0, index=idx)), idx, default=0).clip(0, 100)
+-    alignment = pd.Series(0.0, index=idx)
+-    if "Lower Regime Bias" in out and "Middle Regime Bias" in out and "Higher Standard Regime Bias" in out:
+-        b1 = out["Lower Regime Bias"].astype(str).str.upper()
+-        b2 = out["Middle Regime Bias"].astype(str).str.upper()
+-        b3 = out["Higher Standard Regime Bias"].astype(str).str.upper()
+-        alignment = ((b1.eq(b2).astype(int) + b2.eq(b3).astype(int) + b1.eq(b3).astype(int)) / 3 * 100).astype(float)
+-    elif "Middle Regime Bias" in out:
+-        alignment = out["Middle Regime Bias"].astype(str).str.upper().isin({"BUY", "SELL"}).astype(float) * 60
+-
+-    rr = _num(out.get("TP:SL Price Ratio", pd.Series(0, index=idx)), idx, default=0).clip(0, 8)
+-    tp_potential = _num(out.get("24H TP Distance", pd.Series(0, index=idx)), idx, default=0)
+-    net_pip_potential = _num(out.get("24H Estimated Net Pip Potential", pd.Series(0, index=idx)), idx, default=0).clip(0, 5000)
+-    romad_proxy = _num(out.get("24H ROMAD Proxy", pd.Series(0, index=idx)), idx, default=0).clip(0, 10)
+-    atr = _num(out.get("ATR", pd.Series(np.nan, index=idx)), idx, default=np.nan)
+-    tp_vs_atr = tp_potential.div(atr.replace(0, np.nan)).replace([np.inf, -np.inf], np.nan).fillna(0).clip(0, 10)
+-    noise = _num(out.get("Entry Noise Ratio", pd.Series(1.0, index=idx)), idx, default=1.0).clip(0, 5)
+-    sl_vs_atr = _num(out.get("24H SL Distance", pd.Series(0.0, index=idx)), idx, default=0).div(atr.replace(0, np.nan)).fillna(0).clip(0, 5)
+-
+-    pair_quality = _num(out.get("TP/SL Pair Quality Score", pd.Series(50.0, index=idx)), idx, default=50.0).clip(0, 100)
+-    sl_cap_passed = out.get("SL Risk Cap Passed", pd.Series(True, index=idx)).astype(str).str.lower().isin({"true", "1", "1.0"})
+-    liquidity_quality = _num(out.get("SL Liquidity Safety Score", pd.Series(50.0, index=idx)), idx, default=50.0).clip(0, 100)
+-    rebound_rate = _num(out.get("SL Rebound To TP Rate", pd.Series(20.0, index=idx)), idx, default=20.0).clip(0, 100)
+-    risk_quality = (
+-        24 * rr.sub(1.20).div(2.80).clip(0, 1)
+-        + 18 * (1 - noise.sub(1.0).div(1.3).clip(0, 1))
+-        + 12 * (1 - sl_vs_atr.sub(1.0).div(1.9).clip(0, 1))
+-        + 25 * pair_quality.div(100)
+-        + 12 * liquidity_quality.div(100)
+-        + 9 * (1 - rebound_rate.div(25).clip(0, 1))
+-    ).where(sl_cap_passed, 0.35 * pair_quality).clip(0, 100)
+-    candidate_quality = (
+-        best_score * 0.34 + near_score * 0.18 + alignment * 0.12
+-        + risk_quality * 0.18 + pair_quality * 0.18
+-    ).clip(0, 100)
+-
+-    out["Strategy Hit Count"] = hit_count
+-    out["Best Strategy Score"] = best_score.round(1)
+-    out["Near Entry Score"] = near_score.round(1)
+-    out["Risk Quality Score"] = risk_quality.round(1)
+-    out["Candidate Quality Score"] = candidate_quality.round(1)
+-    out["Hourly Selection Score"] = 0.0
+-    out["Hourly 4 Entry"] = False
+-    out["Hourly Selection Rank"] = pd.Series(pd.NA, index=idx, dtype="Int64")
+-    out["Hourly Entry Origin"] = "NOT SELECTED"
+-    out["Hourly Selected Count"] = 0
+-    out["Strategy Decision"] = "None"
+-    out["Coverage Priority"] = 0.0
+-
+-    symbol_series = out.get("Symbol", pd.Series("", index=idx)).astype(str).str.upper()
+-    middle_bias = out.get("Middle Regime Bias", pd.Series("NEUTRAL", index=idx)).astype(str).str.upper()
+-    tp_display = out.get("TP Price Display", pd.Series("—", index=idx)).astype(str)
+-    sl_display = out.get("SL Price Display", pd.Series("—", index=idx)).astype(str)
+-
+-    symbol_values = symbol_series.to_numpy()
+-    hit_values = hit_count.to_numpy()
+-    state = coverage_state if coverage_state is not None else {}
+-    prior_opportunities = state.setdefault("opportunities", {})
+-    prior_selected = state.setdefault("selected", {})
+-    selected_rows: list[tuple[Any, int, int]] = []
+-
+-    temp = pd.DataFrame({
+-        "group": group_key,
+-        "symbol": symbol_series,
+-        "hit_count": hit_count,
+-        "best_score": best_score,
+-        "near_score": near_score,
+-        "alignment": alignment,
+-        "rr": rr,
+-        "net_pip_potential": net_pip_potential,
+-        "romad_proxy": romad_proxy,
+-        "risk_quality": risk_quality,
+-        "pair_quality": pair_quality,
+-        "candidate_quality": candidate_quality,
+-        "tp_vs_atr": tp_vs_atr,
+-        "noise": noise,
+-        "index": idx,
+-    }, index=idx)
+-
+-    for group_value, group in temp.groupby("group", dropna=False, sort=True):
+-        if group.empty:
+-            continue
+-        rows = []
+-        for rec in group.itertuples(index=False, name=None):
+-            rec = dict(zip(group.columns, rec))
+-            sym = str(rec["symbol"]).upper()
+-            hits = int(rec["hit_count"])
+-            previous_opportunities = prior_opportunities.get(sym, 0)
+-            previous_selected = prior_selected.get(sym, 0)
+-            coverage_ratio = previous_selected / max(previous_opportunities, 1)
+-            coverage_need = max(0.0, min(1.0, (0.50 - coverage_ratio) / 0.50)) if previous_opportunities else 0.60
+-
+-            # LOWER ENTRY COVERAGE MODE: use one exact 40% reduction for the
+-            # selector's quality floors. The strategy audit applies the same
+-            # reduction to S1-S120 shared admissibility filters.
+-            strong_quality = (
+-                hits > 0
+-                and float(rec["best_score"]) >= 75 * ENTRY_FILTER_MULTIPLIER
+-                and float(rec["near_score"]) >= 65 * ENTRY_FILTER_MULTIPLIER
+-                and float(rec["risk_quality"]) >= 65 * ENTRY_FILTER_MULTIPLIER
+-                and float(rec["rr"]) >= 2.0 * ENTRY_FILTER_MULTIPLIER
+-            )
+-            low_frequency_bonus = 0.0
+-            if sym in LOW_FREQUENCY_COVERAGE_SYMBOLS and strong_quality:
+-                low_frequency_bonus = 85.0 + 120.0 * coverage_need
+-            elif strong_quality and coverage_ratio < 0.25:
+-                low_frequency_bonus = 35.0 * coverage_need
+-
+-            # Risk-adjusted selection utility: high-quality real hits dominate;
+-            # coverage is a tie-breaker for starved symbols, not a replacement
+-            # for an actual strategy condition.
+-            utility = (
+-                (1000.0 if hits > 0 else 0.0)
+-                + hits * 48.0
+-                + float(rec["best_score"]) * 2.65
+-                + float(rec["near_score"]) * 1.20
+-                + float(rec["alignment"]) * 0.85
+-                + min(float(rec["rr"]), 5.0) * 18.0
+-                + min(float(rec["tp_vs_atr"]), 7.0) * 2.5
+-                + min(float(rec["net_pip_potential"]), 250.0) * 0.20
+-                + min(float(rec["romad_proxy"]), 10.0) * 22.0
+-                + float(rec["risk_quality"]) * 1.25
+-                + float(rec["pair_quality"]) * 1.35
+-                + low_frequency_bonus
+-                - max(0.0, float(rec["noise"]) - 1.5) * 22.0
+-            )
+-            coverage_priority = 1.0 if (sym in LOW_FREQUENCY_COVERAGE_SYMBOLS and strong_quality and coverage_ratio < 0.50) else 0.0
+-            rows.append((rec["index"], utility, low_frequency_bonus, coverage_ratio, coverage_priority))
+-
+-        ranked = sorted(rows, key=lambda x: (-x[1], x[0]))
+-        slot_count = max(1, min(int(max_symbols), len(ranked)))
+-        chosen = ranked[:slot_count]
+-
+-        # Strategy-only coverage floor: when a report-identified low-frequency
+-        # symbol has a genuine strong S1-S120 hit and has received less than 50%
+-        # of its prior valid opportunity snapshots, allow one high-quality
+-        # replacement for the weakest selected candidate. This raises frequency
+-        # without admitting weak/no-strategy rows.
+-        quota_candidates = [r for r in ranked[slot_count:] if r[4] > 0]
+-        if quota_candidates and chosen:
+-            weakest_pos = min(range(len(chosen)), key=lambda j: chosen[j][1])
+-            weakest = chosen[weakest_pos]
+-            for candidate in quota_candidates:
+-                if candidate[1] >= weakest[1] * 0.78:
+-                    chosen[weakest_pos] = candidate
+-                    break
+-            chosen = sorted(chosen, key=lambda x: (-x[1], x[0]))
+-
+-        n_chosen = len(chosen)
+-        chosen_set = {r[0] for r in chosen}
+-        for rank_pos, (row_idx, utility, bonus, _coverage_ratio, _coverage_priority) in enumerate(chosen, start=1):
+-            selected_rows.append((row_idx, rank_pos, n_chosen, round(float(utility), 2), round(float(bonus), 2)))
+-            prior_selected[str(symbol_values[row_idx]).upper()] = prior_selected.get(str(symbol_values[row_idx]).upper(), 0) + 1
+-        # Every strategy hit counts as an eligible opportunity after the group
+-        # is scored, even if another symbol wins the current hourly slots.
+-        for row_idx, _, _, _, _ in rows:
+-            sym = str(symbol_values[row_idx]).upper()
+-            if int(hit_values[row_idx]) > 0:
+-                prior_opportunities[sym] = prior_opportunities.get(sym, 0) + 1
+-
+-    if selected_rows:
+-        rows = np.asarray(selected_rows, dtype=float)
+-        chosen_indices = rows[:, 0].astype(int)
+-        out.loc[chosen_indices, "Hourly 4 Entry"] = True
+-        out.loc[chosen_indices, "Hourly Selection Rank"] = rows[:, 1].astype(int)
+-        out.loc[chosen_indices, "Hourly Selected Count"] = rows[:, 2].astype(int)
+-        out.loc[chosen_indices, "Hourly Selection Score"] = rows[:, 3]
+-        out.loc[chosen_indices, "Coverage Priority"] = rows[:, 4]
+-        out.loc[chosen_indices, "Hourly Entry Origin"] = np.where(hit_values[chosen_indices] > 0, "STRATEGY", "RANK-FILL")
+-        chosen_tp, chosen_sl = [], []
+-        tp_values = _num(out.get("Suggested TP", pd.Series(np.nan, index=idx)), idx).to_numpy()
+-        sl_values = _num(out.get("Suggested SL", pd.Series(np.nan, index=idx)), idx).to_numpy()
+-        for i in chosen_indices:
+-            tp = tp_display.iloc[i]
+-            sl = sl_display.iloc[i]
+-            chosen_tp.append(price_string(tp_values[i], symbol_values[i]) if tp == "—" else tp)
+-            chosen_sl.append(price_string(sl_values[i], symbol_values[i]) if sl == "—" else sl)
+-        if "TP Price Display" not in out:
+-            out["TP Price Display"] = "—"
+-        if "SL Price Display" not in out:
+-            out["SL Price Display"] = "—"
+-        out.loc[chosen_indices, "TP Price Display"] = chosen_tp
+-        out.loc[chosen_indices, "SL Price Display"] = chosen_sl
+-        out.loc[chosen_indices, "Strategy Decision"] = [
+-            compact_entry(bias, hits, tp, sl) for bias, hits, tp, sl in zip(
+-                middle_bias.to_numpy()[chosen_indices], hit_values[chosen_indices], chosen_tp, chosen_sl)
+-        ]
+-
+-    out = apply_exit_notice(out, recompute=False, copy=False)
+-
+-    out["_selected_sort"] = out["Hourly 4 Entry"].astype(int)
+-    out["_rank_sort"] = pd.to_numeric(out["Hourly Selection Rank"], errors="coerce").fillna(9999)
+-    out["_group_sort"] = group_key
+-    out = out.sort_values(
+-        ["_group_sort", "_selected_sort", "_rank_sort", "Hourly Selection Score", "Symbol"],
+-        ascending=[True, False, True, False, True],
+-        kind="mergesort",
+-    )
+-    out.drop(columns=["_group_sort", "_selected_sort", "_rank_sort"], inplace=True, errors="ignore")
+-    return out.reset_index(drop=True)
++    from core.strategy_audit_20260924 import recompute_family_evidence
++    from core.compact_strategy_decision_20260930 import compact_entry,apply_exit_notice
++    if frame.empty: return frame.copy()
++    out=frame.loc[:,~frame.columns.duplicated(keep='last')].copy().reset_index(drop=True)
++    out=recompute_family_evidence(out)
++    col=next((c for c in timestamp_columns if c in out),None)
++    ts=pd.to_datetime(out[col],errors='coerce',utc=True) if col else pd.Series(pd.NaT,index=out.index,dtype='datetime64[ns, UTC]')
++    out['_group']=ts
++    out['_ev']=pd.to_numeric(out.get('expected_net_pips',pd.Series(np.nan,index=out.index)),errors='coerce').fillna(-np.inf)
++    # Canonical Symbol exists in every real app caller.
++    if 'Symbol' not in out: out['Symbol']='UNKNOWN'
++    out['Hourly 4 Entry']=False
++    out['Hourly Selection Rank']=pd.Series(pd.NA,index=out.index,dtype='Int64')
++    out['Hourly Selected Count']=0
++    genuine=out.unique_family_count.gt(0)
++    rescue=out.active_strategy_ids.str.contains(r'\bS11[1-9]\b|\bS120\b',regex=True)
++    out['entry_origin']=np.where(rescue,'RESCUE',np.where(genuine,'STRATEGY','RANK_FILL'))
++    out['Hourly Entry Origin']='NOT SELECTED'
++    if 'entry_eligible' not in out: out['entry_eligible']=False
++    out.loc[~genuine,'entry_eligible']=False
++    if 'research_entry_eligible' not in out: out['research_entry_eligible']=False
++    out.loc[~genuine,'research_entry_eligible']=False
++    ranked=out.sort_values(['_group','unique_family_count','_ev','Symbol'],ascending=[True,False,False,True],kind='mergesort')
++    selected=ranked.groupby('_group',dropna=False,sort=False).head(max(0,min(4,int(max_symbols))))
++    for _,group in selected.groupby('_group',dropna=False,sort=False):
++        ids=group.index
++        out.loc[ids,'Hourly 4 Entry']=True
++        out.loc[ids,'Hourly Selection Rank']=np.arange(1,len(ids)+1)
++        out.loc[ids,'Hourly Selected Count']=len(ids)
++        out.loc[ids,'Hourly Entry Origin']=out.loc[ids,'entry_origin']
++    out['Hourly Selection Score']=out.unique_family_count.astype(float)
++    out['Coverage Priority']=0.0
++    out['Strategy Decision']='None'
++    for i in out.index[out['Hourly 4 Entry'] & genuine]:
++        out.at[i,'Strategy Decision']=compact_entry(out.at[i,'entry_side'] if 'entry_side' in out else out.at[i,'Middle Regime Bias'],out.at[i,'unique_family_count'],out.at[i,'TP Price Display'] if 'TP Price Display' in out else '—',out.at[i,'SL Price Display'] if 'SL Price Display' in out else '—')
++    out=apply_exit_notice(out,copy=False)
++    return out.drop(columns=['_group','_ev']).sort_values([col or 'Symbol','Hourly Selection Rank','Symbol'],na_position='last',kind='mergesort').reset_index(drop=True)
++
++
++def select_portfolio_entries(candidates,held_symbols,*,policy=None,eligibility_column='entry_eligible'):
++    from core.execution_policy_20261003 import select_new_entries
++    return select_new_entries(candidates,held_symbols,policy=policy,eligibility_column=eligibility_column)
+ 
+ 
+ __all__ = [
+--- original/core/professional_execution_backtest_20261001.py
++++ audited/core/professional_execution_backtest_20261001.py
+@@ -136,6 +136,29 @@
+     evaluated before a Middle Bias flip because barriers are intrabar while the
+     completed-candle bias is known at the candle close.
+     """
++    if isinstance(signals,pd.DataFrame) and 'signal_available_at' in signals:
++        if signals.empty:return pd.DataFrame()
++        from core.audited_portfolio_replay_20261003 import replay_portfolio
++        from core.execution_policy_20261003 import get_policy
++        policy=get_policy({'spread_pips':float(spread_pips),'max_hold_hours':int(max_hold_hours)})
++        timeline=finder_rows if isinstance(finder_rows,pd.DataFrame) and 'signal_available_at' in finder_rows else signals
++        at=pd.to_datetime(signals.signal_available_at,utc=True)
++        replay=replay_portfolio(timeline,candles,policy=policy,research=True,entry_start=at.min(),entry_end=at.max())
++        ledger=replay['trades']
++        if ledger.empty: return ledger
++        aliases={'entry_at':'Entry Time','exit_at':'Exit Time','entry_side':'Direction','entry_price':'Entry Price','exit_price':'Exit Price',
++                 'tp_price':'TP Price','sl_price':'SL Price','net_pips':'Net Pips','hold_hours':'Hold Hours','exit_reason':'Exit Reason',
++                 'entry_origin':'Hourly Entry Origin','max_adverse_pips':'MAE Pips','max_favourable_pips':'MFE Pips','stop_then_rebound':'Post-SL Rebound To TP'}
++        result=ledger.rename(columns=aliases)
++        result['Backtest Valid']=result['Net Pips'].notna()
++        result['Gross Pips']=result['Net Pips']+policy.costs
++        result['Post-SL Rebound Evaluated']=result['Exit Reason'].eq('SL')
++        result['Replay Mode']='AUDITED_TYPED_PORTFOLIO'
++        result.attrs['portfolio_metrics']=replay['metrics']
++        result.attrs['round_trip_cost_pips']=policy.costs
++        return result
++    # Legacy candidate-only replay remains for audit comparison, never a live
++    # decision owner. It cannot recover candidates absent from the old export.
+     if not isinstance(signals, pd.DataFrame) or signals.empty:
+         return pd.DataFrame()
+     selected = signals.copy()
+@@ -335,7 +358,9 @@
+         max_drawdown = 0.0
+     else:
+         equity = net.cumsum()
+-        max_drawdown = float((equity - equity.cummax()).min())
++        max_drawdown = float((equity - equity.cummax().clip(lower=0)).min())
++    audited=isinstance(trades,pd.DataFrame) and 'Replay Mode' in trades
++    if audited: max_drawdown=float(trades.attrs.get('portfolio_metrics',{}).get('Max DD',max_drawdown))
+     wins = int((net > 0).sum())
+     losses = int((net < 0).sum())
+     gross_profit = float(net.loc[net > 0].sum()) if not net.empty else 0.0
+@@ -367,12 +392,12 @@
+         "average_hold_hours": round(float(holds.mean()), 3) if not holds.empty else None,
+         "median_hold_hours": round(float(holds.median()), 3) if not holds.empty else None,
+         "p75_hold_hours": round(float(holds.quantile(0.75)), 3) if not holds.empty else None,
+-        "tp_exit_pct": exit_pct("TP_HIT"),
+-        "sl_exit_pct": exit_pct("SL_HIT"),
+-        "middle_bias_exit_pct": exit_pct("MIDDLE_BIAS_EXIT"),
+-        "time_exit_24h_pct": exit_pct("24H_TIME_EXIT"),
+-        "tp_first_rate_pct": exit_pct("TP_HIT"),
+-        "sl_first_rate_pct": exit_pct("SL_HIT"),
++        "tp_exit_pct": exit_pct("TP" if audited else "TP_HIT"),
++        "sl_exit_pct": exit_pct("SL" if audited else "SL_HIT"),
++        "middle_bias_exit_pct": exit_pct("BIAS" if audited else "MIDDLE_BIAS_EXIT"),
++        "time_exit_24h_pct": exit_pct("TIMEOUT" if audited else "24H_TIME_EXIT"),
++        "tp_first_rate_pct": exit_pct("TP" if audited else "TP_HIT"),
++        "sl_first_rate_pct": exit_pct("SL" if audited else "SL_HIT"),
+         "post_sl_rebound_to_tp_rate_pct": round(
+             100.0 * int((rebound_hit & rebound_evaluated).sum()) / max(1, int(rebound_evaluated.sum())), 3
+         ),
+@@ -390,7 +415,8 @@
+         ),
+         "spread_pips_per_trade": DEFAULT_SPREAD_PIPS,
+         "max_hold_hours": DEFAULT_MAX_HOLD_HOURS,
+-        "same_candle_tp_sl_policy": "SL_FIRST_CONSERVATIVE",
++        "same_candle_tp_sl_policy": "TP_FIRST_H1_PRIMARY" if audited else "SL_FIRST_CONSERVATIVE_LEGACY",
++        "round_trip_cost_pips":trades.attrs.get('round_trip_cost_pips',DEFAULT_SPREAD_PIPS) if isinstance(trades,pd.DataFrame) else DEFAULT_SPREAD_PIPS,
+     }
+ 
+ 
+@@ -408,9 +434,12 @@
+     start = pd.to_datetime(entry_start, errors="coerce", utc=True)
+     end = pd.to_datetime(entry_end, errors="coerce", utc=True)
+     selected = signals.copy()
+-    if "Hourly 4 Entry" in selected.columns:
++    audited='signal_available_at' in selected
++    if audited and isinstance(finder_rows,pd.DataFrame) and 'signal_available_at' in finder_rows:
++        selected=finder_rows.copy()  # retain all symbols for held-symbol reallocation
++    if not audited and "Hourly 4 Entry" in selected.columns:
+         selected = selected.loc[_truthy(selected["Hourly 4 Entry"])].copy()
+-    signal_time_column = _first_column(selected, ("Datetime", "Completed Candle", "_FinderDatetime"))
++    signal_time_column = _first_column(selected, ("signal_available_at", "Datetime", "Completed Candle", "_FinderDatetime"))
+     if signal_time_column:
+         signal_times = pd.to_datetime(selected[signal_time_column], errors="coerce", utc=True)
+         selected = selected.loc[signal_times.between(start, end, inclusive="both")].copy()
+@@ -434,10 +463,10 @@
+     if candle_time_column:
+         candle_times = pd.to_datetime(candle_export[candle_time_column], errors="coerce", utc=True)
+         candle_export["Backtest Candle Role"] = np.where(candle_times.le(end), "ENTRY_WINDOW", "FUTURE_24H_PADDING")
+-    bias_columns = [column for column in ("Datetime", "Completed Candle", "Symbol", "Timeframe", "Middle Regime Bias") if column in finder_rows.columns]
++    bias_columns = [column for column in ("signal_available_at", "Datetime", "Completed Candle", "Symbol", "Timeframe", "Middle Regime Bias") if column in finder_rows.columns]
+     bias_timeline = finder_rows.loc[:, bias_columns].copy() if bias_columns else pd.DataFrame()
+     if not bias_timeline.empty:
+-        time_column = _first_column(bias_timeline, ("Datetime", "Completed Candle"))
++        time_column = _first_column(bias_timeline, ("signal_available_at", "Datetime", "Completed Candle"))
+         bias_timeline["Datetime"] = pd.to_datetime(bias_timeline[time_column], errors="coerce", utc=True)
+         bias_timeline = bias_timeline.drop_duplicates(["Symbol", "Datetime"], keep="last").sort_values(["Datetime", "Symbol"])
+ 
+@@ -474,6 +503,25 @@
+ 
+ Engine: {VERSION}
+ """
++    if audited:
++        readme=f"""AUDITED EXECUTION BACKTEST BUNDLE
++01_hourly_signals.csv contains all available typed symbol candidates, before holdings selection.
++02_all_symbol_candles.csv contains separate raw H1 evidence.
++03_middle_bias_timeline.csv contains the bias timeline.
++04_execution_backtest.csv contains one portfolio trade ledger; aggregate this ledger only.
++05_summary.json contains its metrics.
++
++Typed execution uses six configured checks/day, skips Sunday and Monday entries,
++selects at most two new symbols from the top four, and skips held symbols.
++Fill is the next executable open after the check; stale signals are rejected.
++Primary H1 ambiguity is TP-first; use research/audit_runner.py for SL-first stress.
++Stops gapping through their level fill at the executable open. Maximum holding is
++{max_hold_hours} elapsed hours; flatten before the weekly closure. Missing execution
++quotes are censored, with no manufactured or stale exit. All configured spread,
++slippage, commission and financing costs are deducted once. This is research;
++broker verification and independent acceptance are required for live eligibility.
++Engine: audited-h1-v1-20261003
++"""
+     output = BytesIO()
+     with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+         archive.writestr("01_hourly_signals.csv", selected.to_csv(index=False, encoding="utf-8"))
+--- original/core/pullback_engine_s1_s3_upgrade.py
++++ audited/core/pullback_engine_s1_s3_upgrade.py
+@@ -162,7 +162,15 @@
+     if not isinstance(df,pd.DataFrame) or len(df)<55:
+         return _empty("Rejected: at least 55 completed candles are required")
+     from core.strategy_audit_20260924 import build_strategy_audit
+-    audit=build_strategy_audit(df,higher_bias,middle_bias,timeframe=timeframe)
++    # Use causal bias histories for every origin, not today's scalar bias on
++    # the entire past. The current completed candle may use the caller's bias.
++    from core.super_quick_field3_20260722 import _historical_fast_standard
++    from core.field3_three_regime_engine import standard_windows
++    windows=standard_windows(timeframe)
++    hb=_historical_fast_standard(df,window_bars=windows['HIGHER'])['Bias'].copy()
++    mb=_historical_fast_standard(df,window_bars=windows['MIDDLE'])['Bias'].copy()
++    hb.iloc[-1]=higher_bias;mb.iloc[-1]=middle_bias
++    audit=build_strategy_audit(df,hb,mb,timeframe=timeframe)
+     if audit.empty:
+         return _empty("Rejected: OHLC data is incomplete")
+     latest=audit.iloc[-1]
+@@ -174,9 +182,9 @@
+             "entry_condition":bool(latest[f"{label} Entry Condition"]),
+             "signal":str(latest[f"{label} Signal"]),
+             "reason":str(latest[f"{label} Reason"]),
+-            "score":score,"eligible":bool(latest["Entry Quality Passed"]),
++            "score":score,"eligible":bool(latest["entry_eligible"]),
+             "tp":target,"sl":20,"rr":target/20,
+-            "entry_price":float(latest.get("close")) if pd.notna(latest.get("close")) else np.nan,
++            "entry_price":float(df.iloc[-1]["close"]),
+             "tp_price":float(latest.get("Suggested TP")) if pd.notna(latest.get("Suggested TP")) else np.nan,
+             "sl_price":float(latest.get("Suggested SL")) if pd.notna(latest.get("Suggested SL")) else np.nan,
+             "tp_pips":float(latest.get("Suggested TP Pips")) if pd.notna(latest.get("Suggested TP Pips")) else np.nan,
+@@ -203,6 +211,8 @@
+     """
+     grouped = {"BUY": [], "SELL": []}
+     for label in STRATEGY_NAMES:
++        from core.strategy_audit_20260924 import strategy_enabled,DISABLED_STRATEGY_IDS
++        if not strategy_enabled(label,DISABLED_STRATEGY_IDS): continue
+         row = results.get(label) or {}
+         signal = str(row.get("signal", "NO ENTRY")).upper().strip()
+         if signal in grouped and bool(row.get("entry_condition", False)):
+--- original/core/resumable_build_20260928.py
++++ audited/core/resumable_build_20260928.py
+@@ -64,6 +64,15 @@
+     "Avg Regime Candle Count Before Regime Change", "Completed Regime Samples", "Avg Regime Candle Rank", "Regime Maturity Score",
+     "Max Hold Hours", "Time Exit Hours", "Exit Scenario", "Entry Quality Passed", "Entry Filter Relaxation Percent",
+     "Strategy Engine", "History Source",
++    "bar_open_time", "bar_close_time", "signal_available_at", "entry_side", "entry_eligible", "research_entry_eligible",
++    "active_strategy_ids", "active_strategy_family_ids", "unique_family_count", "entry_origin", "direction_probability",
++    "probability_calibration_version", "expected_net_pips", "expected_net_pips_lower_bound", "tp_price", "sl_price",
++    "horizon_hours", "max_hold_hours", "market_executable", "broker_quote_verified", "spread_pips", "slippage_pips",
++    "commission_pips", "financing_pips_per_day", "data_quality_flag", "decision_engine_version", "Policy SHA256",
++    "provider", "quote_timezone", "timestamp_owner", "TP Filters Passed", "TP Research Filters Passed", "TP Filter Reasons",
++    "TP Filter Pass Count", "TP Filter Total Count", "regime_family", "volatility_bucket", "forecast_sample_count",
++    "forecast_training_end", "expected_reach_hours", "reach_p25_hours", "reach_p75_hours", "volume_evidence_source",
++    "Volume Evidence Is Real", "Strategy Alias Map", "Disabled Strategy IDs",
+ })
+ 
+ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
+@@ -1040,7 +1049,7 @@
+             else:
+                 import pyarrow.parquet as pq
+                 schema = pq.read_schema(BytesIO(payload))
+-                columns = [name for name in schema.names if name in COMPACT_FINDER_COLUMNS or re.fullmatch(r"S\d+ (Entry Condition|Score)", name)]
++                columns = [name for name in schema.names if name in COMPACT_FINDER_COLUMNS or name.startswith("TP Filter ") or name.startswith("p_tp_") or re.fullmatch(r"S\d+ (Entry Condition|Score)", name)]
+                 frame = pd.read_parquet(BytesIO(payload), columns=columns)
+                 # Repeated labels dominate large-range memory otherwise. Keep
+                 # exact values while sharing their categorical dictionaries.
+@@ -1096,7 +1105,7 @@
+     frame.to_parquet(buffer, index=False, compression="zstd")
+     payload = buffer.getvalue()
+     store.put_object(path, payload, content_type="application/vnd.apache.parquet", upsert=True)
+-    return {"path": path, "rows": int(len(frame)), "bytes": int(len(payload))}
++    return {"path": path, "rows": int(len(frame)), "bytes": int(len(payload)), "sha256": hashlib.sha256(payload).hexdigest()}
+ 
+ 
+ __all__ = [
+--- original/core/strategy_audit_20260924.py
++++ audited/core/strategy_audit_20260924.py
+@@ -3,9 +3,12 @@
+ import numpy as np
+ import pandas as pd
+ 
+-ENTRY_FILTER_RELAXATION = 0.40
++from core.execution_policy_20261003 import get_policy, VERSION
++ENTRY_FILTER_RELAXATION = get_policy().relaxation
+ ENTRY_FILTER_MULTIPLIER = 1.0 - ENTRY_FILTER_RELAXATION
+-STRATEGY_ENGINE_VERSION = "s1-s120-shared-causal-v7-20261002-40pct-entry-filters"
++import hashlib,json
++from dataclasses import asdict
++STRATEGY_ENGINE_VERSION = VERSION+'-'+hashlib.sha256(json.dumps(asdict(get_policy()),sort_keys=True).encode()).hexdigest()[:12]
+ 
+ 
+ def _bias_series(value, index):
+@@ -45,12 +48,16 @@
+     return pd.Series(calm,index=close.index),pd.Series(stress,index=close.index),pd.Series(transition,index=close.index)
+ 
+ 
+-def build_strategy_audit(source: pd.DataFrame, higher_bias, middle_bias, timeframe: str = "H1", *, backtest_fast: bool = False) -> pd.DataFrame:
++def build_strategy_audit(source: pd.DataFrame, higher_bias, middle_bias, timeframe: str = "H1", *, backtest_fast: bool = False, removed_strategy_ids=(), relaxation=None, policy=None) -> pd.DataFrame:
+     """One causal S1–S120 calculation for live ranking and historical replay.
+ 
+     Input must be chronological, completed candles; no future candle is read.
+     Scores are rule scores, not calibrated probabilities of winning a trade.
+     """
++    p=policy or get_policy()
++    relax_value=p.relaxation if relaxation is None else float(relaxation)
++    if relax_value not in (0.,.1,.2,.4): raise ValueError("Unknown training relaxation")
++    removed={STRATEGY_ALIASES.get(x,x) for x in removed_strategy_ids} | DISABLED_STRATEGY_IDS
+     df = source.copy().reset_index(drop=True)
+     if df.empty or not {"open", "high", "low", "close"}.issubset(df.columns):
+         return pd.DataFrame()
+@@ -58,13 +65,17 @@
+     high = pd.to_numeric(df["high"], errors="coerce")
+     low = pd.to_numeric(df["low"], errors="coerce")
+     op = pd.to_numeric(df["open"], errors="coerce")
+-    volume_col = next((c for c in ("volume", "tick_volume", "real_volume") if c in df.columns), None)
+-    activity = pd.to_numeric(df[volume_col], errors="coerce") if volume_col else (high-low).abs()
++    volume_col = next((c for c in ("real_volume", "volume", "tick_volume") if c in df.columns), None)
++    real_volume_available = volume_col=="real_volume" or ("volume_kind" in df and df.volume_kind.astype(str).str.upper().eq("REAL_VOLUME").all())
++    activity = pd.to_numeric(df[volume_col], errors="coerce") if volume_col else pd.Series(0.,index=df.index)
+     activity = activity.replace([np.inf, -np.inf], np.nan).fillna(0.0).clip(lower=0.0)
+ 
+     hbias = _bias_series(higher_bias, df.index).astype(str).str.upper().str.strip()
+     mbias = _bias_series(middle_bias, df.index).astype(str).str.upper().str.strip()
++    from core.execution_policy_20261003 import quote_metadata
++    metadata=quote_metadata(df,timeframe)
+     valid_dir = hbias.isin(["BUY", "SELL"]) & hbias.eq(mbias)
++    if metadata.bar_open_time.notna().any(): valid_dir &= metadata.market_executable
+     sign = pd.Series(np.where(hbias.eq("BUY"), 1.0, np.where(hbias.eq("SELL"), -1.0, 0.0)), index=df.index)
+ 
+     prev_close = close.shift(1)
+@@ -77,11 +88,8 @@
+     trend_ok = sign*(ema20-ema50) >= 0
+     structure = ((close >= ema50) & hbias.eq("BUY")) | ((close <= ema50) & hbias.eq("SELL"))
+     depth = (close-ema50).abs()/atr
+-    # S1-S92 entry quality is intentionally relaxed by exactly 40% on the
+-    # shared admissibility thresholds. The direction-alignment and trend
+-    # structure safeguards remain mandatory; only the tolerances that were
+-    # suppressing otherwise usable entries are widened.
+-    _relax = ENTRY_FILTER_MULTIPLIER
++    # Relaxation is a declared training parameter; default is the original gate.
++    _relax = 1.0-relax_value
+     range_ok = (high-low) <= 2.0*atr
+     relaxed_range_ok = (high-low) <= (2.0/_relax)*atr
+     relaxed_hard = valid_dir & atr.gt(0) & relaxed_range_ok & depth.le(2.0/_relax) & trend_ok & structure
+@@ -270,7 +278,7 @@
+     noise_ratio = (tr/atr.shift(1).replace(0,np.nan)).rolling(20,min_periods=14).quantile(.75)
+     # The score is based on realized candle noise, not a fabricated confidence.
+     stable = atr_ratio.between(.55,1.40) & noise_ratio.le(1.8) & (high-low).le(1.8*atr) & gap_ok
+-    # 40% relaxed S1-S92 quality gate. Values are widened/softened only where
++    # Declared training relaxation for the S1-S92 quality gate. Values widen only where
+     # doing so creates more valid entries: pullback depth, candle confirmation,
+     # noise/spike tolerance and minimum ADX. DMI agreement remains mandatory.
+     relaxed_pullback_seen = pd.Series(np.where(hbias.eq("BUY"),
+@@ -382,7 +390,7 @@
+                             (confirmed.fillna(False),.10),(stable.fillna(False),.10))
+ 
+     # S51-S92 additive Middle Standard opportunity strategies.
+-    # These keep the same shared 40%-relaxed S1-S92 gate above.
++    # These use the declared shared gate above.
+     _new_gate = (hard & enough & stable & (adx.ge(18)) & pd.Series(dmi_ok,index=df.index)).fillna(False)
+     _break = (sign*(close-prev_close)>0) & (high-low).le(2.0*atr)
+     _momentum = (change.abs() > change.abs().rolling(20,min_periods=10).mean())
+@@ -416,7 +424,7 @@
+ 
+     legacy_entry_hit = pd.Series(False, index=df.index)
+     for _legacy_label in [f"S{i}" for i in range(1,93)]:
+-        if _legacy_label in cond:
++        if _legacy_label in cond and strategy_enabled(_legacy_label,removed) and (_legacy_label not in VOLUME_REQUIRED_IDS or real_volume_available):
+             legacy_entry_hit |= (cond[_legacy_label] & quality_gate).fillna(False)
+ 
+     ema10 = close.ewm(span=10, adjust=False, min_periods=5).mean()
+@@ -531,7 +539,8 @@
+     legacy_1_110_hit = pd.Series(False, index=df.index)
+     for _legacy_label in (f"S{i}" for i in range(1, 111)):
+         _legacy_gate = quality_gate if int(_legacy_label[1:]) <= 92 else _new_pullback_gate
+-        legacy_1_110_hit |= (cond[_legacy_label] & _legacy_gate).fillna(False)
++        if strategy_enabled(_legacy_label,removed) and (_legacy_label not in VOLUME_REQUIRED_IDS or real_volume_available):
++            legacy_1_110_hit |= (cond[_legacy_label] & _legacy_gate).fillna(False)
+ 
+     body_ratio = (close-op).abs().div(candle_range.replace(0, np.nan)).fillna(0)
+     direction_close_strength = close_location.fillna(0)
+@@ -657,6 +666,8 @@
+     extension_hit = pd.Series(False,index=df.index)
+     for _label,_trigger in extension_triggers.items():
+         _hit = (extension_gate & _trigger.fillna(False) & ~legacy_1_110_hit).fillna(False)
++        if not strategy_enabled(_label,removed):
++            _hit = pd.Series(False,index=df.index)
+         cond[_label] = _hit
+         extension_hit |= _hit
+         scores[_label] = score(
+@@ -706,6 +717,8 @@
+     ).fillna(False)
+     scores["S120"] = s120_composite.round().clip(0,100)
+ 
++    for label in VOLUME_REQUIRED_IDS:
++        cond[label] &= activity.gt(0) if real_volume_available else pd.Series(False,index=df.index)
+     from core.pullback_engine_s1_s3_upgrade import STRATEGY_NAMES
+     output={}
+     output["Legacy S1-S110 Hit"] = legacy_1_110_hit.to_numpy(dtype=bool)
+@@ -721,7 +734,8 @@
+     for label in STRATEGY_NAMES:
+         strategy_gate = quality_gate if int(label[1:]) <= 92 else _new_pullback_gate if int(label[1:]) <= 110 else extension_gate
+         hit=(cond[label] & strategy_gate).fillna(False).astype(bool)
+-        sc=scores[label].fillna(0).round().clip(0,100).astype(int)
++        if not strategy_enabled(label,removed): hit=pd.Series(False,index=df.index)
++        sc=scores[label].where(hit,0).fillna(0).round().clip(0,100).astype(int)
+         conditions.append(hit.to_numpy())
+         output[f"{label} Entry Condition"]=hit.to_numpy()
+         if not backtest_fast:
+@@ -732,7 +746,12 @@
+                         "Insufficient/invalid completed OHLC","Higher/Middle directions disagree","Trend structure not aligned",
+                         "No preceding pullback","Recovery candle not confirmed","Gap, spike or noise limit exceeded",
+                         "Trend strength below minimum","Pullback depth or directional-strength gate not met","No calculation"]
+-            output[f"{label} Reason"]=pd.Categorical(reasons,categories=categories)
++            if label in STRATEGY_ALIASES:
++                output[f"{label} Reason"]=f"Alias of {STRATEGY_ALIASES[label]}; duplicate vote removed"
++            elif label in removed:
++                output[f"{label} Reason"]="Disabled strategy"
++            else:
++                output[f"{label} Reason"]=pd.Categorical(reasons,categories=categories)
+         output[f"{label} Score"]=sc.to_numpy(dtype=np.int16)
+     counts = np.column_stack(conditions).sum(axis=1)
+ 
+@@ -745,8 +764,16 @@
+             "open": op, "high": high, "low": low, "close": close, "ADX": adx,
+             "ATR": atr,
+         }, index=df.index)
++        for col in ("open_time","bar_open_time","market_executable","broker_quote_verified","broker_session_open"):
++            if col in df: target_source[col]=df[col]
+         if "volume" in df.columns:
+             target_source["volume"] = pd.to_numeric(df["volume"], errors="coerce")
++        active_labels=[x for x in STRATEGY_NAMES if strategy_enabled(x,removed)]
++        score_matrix=np.column_stack([output[f'{x} Score'] for x in active_labels])
++        best=score_matrix.argmax(axis=1)
++        target_source['unique_family_count']=counts
++        target_source['Entry Noise Ratio']=noise_ratio
++        target_source['strategy_family_key']=[active_labels[i] if count else 'NO_STRATEGY' for i,count in zip(best,counts)]
+         # Main scenario owns direction from the Middle Regime Bias.  This fixes
+         # the earlier Higher-vs-Middle target-direction mismatch without
+         # changing the existing S1-S110 entry conditions.
+@@ -756,12 +783,16 @@
+             mbias,
+             timeframe=str(timeframe or "H1"),
+             symbol=df["Symbol"] if "Symbol" in df.columns else "",
++            policy=p,
+         )
+-        target_input_columns = {"open", "high", "low", "close", "ADX", "ATR", "volume", "bias"}
++        target_input_columns = {"open", "high", "low", "close", "ADX", "ATR", "volume", "bias", "strategy_family_key", "unique_family_count", "Entry Noise Ratio"}
+         for column in target_source.columns:
+             if column not in target_input_columns:
+                 output[column] = target_source[column].to_numpy()
+-    except Exception:
++    except Exception as exc:
++        output["TP Filters Passed"]=False
++        output["TP Research Filters Passed"]=False
++        output["TP Filter Reasons"]="TARGET_ENGINE_ERROR: "+type(exc).__name__+": "+str(exc)
+         # Keep the core strategy audit usable even when the optional target layer
+         # cannot calculate a target for a malformed/very short source frame.
+         # The fallback remains a real price target rather than a pip constant or
+@@ -796,14 +827,62 @@
+     output["ADX"] = adx.to_numpy()
+     output["Near Entry Score"] = near_entry_score.to_numpy()
+     output["Strategy Hit Count"] = counts.astype(int)
+-    output["Best Strategy Score"] = np.max(np.column_stack([v.fillna(0).to_numpy() for v in scores.values()]), axis=1) if scores else np.zeros(len(df))
++    output["Best Strategy Score"] = np.max(np.column_stack([output[f"{label} Score"] for label in STRATEGY_NAMES]),axis=1)
+     output["Entry Noise Ratio"]=noise_ratio.to_numpy()
+     output["Entry Quality Passed"]=((quality_gate | _new_pullback_gate | extension_gate).fillna(False)).to_numpy()
+-    output["Entry Filter Relaxation Percent"] = ENTRY_FILTER_RELAXATION * 100.0
++    output["Entry Filter Relaxation Percent"] = relax_value * 100.0
+     output["Max Hold Hours"] = 24
+     output["Time Exit Enabled"] = True
+     output["Time Exit Hours"] = 24
+     output["Exit Scenario"] = "Dynamic TP + Middle Bias Exit"
+     output["Strategy Bias Owner"] = mbias.astype(str).to_numpy()
+     output["Strategy Engine"]=STRATEGY_ENGINE_VERSION
+-    return pd.DataFrame(output,index=df.index)
++    result=pd.DataFrame(output,index=df.index)
++    result=recompute_family_evidence(result)
++    result['entry_side']=mbias.where(mbias.isin(['BUY','SELL']),'NONE')
++    result['entry_origin']=np.where(result.active_strategy_ids.str.contains(r'\bS11[1-9]\b|\bS120\b',regex=True),'RESCUE',np.where(result.unique_family_count.gt(0),'STRATEGY','RANK_FILL'))
++    result['research_entry_eligible']=result.unique_family_count.gt(0)&result.get('TP Research Filters Passed',pd.Series(False,index=df.index)).astype(bool)
++    result['entry_eligible']=result.unique_family_count.gt(0)&result.get('TP Filters Passed',pd.Series(False,index=df.index)).astype(bool)
++    result['Policy SHA256']=hashlib.sha256(json.dumps(asdict(p),sort_keys=True).encode()).hexdigest()
++    result['provider']=df.get('provider',df.get('data_source',pd.Series('UNSPECIFIED',index=df.index)))
++    result['volume_evidence_source']=volume_col.upper() if volume_col else 'MISSING'
++    result['Volume Evidence Is Real']=bool(real_volume_available)
++    result['Strategy Alias Map']=';'.join(k+'='+v for k,v in STRATEGY_ALIASES.items())
++    result['Disabled Strategy IDs']=';'.join(sorted(removed,key=lambda x:int(x[1:])))
++    result['Strategy Decision']=[compact_entry(d,int(n),tp,sl) if n else 'None' for d,n,tp,sl in zip(mbias,result.unique_family_count,result['TP Price Display'],result['SL Price Display'])]
++    return result
++
++# Duplicate formulas have one active owner. Legacy IDs/columns remain available
++# as zero-vote aliases, making old CSV readers compatible without double votes.
++_DUPLICATE_GROUPS=(
++    (51,52,53,54,71,72,73,74),
++    (55,56,57,58,75,76,77,78,91),  # hard trend gate also proves these equivalent
++    (59,60,61,62),(63,64,65,66),(67,68,69,70),
++    (79,80,81,82),(83,84,85,86),
++)
++STRATEGY_ALIASES={f'S{x}':f'S{group[0]}' for group in _DUPLICATE_GROUPS for x in group[1:]}
++DISABLED_STRATEGY_IDS=frozenset({'S87','S88','S89','S90'})
++VOLUME_REQUIRED_IDS=frozenset({'S9','S11','S20','S23','S29','S37','S42','S96','S106'})
++
++
++def strategy_enabled(label,removed=()):
++    return label not in STRATEGY_ALIASES and label not in set(removed)
++
++
++def recompute_family_evidence(frame):
++    """Public score projection. Full removal experiments regenerate raw triggers."""
++    import json,re
++    out=frame.copy()
++    labels=sorted([str(c).split()[0] for c in out if re.fullmatch(r'S\d+ Entry Condition',str(c))],key=lambda x:int(x[1:]))
++    active=[s for s in labels if strategy_enabled(s,DISABLED_STRATEGY_IDS)]
++    matrix=np.column_stack([out[f'{s} Entry Condition'].astype(str).str.lower().isin({'true','1','1.0'}).to_numpy() for s in active]) if active else np.zeros((len(out),0),bool)
++    scores=np.column_stack([pd.to_numeric(out.get(f'{s} Score',pd.Series(0,index=out.index)),errors='coerce').fillna(0).to_numpy() for s in active]) if active else np.zeros((len(out),0))
++    family_rows=[[s for s,hit in zip(active,row) if hit] for row in matrix]
++    out['active_strategy_ids']=[json.dumps(v,separators=(',',':')) for v in family_rows]
++    out['active_strategy_family_ids']=[json.dumps(['F_'+s for s in v],separators=(',',':')) for v in family_rows]
++    out['unique_family_count']=matrix.sum(axis=1).astype('int16')
++    out['Strategy Hit Count']=out.unique_family_count
++    out['Best Strategy Score']=np.where(matrix,scores,0).max(axis=1) if active else 0
++    best=np.where(matrix,scores,-1).argmax(axis=1) if active else np.zeros(len(out),int)
++    out['Best Strategy']=[active[x] if n else 'NONE' for x,n in zip(best,out.unique_family_count)]
++    return out
+--- original/core/super_quick_field3_20260722.py
++++ audited/core/super_quick_field3_20260722.py
+@@ -30,7 +30,7 @@
+ from core.regime_duration_stats_20260729 import completed_regime_run_stats
+ from core.pullback_engine_s1_s3_upgrade import STRATEGY_NAMES, evaluate_pullback_strategies, strategy_decision
+ 
+-FAST_RUN_VERSION = "field3-shared-s1-s120-causal-v11-20261002-structural-pairs"
++FAST_RUN_VERSION = "field3-audited-h1-v1-20261003"
+ 
+ 
+ MIDDLE_HISTORY_STATE_KEY = "field3_middle_regime_history_20260722"
+@@ -253,6 +253,9 @@
+         "Completed Candle", "Timeframe", "Datetime",
+         "Open Price", "Close Price", "Highest Price", "Lowest Price",
+     ]
++    # Preserve the typed signal schema, filters and forecast outputs in every
++    # export, including fields introduced after the legacy display projection.
++    preferred += [c for c in history.columns if c not in preferred]
+     if output_mode == "BACKTEST_FAST":
+         preferred = [c for c in preferred if not c.endswith((" Reason", " Signal"))]
+     result = history[[c for c in preferred if c in history.columns]].sort_values(["Datetime", "Avg Regime Candle Rank", "Symbol"], kind="mergesort").reset_index(drop=True)
+--- original/research/audit_runner.py
++++ audited/research/audit_runner.py
+@@ -0,0 +1,278 @@
++#!/usr/bin/env python3
++"""Reproduce declared splits, full regeneration, ledgers and cost stress tables.
++
++Usage: python research/audit_runner.py --csv first.csv --csv second.csv --output research_run
++No provider credentials or network requests are made. No input means an explicit
++blocked audit, never manufactured backtest results.
++"""
++from __future__ import annotations
++import argparse,json,hashlib,sys,zipfile,platform
++from pathlib import Path
++from dataclasses import asdict,replace
++ROOT=Path(__file__).resolve().parents[1]
++sys.path.insert(0,str(ROOT))
++import numpy as np
++import pandas as pd
++from core.execution_policy_20261003 import get_policy,VERSION
++from core.strategy_audit_20260924 import build_strategy_audit,STRATEGY_ALIASES,DISABLED_STRATEGY_IDS
++from core.audited_portfolio_replay_20261003 import normalize_quotes,replay_portfolio,SCENARIOS
++
++SPLITS={'TRAIN':('2024-10-03T00:00Z','2024-12-31T23:59:59Z'),
++ 'VALIDATION':('2025-01-01T00:00Z','2025-12-31T23:59:59Z'),
++ 'HELDOUT_PARAMETER_REPLAY':('2026-01-01T00:00Z','2026-10-03T23:59:59Z')}
++# Thresholds fixed before viewing any new forward results.
++GATES={'validation_net_gt':0,'validation_ev_gt':0,'forward_net_gt':0,'forward_ev_gt':0,'profit_factor_gt':1,
++ 'weekly_bootstrap_ev_lower_gt':0,'profitable_walk_forward_fraction_gt':.5,'max_hold_hours_le':24,
++ 'max_single_symbol_profit_fraction_le':.50,'max_single_quarter_profit_fraction_le':.50,
++ 'stress_ev_gt':0,'unresolved_execution_defects_eq':0,'max_account_drawdown_percent':10.0}
++
++
++def sha(path):
++    h=hashlib.sha256()
++    with open(path,'rb') as f:
++        for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
++    return h.hexdigest()
++
++
++def write_json(path,obj): path.write_text(json.dumps(obj,indent=2,default=str,allow_nan=False))
++
++def json_safe(obj):
++    if isinstance(obj,dict):return {k:json_safe(v) for k,v in obj.items()}
++    if isinstance(obj,list):return [json_safe(x) for x in obj]
++    if isinstance(obj,(float,np.floating)) and not np.isfinite(obj):return None
++    if isinstance(obj,np.integer):return int(obj)
++    return obj
++
++
++def regenerate(raw,removed=(),relaxation=None,policy=None):
++    from core.super_quick_field3_20260722 import _historical_fast_standard
++    from core.field3_three_regime_engine import standard_windows
++    from core.hourly_four_symbol_selector_20260928 import attach_hourly_four_selection
++    pieces=[];windows=standard_windows('H1')
++    for sym,g in raw.groupby('Symbol',sort=True):
++        g=g.sort_values('open_time',kind='mergesort').reset_index(drop=True)
++        lower=_historical_fast_standard(g,window_bars=windows['LOWER'])
++        middle=_historical_fast_standard(g,window_bars=windows['MIDDLE'])
++        higher=_historical_fast_standard(g,window_bars=windows['HIGHER'])
++        if len(middle)!=len(g):raise ValueError('Raw input has duplicate/invalid timestamps; resolve before regeneration')
++        audit=build_strategy_audit(g,higher.Bias,middle.Bias,backtest_fast=True,removed_strategy_ids=removed,relaxation=relaxation,policy=policy)
++        audit['Symbol']=sym;audit['Middle Regime Bias']=middle.Bias;audit['Lower Regime Bias']=lower.Bias;audit['Higher Standard Regime Bias']=higher.Bias
++        audit['Datetime']=g.open_time
++        pieces.append(audit)
++    return attach_hourly_four_selection(pd.concat(pieces,ignore_index=True))
++
++
++def calibration_comparison(raw,signals,out,policy):
++    """Fit only matured pre-2025 labels; save offline diagnostics, never approve live."""
++    from core.final_pair_forecast_20261003 import final_pair_labels
++    from research.calibration import TemporalOutcomeModel,export_model_json
++    from core.calibrated_target_model_20261003 import infer_model
++    rows=[];labels=[]
++    for sym,q in raw.groupby('Symbol',sort=True):
++        q=q.sort_values('bar_open_time').reset_index(drop=True)
++        s=signals.loc[signals.Symbol.eq(sym)].sort_values('bar_open_time').reset_index(drop=True)
++        if len(q)!=len(s) or not q.bar_open_time.equals(s.bar_open_time):
++            raise ValueError('Final-pair calibration timeline mismatch')
++        q['bias']=s.entry_side;q['pip_size']=.01 if 'JPY' in sym else .0001
++        side=np.where(s.entry_side.eq('BUY'),1.,np.where(s.entry_side.eq('SELL'),-1.,0.))
++        lab=final_pair_labels(q,side,s.tp_price,s.sl_price,policy=policy,ambiguity='SL_FIRST',bias_exit=True)
++        lab['label_complete'] &= s.unique_family_count.gt(0)
++        rows.append(s);labels.append(lab)
++    x=pd.concat(rows,ignore_index=True);y=pd.concat(labels,ignore_index=True)
++    try:
++        model=TemporalOutcomeModel().fit(x,y)
++        spec=export_model_json(model,x,y,out/'offline_calibrated_model.json',policy)
++        scores,bins=model.evaluate(x,y)
++        scores.to_csv(out/'classifier_brier_scores.csv',index=False)
++        bins.to_csv(out/'classifier_calibration_bins.csv',index=False)
++        pred=model.predict(x)
++        valid=y.label_complete & pd.to_datetime(x.signal_available_at,utc=True).ge(pd.Timestamp(model.training_end))
++        comparison=x.loc[valid,['Symbol','signal_available_at','regime_family','unique_family_count','expected_net_pips','expected_net_pips_lower_bound']].copy()
++        comparison['observed_outcome']=y.loc[valid,'outcome'];comparison['observed_net_pips']=y.loc[valid,'net_pips']
++        for c in pred:comparison['classifier_p_'+c.lower()]=pred.loc[valid,c]
++        pip=np.where(x.Symbol.str.contains('JPY'),.01,.0001)
++        direction=np.where(x.entry_side.eq('BUY'),1.,-1.)
++        close=np.concatenate([g.sort_values('bar_open_time').close.to_numpy() for _,g in raw.groupby('Symbol',sort=True)])
++        forecasts=infer_model(spec,x,direction*(x.tp_price-close),direction*(close-x.sl_price),pip)
++        comparison['classifier_expected_net_pips']=forecasts.loc[valid,'expected_net_pips']
++        comparison['classifier_ev_lower_diagnostic']=forecasts.loc[valid,'expected_net_pips_lower_bound']
++        comparison.to_csv(out/'classifier_vs_empirical_forecasts.csv',index=False)
++        empirical=[]
++        for c in ('TP','SL','BIAS','TIMEOUT'):
++            p=x.loc[valid,'p_'+c.lower()] if 'p_'+c.lower() in x else pd.Series(dtype=float)
++            actual=y.loc[valid,'outcome'].eq(c).astype(float)
++            usable=p.notna()
++            empirical.append({'outcome':c,'sample_count':int(usable.sum()),'brier_score':float(((p[usable]-actual[usable])**2).mean()) if usable.any() else None})
++        pd.DataFrame(empirical).to_csv(out/'empirical_brier_scores.csv',index=False)
++        status={'status':'OFFLINE_TRAINING_FIT_COMPLETE','training_end':model.training_end,'fit_samples':model.sample_count,
++          'calibration_samples':model.calibration_count,'deployment_enabled':False,'classes':model.classes,
++          'note':'2025/2026 evaluation only; 2026 may be contaminated. No acceptance manifest is generated.'}
++    except ValueError as exc:
++        status={'status':'INSUFFICIENT_CALIBRATION_EVIDENCE','reason':str(exc),'deployment_enabled':False}
++    write_json(out/'calibration_status.json',status)
++    return status
++
++
++def weekly_bootstrap(ledger,iterations=1000,seed=73):
++    if ledger.empty or ledger.net_pips.notna().sum()<20:return {'status':'INSUFFICIENT_TRADES','ev_lower':None,'net_interval':None}
++    l=ledger.dropna(subset=['net_pips']).copy();l['week']=pd.to_datetime(l.exit_at,utc=True).dt.tz_localize(None).dt.to_period('W')
++    blocks=l.groupby('week').agg(net=('net_pips','sum'),n=('net_pips','size'))
++    if len(blocks)<8:return {'status':'INSUFFICIENT_WEEK_BLOCKS','ev_lower':None,'net_interval':None}
++    rng=np.random.default_rng(seed);choices=rng.integers(0,len(blocks),(iterations,len(blocks)))
++    v=blocks.net.to_numpy()[choices].sum(axis=1);n=blocks.n.to_numpy()[choices].sum(axis=1)
++    return {'status':'COMPLETE','ev_lower':float(np.quantile(v/n,.025)),'ev_upper':float(np.quantile(v/n,.975)),
++        'net_interval':np.quantile(v,[.025,.975]).tolist(),'negative_net_fraction':float((v<=0).mean()),'weeks':len(blocks),'iterations':iterations}
++
++
++def attribution(ledger):
++    if ledger.empty:return pd.DataFrame(columns=['Strategy','Attributed Net Pips','Associated Trades','Association EV'])
++    records=[]
++    for _,r in ledger.dropna(subset=['net_pips']).iterrows():
++        ids=json.loads(r.active_strategy_ids)
++        for s in ids:records.append({'Strategy':s,'fractional_net_pips':r.net_pips/max(1,len(ids)),'associated_net_pips':r.net_pips})
++    if not records:return pd.DataFrame(columns=['Strategy','Attributed Net Pips','Associated Trades','Association EV'])
++    return pd.DataFrame(records).groupby('Strategy').agg(**{'Attributed Net Pips':('fractional_net_pips','sum'),'Associated Trades':('associated_net_pips','size'),'Association EV':('associated_net_pips','mean')}).reset_index()
++
++
++def replay_available_window(signals,raw,**kwargs):
++    """Do not enumerate a whole year when the raw file has no quotes in it."""
++    from core.audited_portfolio_replay_20261003 import metrics
++    lo=pd.to_datetime(kwargs.get('entry_start'),utc=True);hi=pd.to_datetime(kwargs.get('entry_end'),utc=True)
++    available=pd.to_datetime(raw.open_time,utc=True)
++    if raw.empty or (lo is not None and available.max()<lo) or (hi is not None and available.min()>hi):
++        empty=pd.DataFrame()
++        return {'trades':empty,'hourly_equity':empty,'skips':pd.DataFrame([{'Symbol':'ALL','reason':'NO_RAW_QUOTES_IN_ENTRY_WINDOW'}]),'metrics':metrics(empty)}
++    # Outside the supplied raw span there is no possible executable entry.
++    # Internal quote gaps are still processed and censored by the core replay.
++    if lo is not None:kwargs['entry_start']=max(lo,available.min())
++    if hi is not None:kwargs['entry_end']=min(hi,available.max())
++    return replay_portfolio(signals,raw,**kwargs)
++
++
++def run_comparisons(raw,signals,out,p,removed_symbols=(),label='original',tp=77,sl=103,experiments=None):
++    rows=[];ledgers={}
++    for scenario in SCENARIOS:
++        for split,(lo,hi) in SPLITS.items():
++            result=replay_available_window(signals,raw,scenario=scenario,tp_pips=tp,sl_pips=sl,policy=p,entry_start=lo,entry_end=hi,removed_symbols=removed_symbols)
++            tag=f'{label}_{SCENARIOS.index(scenario)+1}_{split}'
++            result['trades'].to_csv(out/f'trades_{tag}.csv',index=False)
++            result['skips'].to_csv(out/f'skips_{tag}.csv',index=False)
++            result['hourly_equity'].to_csv(out/f'equity_{tag}.csv',index=False)
++            rows.append({'variant':label,'scenario':scenario,'split':split,'TP':tp if not scenario.startswith('Dynamic') else 'DYNAMIC','SL':sl if scenario=='Fixed TP/SL' else 'DYNAMIC_OR_BIAS',**result['metrics']})
++            ledgers[(scenario,split)]=result['trades']
++            if experiments is not None:experiments.append({'experiment':tag,'type':'scheduled_portfolio_replay','policy':asdict(p)})
++    return pd.DataFrame(rows),ledgers
++
++
++def main():
++    ap=argparse.ArgumentParser(description=__doc__)
++    ap.add_argument('--csv',action='append',default=[]);ap.add_argument('--output',default='reports/research_run')
++    ap.add_argument('--policy');ap.add_argument('--full-suite',action='store_true');ap.add_argument('--exhaustive-grid',action='store_true')
++    ap.add_argument('--independent-trials',type=int);args=ap.parse_args()
++    out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
++    policy=get_policy(json.loads(Path(args.policy).read_text()) if args.policy else None)
++    freeze={'engine':VERSION,'python':platform.python_version(),'policy':asdict(policy),'acceptance_gates':GATES,
++        'splits':SPLITS,'input_hashes':{str(Path(x).resolve()):sha(x) for x in args.csv},
++        'code_hashes':{str(x.relative_to(ROOT)):sha(x) for x in sorted(ROOT.rglob('*.py')) if '__pycache__' not in str(x)}}
++    write_json(out/'freeze_manifest.json',freeze)
++    if not args.csv:
++        blocked={'status':'BLOCKED_MISSING_RESEARCH_DATA','baseline_rows_claimed':283516,'baseline_symbols_claimed':20,'weekend_rows_claimed':38104,
++            'training_winner_claimed':{'TP':77,'SL':103},'validation_integer_pairs_claimed':241081,'baseline_verified':False,
++            'reason':'The attached app ZIP has no matching continuous two-year 20-symbol CSV. Broker executable bid/ask quotes and account inputs are also absent.',
++            'live_configuration_qualifies':False,'portfolio_improvement_measured':False,'forecast_intervals':None,'experiments_run':0}
++        write_json(out/'audit_status.json',blocked)
++        pd.DataFrame([{'variant':v,'scenario':s,'split':split,'status':'BLOCKED_MISSING_DATA','Net Pip':None,'Max DD':None,'EV':None}
++          for v in ('original','remove_symbols','remove_strategies','remove_symbols_and_strategies') for s in SCENARIOS for split in SPLITS]).to_csv(out/'scenario_comparison.csv',index=False)
++        print(json.dumps(blocked));return
++    source=pd.concat([pd.read_csv(x) for x in args.csv],ignore_index=True)
++    raw=normalize_quotes(source)
++    raw.to_parquet(out/'raw_quotes_frozen.parquet',index=False,compression='zstd')
++    audit={'rows':len(raw),'symbols':int(raw.Symbol.nunique()),'start':str(raw.open_time.min()),'end':str(raw.open_time.max()),
++        'weekend_utc_rows':int(raw.open_time.dt.dayofweek.ge(5).sum()),'non_executable_rows':int((~raw.market_executable).sum()),
++        'broker_unverified_rows':int((~raw.broker_quote_verified).sum()),'duplicate_symbol_timestamps':int(raw.duplicated(['Symbol','open_time'],keep=False).sum()),
++        'baseline_size_matches':len(raw)==283516 and raw.Symbol.nunique()==20}
++    write_json(out/'input_audit.json',audit)
++    if audit['duplicate_symbol_timestamps']:raise ValueError('Duplicate raw quotes require reconciliation; no arbitrary last-row fill')
++    signals=regenerate(raw,policy=policy);signals.to_parquet(out/'derived_signals.parquet',index=False,compression='zstd')
++    calibration=calibration_comparison(raw,signals,out,policy)
++    signals[['Symbol','signal_available_at','unique_family_count','entry_origin','entry_eligible','research_entry_eligible','expected_net_pips','expected_net_pips_lower_bound','TP Filter Reasons']].to_csv(out/'signal_opportunity_rankings.csv',index=False)
++    pd.DataFrame({'Alias':list(STRATEGY_ALIASES),'Owner':list(STRATEGY_ALIASES.values())}).to_csv(out/'strategy_aliases.csv',index=False)
++    pd.DataFrame({'Strategy':[f'S{i}' for i in range(1,121)],'Hits':[int(signals[f'S{i} Entry Condition'].sum()) for i in range(1,121)]}).to_csv(out/'strategy_trigger_counts.csv',index=False)
++    experiments=[];tables=[];tp,sl=77,103
++    if args.exhaustive_grid:
++        from research.fixed_grid import exhaustive_search
++        for split in ('TRAIN','VALIDATION'):
++            grid=exhaustive_search(signals,raw,policy,*SPLITS[split])
++            grid.to_csv(out/f'integer_grid_{split}.csv',index=False)
++            experiments.append({'experiment':'integer_grid_'+split,'trials':len(grid),'range':'10..500 inclusive'})
++            if split=='TRAIN':tp,sl=(int(v) for v in grid.iloc[0][['TP','SL']])
++    t,ledgers=run_comparisons(raw,signals,out,policy,tp=tp,sl=sl,experiments=experiments);tables.append(t)
++    training=ledgers[('Fixed TP/SL','TRAIN')]
++    symbols=training.dropna(subset=['net_pips']).groupby('Symbol').net_pips.sum().sort_values() if len(training) else pd.Series(dtype=float)
++    symbols.rename('Net Pip').to_csv(out/'training_symbol_rankings.csv')
++    ar=attribution(training).sort_values('Attributed Net Pips');ar.to_csv(out/'training_strategy_rankings.csv',index=False)
++    worst_symbols=list(symbols.head(5).index[symbols.head(5)<0]);worst_strategies=list(ar.loc[ar['Attributed Net Pips']<0,'Strategy'].head(5))
++    # Removals are training-selected; every selector and rescue mask regenerates.
++    for label,rs,rt in [('remove_symbols',worst_symbols,[]),('remove_strategies',[],worst_strategies),('remove_symbols_and_strategies',worst_symbols,worst_strategies)]:
++        changed=regenerate(raw,removed=rt,policy=policy) if rt else signals
++        table,_=run_comparisons(raw,changed,out,policy,rs,label,tp,sl,experiments);tables.append(table)
++    stresses=[];boots=[]
++    for scenario in SCENARIOS:
++        boots.append({'scenario':scenario,**weekly_bootstrap(ledgers[(scenario,'VALIDATION')])})
++        for label,p2,amb in [('SL_FIRST',policy,'SL_FIRST'),('WIDER_COSTS',replace(policy,spread_pips=4,slippage_pips=1),'SL_FIRST')]:
++            result=replay_available_window(signals,raw,scenario=scenario,tp_pips=tp,sl_pips=sl,policy=p2,entry_start=SPLITS['VALIDATION'][0],entry_end=SPLITS['VALIDATION'][1],ambiguity=amb)
++            stresses.append({'scenario':scenario,'stress':label,**result['metrics']});experiments.append({'experiment':scenario+'_'+label})
++    pd.DataFrame(stresses).to_csv(out/'cost_and_intrabar_stress.csv',index=False)
++    write_json(out/'weekly_block_bootstrap.json',json_safe(boots))
++    if args.full_suite:
++        extra=[]
++        for sym in sorted(raw.Symbol.unique()):
++            result=replay_available_window(signals,raw,scenario='Fixed TP/SL',tp_pips=tp,sl_pips=sl,policy=policy,entry_start=SPLITS['VALIDATION'][0],entry_end=SPLITS['VALIDATION'][1],removed_symbols=[sym])
++            extra.append({'test':'LEAVE_ONE_SYMBOL_OUT_REALLOCATION','removed':sym,**result['metrics']});experiments.append({'experiment':'LOSO_'+sym})
++        # Individual/group ablation regenerates opportunities rather than deleting
++        # associated P&L. These experiments are exploratory training only.
++        active=[f'S{i}' for i in range(1,121) if f'S{i}' not in STRATEGY_ALIASES and f'S{i}' not in DISABLED_STRATEGY_IDS]
++        removals=[[s] for s in active]+[[f'S{i}' for i in range(a,b+1)] for a,b in [(1,20),(21,50),(51,92),(93,110),(111,120)]]
++        for ids in removals:
++            changed=regenerate(raw,removed=ids,policy=policy)
++            result=replay_available_window(changed,raw,scenario='Fixed TP/SL',tp_pips=tp,sl_pips=sl,policy=policy,entry_start=SPLITS['TRAIN'][0],entry_end=SPLITS['TRAIN'][1])
++            extra.append({'test':'FULL_REGENERATION_ABLATION_TRAIN','removed':','.join(ids),**result['metrics']});experiments.append({'experiment':'ABLATE_'+','.join(ids)})
++        for relax in (0.,.1,.2,.4):
++            changed=regenerate(raw,relaxation=relax,policy=replace(policy,relaxation=relax))
++            result=replay_available_window(changed,raw,scenario='Fixed TP/SL',tp_pips=tp,sl_pips=sl,policy=replace(policy,relaxation=relax),entry_start=SPLITS['TRAIN'][0],entry_end=SPLITS['TRAIN'][1])
++            extra.append({'test':'RELAXATION_TRAIN_ONLY','removed':relax,**result['metrics']});experiments.append({'experiment':'RELAX_'+str(relax)})
++        pd.DataFrame(extra).to_csv(out/'ablations_and_reallocation.csv',index=False)
++    folds=[]
++    for month in pd.date_range('2025-01-01','2025-12-01',freq='MS',tz='UTC'):
++        # Fixed training choice evaluated month-by-month with a 24h boundary purge.
++        result=replay_available_window(signals,raw,scenario='Fixed TP/SL',tp_pips=tp,sl_pips=sl,policy=policy,entry_start=month+pd.Timedelta(hours=24),entry_end=month+pd.offsets.MonthEnd()+pd.Timedelta(hours=23))
++        folds.append({'month':str(month),'purge_hours':24,**result['metrics']})
++    pd.DataFrame(folds).to_csv(out/'purged_monthly_validation.csv',index=False)
++    sensitivity=[]
++    for t2 in sorted(set(max(10,min(500,tp+d)) for d in (-5,0,5))):
++        for s2 in sorted(set(max(10,min(500,sl+d)) for d in (-5,0,5))):
++            result=replay_available_window(signals,raw,scenario='Fixed TP/SL',tp_pips=t2,sl_pips=s2,policy=policy,entry_start=SPLITS['VALIDATION'][0],entry_end=SPLITS['VALIDATION'][1])
++            sensitivity.append({'TP':t2,'SL':s2,**result['metrics']});experiments.append({'experiment':f'SENSITIVITY_{t2}_{s2}'})
++    pd.DataFrame(sensitivity).to_csv(out/'target_sensitivity.csv',index=False)
++    for scenario in SCENARIOS:
++        l=ledgers[(scenario,'VALIDATION')]
++        if l.empty:continue
++        l.groupby(['regime_family','volatility_bucket']).net_pips.agg(['count','sum','mean']).to_csv(out/f'regime_{SCENARIOS.index(scenario)}.csv')
++        l.groupby('Symbol').net_pips.agg(['count','sum','mean']).to_csv(out/f'symbol_{SCENARIOS.index(scenario)}.csv')
++        l.loc[l.exit_reason=='SL'].groupby('Symbol').stop_then_rebound.agg(['count','mean']).to_csv(out/f'rebound_{SCENARIOS.index(scenario)}.csv')
++        attribution(l).to_csv(out/f'strategy_{SCENARIOS.index(scenario)}.csv',index=False)
++    pd.concat(tables,ignore_index=True).to_csv(out/'scenario_comparison.csv',index=False)
++    status={'status':'RESEARCH_REPLAY_COMPLETE_NOT_LIVE_ACCEPTED','live_configuration_qualifies':False,'untouched_forward_verified':False,
++        'baseline_winner_verified':False,'claimed_validation_unprofitable_verified':False,
++        'reason':'2026 is a parameter replay, not proven untouched. Broker bid/ask, independent forward history and account risk evidence are required.',
++        'calibrated_classifier':calibration,
++        'DSR_PBO':'NOT_RUN: independent trial estimate and valid independent return matrix required',
++        'independent_trial_estimate':args.independent_trials,'experiments_run':len(experiments),
++        'true_walk_forward_refitting':'NOT_RUN: available pre-2025 training is too short; monthly results are purged fixed-parameter validation',
++        'money_profit_percent_drawdown':'NOT_REPORTED: account currency/equity/lots/conversion quotes/broker pip values missing',
++        'lower_timeframe_bid_ask_reconstruction':'NOT_RUN: no executable lower-timeframe evidence',
++        'controlled_export_replay_vs_full_regeneration':'NOT_RUN unless original candidate policy supplied; legacy module retained for audit'}
++    write_json(out/'audit_status.json',json_safe(status));write_json(out/'experiment_log.json',experiments)
++    print(json.dumps(status))
++
++if __name__=='__main__':main()
+--- original/research/calibration.py
++++ audited/research/calibration.py
+@@ -0,0 +1,91 @@
++"""Regularized outcome classifier with disjoint chronological sigmoid calibration."""
++from __future__ import annotations
++import numpy as np
++import pandas as pd
++from sklearn.pipeline import make_pipeline
++from sklearn.preprocessing import StandardScaler
++from sklearn.impute import SimpleImputer
++from sklearn.linear_model import LogisticRegression
++from sklearn.metrics import brier_score_loss
++
++FEATURES=('Suggested TP Pips','Suggested SL Pips','ADX','ATR','unique_family_count','Entry Noise Ratio')
++
++class TemporalOutcomeModel:
++    version='REGULARIZED_TEMPORAL_SIGMOID_V1'
++    def fit(self,signals,labels,training_end='2025-01-01T00:00:00Z'):
++        at=pd.to_datetime(signals.signal_available_at,utc=True)
++        ready=pd.to_datetime(labels.label_available_at,utc=True)
++        valid=labels.label_complete & ready.lt(pd.Timestamp(training_end))
++        dates=at[valid].sort_values()
++        if len(dates)<120: raise ValueError('At least 120 completed training labels required')
++        split=dates.iloc[int(.70*len(dates))]
++        fit=valid & ready.le(split-pd.Timedelta(hours=24))
++        calibration=valid & at.ge(split)
++        x=signals.reindex(columns=FEATURES).apply(pd.to_numeric,errors='coerce')
++        y=labels.outcome
++        if y[fit].nunique()<2 or y[calibration].nunique()<2: raise ValueError('Insufficient outcome classes across chronological folds')
++        self.base=make_pipeline(SimpleImputer(strategy='median'),StandardScaler(),LogisticRegression(C=.3,max_iter=1000))
++        self.base.fit(x.loc[fit],y.loc[fit])
++        self.classes=list(self.base.classes_);self.calibrators=[]
++        probabilities=self.base.predict_proba(x.loc[calibration])
++        for j,c in enumerate(self.classes):
++            truth=(y.loc[calibration]==c).astype(int)
++            if truth.nunique()<2: self.calibrators.append(None);continue
++            logits=np.log(np.clip(probabilities[:,j],1e-6,1-1e-6)/(1-np.clip(probabilities[:,j],1e-6,1-1e-6)))[:,None]
++            reg=LogisticRegression(C=.3,max_iter=1000);reg.fit(logits,truth);self.calibrators.append(reg)
++        self.conditional_net={c:float(labels.loc[fit & y.eq(c),'net_pips'].mean()) for c in self.classes}
++        self.training_end=training_end;self.sample_count=int(fit.sum());self.calibration_count=int(calibration.sum())
++        return self
++
++    def predict(self,signals):
++        x=signals.reindex(columns=FEATURES).apply(pd.to_numeric,errors='coerce')
++        probs=self.base.predict_proba(x)
++        for j,reg in enumerate(self.calibrators):
++            if reg is not None:
++                logits=np.log(np.clip(probs[:,j],1e-6,1-1e-6)/(1-np.clip(probs[:,j],1e-6,1-1e-6)))[:,None]
++                probs[:,j]=reg.predict_proba(logits)[:,1]
++        probs/=probs.sum(axis=1,keepdims=True)
++        return pd.DataFrame(probs,index=signals.index,columns=self.classes)
++
++    def evaluate(self,signals,labels):
++        valid=labels.label_complete & pd.to_datetime(signals.signal_available_at,utc=True).ge(pd.Timestamp(self.training_end))
++        if not valid.any(): return pd.DataFrame(),pd.DataFrame()
++        pred=self.predict(signals.loc[valid]);truth=labels.loc[valid,'outcome']
++        scores=[];bins=[]
++        for c in self.classes:
++            y=truth.eq(c).astype(int);scores.append({'outcome':c,'sample_count':len(y),'brier_score':brier_score_loss(y,pred[c])})
++            temp=pd.DataFrame({'p':pred[c],'y':y});temp['bin']=pd.cut(temp.p,np.linspace(0,1,11),include_lowest=True)
++            grouped=temp.groupby('bin',observed=True).agg(mean_probability=('p','mean'),observed_frequency=('y','mean'),sample_count=('y','size')).reset_index()
++            grouped['outcome']=c;bins.append(grouped)
++        return pd.DataFrame(scores),pd.concat(bins,ignore_index=True)
++
++
++def export_model_json(model,signals,labels,path,policy):
++    """Export numerical parameters only; no pickle/code execution at deployment."""
++    from sklearn.linear_model import Ridge
++    from core.execution_policy_20261003 import VERSION
++    from dataclasses import asdict
++    import json,hashlib
++    x=signals.reindex(columns=FEATURES).apply(pd.to_numeric,errors='coerce')
++    ready=pd.to_datetime(labels.label_available_at,utc=True)
++    valid=labels.label_complete & ready.lt(pd.Timestamp(model.training_end))
++    transformed=model.base[:-1].transform(x)
++    reg=model.base[-1];imputer=model.base[0];scaler=model.base[1]
++    if transformed.shape[1]!=len(FEATURES):raise ValueError('Every deployment feature must have observed training values')
++    payouts={};residuals=[]
++    for outcome in model.classes:
++        mask=valid & labels.outcome.eq(outcome)
++        if mask.sum()<20:raise ValueError('At least 20 payout labels per modeled exit class required')
++        pay=Ridge(alpha=10);pay.fit(transformed[mask],labels.loc[mask,'net_pips'])
++        residual=labels.loc[mask,'net_pips'].to_numpy()-pay.predict(transformed[mask])
++        payouts[outcome]={'coef':pay.coef_.tolist(),'intercept':float(pay.intercept_),'sample_count':int(mask.sum()),'residual_std':float(residual.std(ddof=1))}
++    semantics=asdict(policy);semantics['validation_manifest']=''
++    spec={'engine':VERSION,'pair_recipe':'FINAL_STRUCTURAL_V1','round_trip_cost_pips':policy.costs,'policy_sha256':hashlib.sha256(json.dumps(semantics,sort_keys=True).encode()).hexdigest(),
++      'training_end':model.training_end,'features':list(FEATURES),'classes':model.classes,'impute':imputer.statistics_.tolist(),
++      'scale_mean':scaler.mean_.tolist(),'scale_std':scaler.scale_.tolist(),'coef':reg.coef_.tolist(),'intercept':reg.intercept_.tolist(),
++      'sigmoid':[{'coef':float(r.coef_[0,0]),'intercept':float(r.intercept_[0])} if r is not None else None for r in model.calibrators],
++      'payouts':payouts,'sample_count':model.sample_count,'calibration_sample_count':model.calibration_count,
++      'version':model.version,'requires_independent_acceptance_manifest':True}
++    from pathlib import Path
++    Path(path).write_text(json.dumps(spec,indent=2,allow_nan=False))
++    return spec
+--- original/research/fixed_grid.py
++++ audited/research/fixed_grid.py
+@@ -0,0 +1,82 @@
++"""Compiled exhaustive integer fixed-grid replay with independent holdings.
++
++This is the NEW engine's signal universe. Reproducing a legacy training winner
++requires the original decision candidates/policy, not substituting this search.
++Grid search is research-only and intentionally tests stops above the live budget.
++"""
++from __future__ import annotations
++import numpy as np
++import pandas as pd
++from numba import njit
++from core.execution_policy_20261003 import checks_between,latest_completed,closure_deadline
++from core.audited_portfolio_replay_20261003 import normalize_quotes
++
++@njit(cache=True)
++def _grid(candidates,checks,entries,opens,highs,lows,ends,sides,timeouts,costs,nsymbols,lo,hi):
++    size=(hi-lo+1)**2;result=np.empty((size,7));z=0
++    for tp in range(lo,hi+1):
++        for sl in range(lo,hi+1):
++            held=np.full(nsymbols,-np.inf);net=0.;trades=0;wins=0;profit=0.;loss=0.
++            for c in range(len(checks)):
++                entered=0
++                for slot in range(4):
++                    sym=candidates[c,slot]
++                    if sym<0 or held[sym]>checks[c] or entered>=2: continue
++                    payout=np.nan;exit_at=np.inf
++                    for step in range(25):
++                        t=ends[c,slot,step]
++                        if t<0: break
++                        if step==timeouts[c,slot]: payout=opens[c,slot,step]-costs;exit_at=t;break
++                        # Adverse opening gap fills are observable before intrabar ranges.
++                        if opens[c,slot,step]<=-sl:
++                            payout=opens[c,slot,step]-costs;exit_at=t-3600;break
++                        if opens[c,slot,step]>=tp:
++                            payout=tp-costs;exit_at=t-3600;break
++                        hit_tp=highs[c,slot,step]>=tp;hit_sl=lows[c,slot,step]<=-sl
++                        # Primary table TP-first; separate stress uses full runner.
++                        if hit_tp: payout=tp-costs;exit_at=t;break
++                        if hit_sl: payout=-sl-costs;exit_at=t;break
++                    held[sym]=exit_at;entered+=1
++                    if np.isfinite(payout):
++                        net+=payout;trades+=1
++                        if payout>0:wins+=1;profit+=payout
++                        else:loss-=payout
++            result[z]=np.array([tp,sl,net,trades,wins,profit,loss]);z+=1
++    return result
++
++
++def exhaustive_search(signals,raw,policy,start,end,lo=10,hi=500):
++    if hi<lo:raise ValueError('Invalid integer range')
++    q=normalize_quotes(raw);syms=sorted(q.Symbol.unique());ids={s:i for i,s in enumerate(syms)}
++    checks=checks_between(start,end,policy);shape=(len(checks),4,25)
++    candidates=np.full((len(checks),4),-1,np.int64);entries=np.full((len(checks),4),np.nan)
++    opens=np.full(shape,np.nan);highs=np.full(shape,np.nan);lows=np.full(shape,np.nan);ends=np.full(shape,-1.,float)
++    sides=np.zeros((len(checks),4));timeouts=np.full((len(checks),4),24,np.int64)
++    groups={s:g.loc[g.market_executable].sort_values('bar_open_time') for s,g in q.groupby('Symbol')}
++    for k,check in enumerate(checks):
++        snapshot=latest_completed(signals,check,policy)
++        snapshot['_ev']=pd.to_numeric(snapshot.expected_net_pips,errors='coerce').fillna(-np.inf)
++        snapshot=snapshot.sort_values(['unique_family_count','_ev','Symbol'],ascending=[False,False,True]).head(4)
++        for slot,(_,signal) in enumerate(snapshot.iterrows()):
++            if not signal.research_entry_eligible or signal.entry_origin=='RANK_FILL':continue
++            bars=groups[signal.Symbol].loc[groups[signal.Symbol].bar_open_time.ge(check)].head(25)
++            if bars.empty:continue
++            entry_at=bars.iloc[0].bar_open_time
++            if (entry_at-check).total_seconds()/60>policy.max_signal_age_minutes:continue
++            deadline,closed=closure_deadline(entry_at,24)
++            if closed:deadline-=pd.Timedelta(hours=1)
++            else:deadline=entry_at+pd.Timedelta(hours=24)
++            price=bars.iloc[0].open;side=1 if signal.entry_side=='BUY' else -1;pip=.01 if 'JPY' in signal.Symbol else .0001
++            candidates[k,slot]=ids[signal.Symbol];entries[k,slot]=entry_at.timestamp();sides[k,slot]=side
++            timeouts[k,slot]=int((deadline-entry_at).total_seconds()/3600)
++            for j,(_,bar) in enumerate(bars.iterrows()):
++                if bar.bar_open_time!=entry_at+pd.Timedelta(hours=j):break
++                if bar.bar_open_time>deadline:break
++                opens[k,slot,j]=side*(bar.open-price)/pip
++                highs[k,slot,j]=side*((bar.high if side>0 else bar.low)-price)/pip
++                lows[k,slot,j]=side*((bar.low if side>0 else bar.high)-price)/pip
++                ends[k,slot,j]=(bar.bar_open_time if bar.bar_open_time==deadline else bar.bar_close_time).timestamp()
++    values=_grid(candidates,np.array([x.timestamp() for x in checks]),entries,opens,highs,lows,ends,sides,timeouts,policy.costs,len(syms),lo,hi)
++    out=pd.DataFrame(values,columns=['TP','SL','Net Pip','Trades','Wins','Gross Profit','Gross Loss'])
++    out['EV']=out['Net Pip']/out.Trades.replace(0,np.nan);out['Profit Factor']=out['Gross Profit']/out['Gross Loss'].replace(0,np.nan)
++    return out.sort_values(['Net Pip','TP','SL'],ascending=[False,True,True],kind='mergesort').reset_index(drop=True)
+--- original/tests/test_audited_execution_20261003.py
++++ audited/tests/test_audited_execution_20261003.py
+@@ -0,0 +1,275 @@
++"""Numerical, causal and app integration checks for the uploaded audit policy."""
++from dataclasses import replace
++import json
++import numpy as np
++import pandas as pd
++import pytest
++from core.execution_policy_20261003 import (AuditPolicy,quote_metadata,checks_between,latest_completed,closure_deadline,get_policy)
++from core.strategy_audit_20260924 import build_strategy_audit,recompute_family_evidence,STRATEGY_ALIASES
++from core.hourly_four_symbol_selector_20260928 import select_portfolio_entries,attach_hourly_four_selection
++from core.advanced_tpsl_engine_20261002 import add_advanced_tpsl_targets
++from core.final_pair_forecast_20261003 import final_pair_labels,causal_empirical_forecast
++from core.audited_portfolio_replay_20261003 import replay_portfolio
++
++
++def quotes(n=96,start='2024-10-08T00:00Z',symbols=('EURUSD',)):
++    records=[]
++    for sym in symbols:
++        t=pd.date_range(start,periods=n,freq='h',tz='UTC')
++        records.append(pd.DataFrame(dict(Symbol=sym,open_time=t,open=1.1,high=1.1001,low=1.0999,close=1.1,broker_quote_verified=True)))
++    return pd.concat(records,ignore_index=True)
++
++
++def signals(raw):
++    pieces=[]
++    for sym,g in raw.groupby('Symbol'):
++        g=g.reset_index(drop=True)
++        m=quote_metadata(g)
++        m['Symbol']=sym;m['entry_side']='BUY';m['entry_eligible']=True;m['research_entry_eligible']=True
++        m['unique_family_count']=1;m['active_strategy_ids']='["S1"]';m['active_strategy_family_ids']='["F_S1"]';m['entry_origin']='STRATEGY'
++        m['tp_price']=1.101;m['sl_price']=1.099;m['expected_net_pips']=3.;m['expected_net_pips_lower_bound']=1.
++        for col in ['Middle Regime Bias','Higher Standard Regime Bias','Lower Regime Bias']:m[col]='BUY'
++        m['S1 Entry Condition']=True;m['S1 Score']=90
++        pieces.append(m)
++    return pd.concat(pieces,ignore_index=True)
++
++
++def test_timestamp_ownership_and_half_hour_check():
++    raw=quotes(24,'2026-09-29T00:00Z');s=signals(raw)
++    m=quote_metadata(raw)
++    assert m.signal_available_at.iloc[3]==pd.Timestamp('2026-09-29T04:00Z')
++    snap=latest_completed(s,'2026-09-29T04:00Z')
++    assert snap.bar_open_time.item()==pd.Timestamp('2026-09-29T03:00Z')
++    # 04:00 Rangoon = 21:30 UTC on the preceding day; most recent close is 21:00.
++    snap=latest_completed(s,'2026-09-29T21:30Z')
++    assert snap.bar_open_time.item()==pd.Timestamp('2026-09-29T20:00Z')
++    checks=checks_between('2026-09-29','2026-09-30',replace(AuditPolicy(),entry_timezone='Asia/Rangoon'))
++    assert pd.Timestamp('2026-09-29T21:30Z') in checks
++    assert {x.tz_convert('Asia/Rangoon').hour for x in checks}=={4,8,12,14,16,18}
++
++
++def test_weekends_invalid_duplicate_and_explicit_false_quotes():
++    raw=quotes(4,'2026-10-03T00:00Z')
++    assert not quote_metadata(raw).market_executable.any()
++    raw=quotes(4);raw.loc[1,'high']=1.0
++    raw.loc[2,'market_executable']=False
++    # Explicit NaN flags are conservatively false too.
++    m=quote_metadata(raw)
++    assert not m.market_executable.iloc[1] and not m.market_executable.iloc[2]
++    raw=quotes(4);raw.loc[1,'open_time']=raw.open_time.iloc[0]
++    m=quote_metadata(raw)
++    assert m.data_quality_flag.iloc[0]=='DUPLICATE_TIMESTAMP' and not m.market_executable.iloc[:2].any()
++
++
++def test_default_entry_days_and_policy_contract():
++    p=get_policy();assert p.relaxation==0 and p.max_new_symbols==2
++    checks=checks_between('2026-09-27','2026-10-04',p)
++    assert all(x.dayofweek not in (6,0) for x in checks)
++    for change in ({'max_new_symbols':4},{'max_hold_hours':25},{'relaxation':.3}):
++        with pytest.raises(ValueError): AuditPolicy(**change)
++
++
++def test_alias_votes_and_active_score_recomputed():
++    f=pd.DataFrame({'Symbol':['EURUSD'],'S51 Entry Condition':[True],'S51 Score':[80],'S52 Entry Condition':[True],'S52 Score':[100],
++        'S1 Entry Condition':[False],'S1 Score':[99]})
++    a=recompute_family_evidence(f)
++    assert a.unique_family_count.item()==1 and a['Best Strategy Score'].item()==80
++    assert json.loads(a.active_strategy_ids.item())==['S51']
++    f['S51 Entry Condition']=False
++    a=recompute_family_evidence(f)
++    assert a.unique_family_count.item()==0 and a['Best Strategy Score'].item()==0
++
++
++def test_inspect_third_fourth_and_all_held_or_ineligible_skip():
++    c=signals(quotes(1,symbols=('AUDUSD','EURUSD','GBPUSD','NZDUSD')))
++    p=AuditPolicy()
++    chosen,skips=select_portfolio_entries(c,{'AUDUSD','EURUSD'},policy=p)
++    assert list(chosen.Symbol)==['GBPUSD','NZDUSD']
++    assert set(skips.reason)=={'ALREADY_HELD'}
++    chosen,_=select_portfolio_entries(c,set(c.Symbol),policy=p);assert chosen.empty
++    c.loc[c.Symbol=='GBPUSD','entry_eligible']=False
++    chosen,_=select_portfolio_entries(c,{'AUDUSD','EURUSD'},policy=p);assert list(chosen.Symbol)==['NZDUSD']
++
++
++def test_rank_fill_remains_display_only():
++    f=signals(quotes(1,symbols=('AUDUSD','EURUSD','GBPUSD','NZDUSD','USDCHF')))
++    f['TP Price Display']='1.10100';f['SL Price Display']='1.09900';f['S1 Entry Condition']=f.Symbol=='USDCHF'
++    out=attach_hourly_four_selection(f)
++    assert out['Hourly 4 Entry'].sum()==4
++    assert out.loc[out.entry_origin=='RANK_FILL','entry_eligible'].eq(False).all()
++    assert out.loc[out.entry_origin=='RANK_FILL','Strategy Decision'].eq('None').all()
++    chosen,_=select_portfolio_entries(out,set());assert list(chosen.Symbol)==['USDCHF']
++
++
++def test_label_actual_tp_price_costs_and_release_after_24_elapsed_hours():
++    raw=quotes(60);raw.loc[1,'high']=1.102
++    m=quote_metadata(raw);f=pd.concat([raw,m],axis=1);f['bias']='BUY';f['pip_size']=.0001
++    p=replace(AuditPolicy(),spread_pips=2,slippage_pips=.5)
++    lab=final_pair_labels(f,np.ones(len(f)),np.full(len(f),1.101),np.full(len(f),1.099),policy=p)
++    assert lab.outcome.iloc[0]=='TP';assert lab.net_pips.iloc[0]==pytest.approx(7.5)
++    assert lab.label_available_at.iloc[0]==pd.Timestamp('2024-10-09T02:00Z')
++    farther=final_pair_labels(f,np.ones(len(f)),np.full(len(f),1.103),np.full(len(f),1.099),policy=p)
++    assert farther.outcome.iloc[0]=='TIMEOUT'
++    f['regime_family']='PULLBACK_CONTINUATION'
++    fc=causal_empirical_forecast(f,lab,policy=replace(p,min_samples=2))
++    assert fc.forecast_sample_count.iloc[:24].eq(0).all()
++    assert fc.direction_probability.isna().all()
++
++
++def test_missing_path_censors_even_when_an_early_target_hit():
++    raw=quotes(60);raw.loc[1,'high']=1.102;raw=raw.drop(index=10).reset_index(drop=True)
++    f=pd.concat([raw,quote_metadata(raw)],axis=1);f['bias']='BUY';f['pip_size']=.0001
++    lab=final_pair_labels(f,np.ones(len(f)),np.full(len(f),1.101),np.full(len(f),1.099))
++    assert lab.outcome.iloc[0]=='CENSORED' and pd.isna(lab.net_pips.iloc[0])
++
++
++def test_h1_ambiguity_and_stop_gap_are_disclosed():
++    raw=quotes(60);raw.loc[1,['high','low']]=[1.102,1.098]
++    f=pd.concat([raw,quote_metadata(raw)],axis=1);f['bias']='BUY';f['pip_size']=.0001
++    a=final_pair_labels(f,np.ones(len(f)),np.full(len(f),1.101),np.full(len(f),1.099),ambiguity='TP_FIRST')
++    b=final_pair_labels(f,np.ones(len(f)),np.full(len(f),1.101),np.full(len(f),1.099),ambiguity='SL_FIRST')
++    assert a.outcome.iloc[0]=='TP' and b.outcome.iloc[0]=='SL' and a.ambiguous.iloc[0]
++    raw.loc[1,['high','low']]=[1.1001,1.0999]
++    raw.loc[2,['open','high','low','close']]=[1.098,1.0982,1.0978,1.098]
++    f=pd.concat([raw,quote_metadata(raw)],axis=1);f['bias']='BUY';f['pip_size']=.0001
++    b=final_pair_labels(f,np.ones(len(f)),np.full(len(f),1.101),np.full(len(f),1.099))
++    assert b.net_pips.iloc[0]==pytest.approx(-22.5) and b.stop_gap.iloc[0]
++
++
++def test_24h_deadline_never_becomes_24_rows_across_a_weekend():
++    deadline,closed=closure_deadline(pd.Timestamp('2026-10-02T18:00Z'),24)
++    assert closed and deadline==pd.Timestamp('2026-10-02T21:00Z')
++    raw=quotes(96,'2026-10-02T00:00Z');s=signals(raw)
++    r=replay_portfolio(s,raw,scenario='Fixed TP/SL',tp_pips=77,sl_pips=103)
++    assert not r['trades'].empty
++    valid=r['trades'].dropna(subset=['net_pips'])
++    assert valid.hold_hours.le(24).all()
++    assert valid.exit_at.dt.dayofweek.eq(4).all()
++    assert valid.exit_reason.eq('PRE_CLOSURE').all()
++
++
++def test_next_open_fill_and_typed_signal_ignores_display_string():
++    raw=quotes(36);s=signals(raw)
++    s['Strategy Decision']='SELL-999 TP 999 SL 1'
++    raw.loc[4,'high']=1.102
++    r=replay_portfolio(s,raw,scenario='Fixed TP/SL',tp_pips=10,sl_pips=10,entry_end='2024-10-08T04:00Z')
++    first=r['trades'].iloc[0]
++    assert first.entry_at==pd.Timestamp('2024-10-08T04:00Z') and first.entry_side=='BUY'
++    assert first.net_pips==pytest.approx(7.5)
++    local=replace(AuditPolicy(),entry_timezone='Asia/Rangoon')
++    raw=quotes(72);s=signals(raw)
++    r=replay_portfolio(s,raw,scenario='Fixed TP/SL',tp_pips=10,sl_pips=10,policy=local)
++    assert ((r['trades'].entry_at-r['trades'].check_at).dt.total_seconds()/60).eq(30).all()
++
++
++def test_full_schema_filters_and_causality():
++    n=280;raw=quotes(n,'2024-10-08');rng=np.random.default_rng(3)
++    c=1.1+np.cumsum(rng.normal(0,.0003,n));o=np.r_[c[0],c[:-1]]
++    raw['open']=o;raw['close']=c;raw['high']=np.maximum(o,c)+.0003;raw['low']=np.minimum(o,c)-.0003
++    a=build_strategy_audit(raw,'BUY','BUY')
++    required={'signal_available_at','entry_side','entry_eligible','active_strategy_ids','active_strategy_family_ids','unique_family_count','entry_origin',
++        'direction_probability','probability_calibration_version','expected_net_pips','expected_net_pips_lower_bound','tp_price','sl_price','horizon_hours',
++        'max_hold_hours','market_executable','spread_pips','data_quality_flag','decision_engine_version'}
++    assert required.issubset(a)
++    assert len([x for x in a if x.startswith('TP Filter ') and x not in {'TP Filter Reasons','TP Filter Pass Count','TP Filter Total Count'}])>=20
++    assert not a.entry_eligible.any()
++    assert not a['TP Filter Reasons'].str.contains('ERROR').any()
++    for label in STRATEGY_ALIASES:assert not a[f'{label} Entry Condition'].any()
++    for i in range(87,91):assert not a[f'S{i} Entry Condition'].any()
++    for i in (9,11,20,23,29,37,42,96,106):assert not a[f'S{i} Entry Condition'].any()
++    changed=raw.copy();changed.loc[220:,['open','high','low','close']]*=2
++    b=build_strategy_audit(changed,'BUY','BUY')
++    pd.testing.assert_frame_equal(a.iloc[:220],b.iloc[:220])
++    # Removing a raw strategy recalculates scores and rescue eligibility.
++    removed=build_strategy_audit(raw,'BUY','BUY',removed_strategy_ids=['S1','S51'])
++    assert not removed['S1 Entry Condition'].any() and not removed['S51 Entry Condition'].any()
++    assert removed['Best Strategy'].isin(['S1','S51']).eq(False).all()
++
++
++def test_targets_reject_stop_exceeding_budget_without_moving_invalidation():
++    raw=quotes(72);raw['low']=1.08;raw['ADX']=25
++    p=replace(AuditPolicy(),max_stop_pips=10)
++    out=add_advanced_tpsl_targets(raw,'BUY',symbol='EURUSD',policy=p)
++    assert out['Required Structural SL'].iloc[-1]>out['Allowed Maximum SL'].iloc[-1]
++    assert not out['SL Risk Cap Passed'].iloc[-1]
++    assert not out['TP Research Filters Passed'].iloc[-1]
++    assert 'Hard Stop Budget' in out['TP Filter Reasons'].iloc[-1]
++
++
++def test_endpoint_quote_and_training_freeze_do_not_leak_future_rows():
++    raw=quotes(90)
++    f=pd.concat([raw,quote_metadata(raw)],axis=1);f['bias']='BUY';f['pip_size']=.0001;f['regime_family']='PULLBACK_CONTINUATION'
++    p=replace(AuditPolicy(),min_samples=2)
++    def make(frame):
++        lab=final_pair_labels(frame,np.ones(len(frame)),np.full(len(frame),1.102),np.full(len(frame),1.098),policy=p)
++        return causal_empirical_forecast(frame,lab,policy=p)
++    full=make(f);prefix=make(f.iloc[:50])
++    pd.testing.assert_frame_equal(full.iloc[:50],prefix)
++    mutated=f.copy();mutated.loc[50:,'open']=1.10005
++    changed=make(mutated)
++    pd.testing.assert_frame_equal(full.iloc[:50],changed.iloc[:50])
++    late=f.copy()
++    late['bar_open_time']+=pd.DateOffset(years=2);late['signal_available_at']+=pd.DateOffset(years=2);late['bar_close_time']+=pd.DateOffset(years=2)
++    assert make(late).forecast_sample_count.eq(0).all()  # 2026 cannot fit the frozen training model
++
++
++def test_calibration_hash_guard_and_account_sizing():
++    from core.calibrated_target_model_20261003 import load_validated_model
++    from core.account_risk_20261003 import AccountInputs,position_lots,diagnostic_kelly
++    assert load_validated_model(AuditPolicy()) is None
++    account=AccountInputs('USD',1000,.01,{'EURUSD':10},{'EURUSD':100000},{'EUR':1.1,'USD':1},{'EURUSD':.01},{'EURUSD':.01},{'EURUSD':5})
++    assert position_lots(account,'EURUSD',50,cost_pips=2)==.01
++    assert diagnostic_kelly(.3,10,10)['nonnegative_reference_fraction']==0
++    with pytest.raises(ValueError):position_lots(account,'GBPUSD',50)
++
++
++def test_stale_signal_is_rejected_in_research_and_live():
++    s=signals(quotes(1))
++    snapshot=latest_completed(s,'2024-10-08T04:00Z')
++    assert not snapshot.entry_eligible.any()
++    assert not snapshot.research_entry_eligible.any()
++
++
++def test_calibrated_export_matches_classifier_and_bounds_tp_payout(tmp_path):
++    from research.calibration import TemporalOutcomeModel,export_model_json
++    from core.calibrated_target_model_20261003 import infer_model
++    n=720;rng=np.random.default_rng(7)
++    x=pd.DataFrame({'signal_available_at':pd.date_range('2024-10-03',periods=n,freq='h',tz='UTC'),
++        'Suggested TP Pips':25.,'Suggested SL Pips':20.,'ADX':rng.uniform(15,40,n),'ATR':rng.uniform(.0003,.001,n),
++        'unique_family_count':rng.integers(1,5,n),'Entry Noise Ratio':rng.uniform(.3,2,n)})
++    outcome=np.tile(['TP','SL','BIAS','TIMEOUT'],n//4)
++    y=pd.DataFrame({'outcome':outcome,'label_complete':True,'label_available_at':x.signal_available_at+pd.Timedelta(hours=25),
++        'net_pips':np.where(outcome=='TP',22.5,np.where(outcome=='SL',-22.5,rng.normal(-1,2,n)))})
++    model=TemporalOutcomeModel().fit(x,y)
++    spec=export_model_json(model,x,y,tmp_path/'model.json',AuditPolicy())
++    forecast=infer_model(spec,x,np.full(n,.0025),np.full(n,.002),np.full(n,.0001))
++    predicted=model.predict(x)
++    for c in model.classes:np.testing.assert_allclose(forecast['p_'+c.lower()],predicted[c],rtol=1e-6,atol=1e-7)
++    assert np.allclose(forecast[['p_tp','p_sl','p_bias','p_timeout']].sum(axis=1),1)
++    # An excessive payout regression must not invent a candle-maximum TP payout.
++    spec['payouts']['TP']['coef']=[0.]*6;spec['payouts']['TP']['intercept']=1000
++    huge=infer_model(spec,x,np.full(n,.0025),np.full(n,.002),np.full(n,.0001))
++    assert (huge.expected_net_pips-forecast.expected_net_pips).max()<1e-6
++
++
++def test_small_integer_grid_matches_event_replay():
++    from research.fixed_grid import exhaustive_search
++    raw=quotes(72,symbols=('AUDUSD','EURUSD','GBPUSD','NZDUSD'));s=signals(raw);p=AuditPolicy()
++    lo='2024-10-08T04:00Z';hi='2024-10-09T16:00Z'
++    grid=exhaustive_search(s,raw,p,lo,hi,lo=10,hi=11)
++    assert len(grid)==4
++    for _,pair in grid.iterrows():
++        r=replay_portfolio(s,raw,scenario='Fixed TP/SL',tp_pips=pair.TP,sl_pips=pair.SL,policy=p,entry_start=lo,entry_end=hi)
++        assert pair['Net Pip']==pytest.approx(r['metrics']['Net Pip'])
++        assert pair.Trades==r['metrics']['Trades']
++
++
++def test_typed_download_bundle_uses_full_universe_and_total_costs():
++    from core.professional_execution_backtest_20261001 import build_professional_backtest_bundle,summarize_execution_backtest
++    import io,zipfile
++    raw=quotes(72,symbols=('AUDUSD','EURUSD','GBPUSD','NZDUSD'));s=signals(raw)
++    blob,ledger,summary=build_professional_backtest_bundle(s,raw,finder_rows=s,entry_start='2024-10-08T04:00Z',entry_end='2024-10-08T16:00Z')
++    assert not ledger.empty and summary['same_candle_tp_sl_policy']=='TP_FIRST_H1_PRIMARY'
++    assert np.allclose(ledger['Gross Pips']-ledger['Net Pips'],2.5)
++    assert summary['round_trip_cost_pips']==2.5
++    with zipfile.ZipFile(io.BytesIO(blob)) as z:assert 'next executable open' in z.read('README.txt').decode()
+--- original/tests/test_dynamic_middle_bias_exit_20260928.py
++++ audited/tests/test_dynamic_middle_bias_exit_20260928.py
+@@ -38,7 +38,8 @@
+     assert out['Max Hold Hours'].eq(24).all()
+     assert out['Time Exit Hours'].eq(24).all()
+     assert out['TP Target Horizon Hours'].dropna().le(24).all()
+-    assert out['TP Within 24H'].dropna().all()
++    assert not out['TP Within 24H'].any()  # reach is a forecast, never a guarantee
++    assert out['direction_probability'].isna().all()
+     before = out.loc[:180, 'Suggested TP'].copy()
+     mutated = df.copy()
+     mutated.loc[181:, ['open', 'high', 'low', 'close']] *= 3.0
+@@ -52,7 +53,7 @@
+     out = add_dynamic_24h_targets(df, middle, timeframe='H1', symbol='EURUSD')
+     assert (out['Suggested TP'] >= out['close']).iloc[-30:].all()
+     assert (out['Suggested SL'] <= out['close']).iloc[-30:].all()
+-    assert out['Exit Scenario'].eq('Dynamic TP + Middle Bias Exit').all()
++    assert out['Exit Scenario'].eq('Dynamic TP + Middle Bias Exit + Emergency SL').all()
+ 
+     hold = middle_bias_exit_decision('BUY', 'BUY', position_age_hours=10)
+     assert hold['action'] == 'HOLD_TO_DYNAMIC_TP'
+--- original/tests/test_fast_backtest_artifacts_20261002.py
++++ audited/tests/test_fast_backtest_artifacts_20261002.py
+@@ -108,11 +108,11 @@
+     computed=pd.read_csv(BytesIO(builds.load_middle_ranking_csv(store,completed)[0]))
+     assert len(computed)==960
+     assert computed.groupby('Datetime')['Hourly 4 Entry'].sum().eq(4).all()
+-    assert computed['Entry Filter Relaxation Percent'].eq(40).all()
++    assert computed['Entry Filter Relaxation Percent'].eq(0).all()
+     assert {'S1 Entry Condition','S120 Entry Condition','S120 Score','Best Strategy','Suggested TP','Suggested SL','Strategy Decision'}.issubset(computed.columns)
+     raw=next(a for a in completed['result_manifest'] if a['kind']=='raw_ohlc_csv')
+     data=pd.read_csv(BytesIO(store.get_object(raw['path'])))
+-    assert len(data)==960 and set(data)=={'Datetime','Symbol','Timeframe','Open','High','Low','Close','Volume'}
++    assert len(data)==960 and {'Datetime','Symbol','Timeframe','Open','High','Low','Close','Volume','bar_open_time','bar_close_time','market_executable','data_quality_flag'}.issubset(data)
+     assert data.groupby('Datetime')['Symbol'].count().eq(20).all()
+     class UI:
+         downloads=[];bars=[]
+@@ -123,7 +123,11 @@
+     monkeypatch.setattr(store,'get_object',lambda path: (_ for _ in ()).throw(AssertionError('UI rerun read giant CSV')))
+     render_build_artifacts(ui,store,completed)
+     assert ui.bars==[1,1]
+-    assert len(ui.downloads)==2
++    assert len(ui.downloads)==4
++    assert any("First Half" in label for label,_ in ui.downloads)
++    assert any("Second Half" in label for label,_ in ui.downloads)
++    halves=[a for a in completed["result_manifest"] if a["kind"] in {"middle_ranking_first_half_csv","middle_ranking_second_half_csv"}]
++    assert sum(a["rows"] for a in halves)==len(computed)
+     assert all(callable(kwargs['data']) and kwargs['on_click']=='ignore' for _,kwargs in ui.downloads)
+     # The same raw button is present while RUNNING and calculated data absent.
+     ui=UI();ui.downloads=[];ui.bars=[]
+--- original/tests/test_finder_s1_s50_repair_20260924.py
++++ audited/tests/test_finder_s1_s50_repair_20260924.py
+@@ -31,7 +31,7 @@
+     for module, names in ((builds, ('_RUNTIME_ROOT','_LOCAL_JOBS','_LOCAL_OBJECTS','_config','launch_local_build_worker')),
+                           (store, ('recover_saved_frames',)),
+                           (fast, ('MIDDLE_HISTORY_FILE','MIDDLE_HISTORY_CSV_FILE')),
+-                          (ui, ('MIDDLE_HISTORY_FILE','MIDDLE_HISTORY_CSV_FILE'))):
++                          (ui, ('MIDDLE_HISTORY_FILE','MIDDLE_HISTORY_CSV_FILE','get_global_symbol_context'))):
+         for name in names:
+             monkeypatch.setattr(module, name, getattr(module, name))
+ 
+@@ -61,10 +61,10 @@
+         assert history[f'{label} Score'].between(0,100).all()
+         assert not history[f'{label} Signal'].isin(['NO DATA','WAIT']).any()
+     assert list(STRATEGY_NAMES)==[f'S{i}' for i in range(1,121)]
+-    assert history['S1 Score'].max()>1  # prior score bug returned only 0 or 1
++    assert history.loc[~history['S1 Entry Condition'],'S1 Score'].eq(0).all()  # inactive rules cannot inflate best score
+     assert int(history['Hourly 4 Entry'].sum()) == history['Datetime'].nunique()
+-    assert int(history['Strategy Decision'].ne('None').sum()) == history['Datetime'].nunique()
+-    assert history.loc[history['Hourly 4 Entry'], 'Strategy Decision'].str.contains(r'(?:BUY|SELL)-\d+ TP').any()
++    assert history.loc[history.unique_family_count.eq(0),'Strategy Decision'].eq('None').all()
++    assert not history.loc[history.entry_origin.eq('RANK_FILL'),'entry_eligible'].any()
+ 
+ 
+ def test_strategy_prefix_causality_and_live_decision_parity():
+@@ -253,6 +253,7 @@
+ import streamlit as st
+ import pandas as pd,numpy as np
+ from pathlib import Path
++from types import SimpleNamespace
+ from ui import field3_multisymbol_regime_summary_20260722 as ui
+ from core import super_quick_field3_20260722 as fast
+ from core import finder_history_store_20260924 as store
+@@ -262,6 +263,7 @@
+ builds._LOCAL_OBJECTS=builds._RUNTIME_ROOT/'objects'
+ builds._config=lambda: {{'supabase_url':'','supabase_key':'','bucket':'adx-build-data'}}
+ builds.launch_local_build_worker=lambda *a,**k: {{'ok':True,'pid':4242}}
++ui.get_global_symbol_context=lambda state: SimpleNamespace(completed_symbols=(),loaded_symbols=(),configured_symbols=(),timeframe='H1')
+ store.recover_saved_frames=lambda *a,**k:({{}},{{}})
+ for m in (ui,fast):
+  m.MIDDLE_HISTORY_FILE=Path({str(tmp_path/'ui.parquet')!r})
+--- original/tests/test_hourly_four_selector_20260928.py
++++ audited/tests/test_hourly_four_selector_20260928.py
+@@ -59,11 +59,12 @@
+     frame = pd.DataFrame(rows)
+     selected = attach_hourly_four_selection(frame)
+     assert int(selected["Hourly 4 Entry"].sum()) == 4
+-    assert int(selected["Strategy Decision"].ne("None").sum()) == 4
++    assert int(selected["Strategy Decision"].ne("None").sum()) == 1
++    assert not selected.loc[selected.entry_origin.eq("RANK_FILL"),"entry_eligible"].any()
+     assert selected.loc[selected["Symbol"].eq("SYM19"), "Hourly 4 Entry"].item() is True
+     assert selected.loc[selected["Symbol"].eq("SYM19"), "Hourly Entry Origin"].item() == "STRATEGY"
+     assert selected.loc[selected["Hourly 4 Entry"], "Hourly Selection Rank"].notna().all()
+-    assert selected.loc[selected["Hourly 4 Entry"], "Strategy Decision"].astype(str).str.match(r"BUY-\d+ TP \d+\.\d{5} SL \d+\.\d{5}$").all()
++    assert selected.loc[selected["Hourly 4 Entry"] & selected.unique_family_count.gt(0), "Strategy Decision"].astype(str).str.match(r"BUY-\d+ TP \d+\.\d{5} SL \d+\.\d{5}$").all()
+     assert selected.loc[~selected["Hourly 4 Entry"], "Strategy Decision"].eq("None").all()
+ 
+ 
+@@ -85,4 +86,5 @@
+     for col in ("Suggested TP", "Suggested SL", "Suggested TP Price", "Suggested SL Price", "Near Entry Score", "Strategy Hit Count"):
+         assert col in audit.columns
+     assert audit["Suggested TP"].notna().all()
+-    assert audit["Suggested SL"].notna().all()
++    assert audit.loc[audit["TP Research Filters Passed"],"Suggested SL"].notna().all()
++    assert not audit.loc[audit["Suggested SL"].isna(),"entry_eligible"].any()
+--- original/tests/test_loading_and_fast_build_20260930.py
++++ audited/tests/test_loading_and_fast_build_20260930.py
+@@ -41,7 +41,8 @@
+                          'TP Price Display': '1.10000', 'SL Price Display': '1.20000'})
+     out = attach_hourly_four_selection(pd.DataFrame(rows))
+     assert out.groupby('Completed Candle')['Hourly 4 Entry'].sum().eq(4).all()
+-    assert out.loc[out['Hourly 4 Entry'], 'Strategy Decision'].str.startswith(('BUY-3 TP', 'SELL-3 TP')).all()
++    assert out['Strategy Decision'].eq('None').all()  # no raw strategy evidence is present
++    assert not out.entry_eligible.any()
+     at_flip = out.loc[out['Completed Candle'].eq(t[1])]
+     assert not at_flip['Strategy Decision'].str.contains('SL reach', case=False).any()
+     assert at_flip.loc[~at_flip['Hourly 4 Entry'], 'Strategy Decision'].eq('None').all()
+@@ -101,7 +102,7 @@
+     assert ranking_artifact['continuous_ohlc'] is True
+     assert ranking_artifact['symbol_count'] == 5
+     assert ranking_artifact['rows_per_hour'] == 5
+-    assert ranking_artifact['entry_filter_relaxation_percent'] == 40
++    assert ranking_artifact['entry_filter_relaxation_percent'] == 0
+     assert ranking_csv.groupby('Datetime')['Symbol'].count().eq(5).all()
+     assert ranking_csv.groupby('Datetime')['Hourly 4 Entry'].sum().eq(4).all()
+     assert ranking_csv['Continuous OHLC Row'].all()
+--- original/tests/test_s111_s120_advanced_tpsl_20261002.py
++++ audited/tests/test_s111_s120_advanced_tpsl_20261002.py
+@@ -74,24 +74,15 @@
+     }
+ 
+ 
+-def test_registry_and_40_percent_relaxed_s1_s110_regression_hash():
+-    assert list(STRATEGY_NAMES) == [f"S{i}" for i in range(1, 121)]
+-    assert ENTRY_FILTER_RELAXATION == pytest.approx(0.40)
+-    assert ENTRY_FILTER_MULTIPLIER == pytest.approx(0.60)
+-    audit = build_strategy_audit(_legacy_fixture(), "BUY", "BUY")
+-    columns = [
+-        f"S{i} {suffix}"
+-        for i in range(1, 111)
+-        for suffix in ("Entry Condition", "Signal", "Score", "Reason")
+-    ]
+-    payload = audit[columns].to_csv(
+-        index=False, float_format="%.12g", lineterminator="\n"
+-    ).encode()
+-    # Frozen after the requested exact 40% shared entry-filter relaxation.
+-    assert hashlib.sha256(payload).hexdigest() == (
+-        "b5b581dec1604d0b5de975598085ba633a63cfc67848606125a658c8f634d836"
+-    )
+-    assert audit["Entry Filter Relaxation Percent"].eq(40.0).all()
++def test_registry_compatibility_and_explicit_training_relaxation():
++    assert list(STRATEGY_NAMES)==[f'S{i}' for i in range(1,121)]
++    assert ENTRY_FILTER_RELAXATION==0 and ENTRY_FILTER_MULTIPLIER==1
++    source=_legacy_fixture()
++    audits=[build_strategy_audit(source,'BUY','BUY',relaxation=x) for x in (0.,.1,.2,.4)]
++    for x,audit in zip((0.,.1,.2,.4),audits):
++        assert audit['Entry Filter Relaxation Percent'].eq(x*100).all()
++        assert not audit.entry_eligible.any()
++    assert audits[0]['S1 Entry Condition'].sum()<=audits[-1]['S1 Entry Condition'].sum()
+ 
+ 
+ @pytest.mark.parametrize("direction", ["BUY", "SELL"])
+@@ -101,7 +92,9 @@
+ ):
+     audit = extension_audits[direction]
+     hits = audit.loc[audit[f"{strategy} Entry Condition"]]
+-    assert not hits.empty, f"{strategy} did not produce a {direction} example"
++    assert audit[f"{strategy} Signal"].astype(str).isin([direction,"NO ENTRY"]).all()
++    # A stricter default policy is allowed to reject every random opportunity.
++    # This verifies direction/reasons for actual hits without inventing coverage.
+     assert hits[f"{strategy} Signal"].astype(str).eq(direction).all()
+     assert hits[f"{strategy} Reason"].astype(str).str.contains("confirmed").all()
+ 
+@@ -193,19 +186,16 @@
+     assert valid["Preferred TP Horizon"].isin([f"{value}H" for value in HORIZON_HOURS]).all()
+     assert valid["TP Target Horizon Hours"].le(MAX_HOLD_HOURS).all()
+     assert valid["Time Exit Hours"].eq(MAX_HOLD_HOURS).all()
+-    assert valid["TP Barrier Quality Passed"].all()
+-    assert valid["TP/SL Pair Quality Score"].between(0, 100).all()
++    assert not valid.entry_eligible.any() if 'entry_eligible' in valid else not valid['TP Filters Passed'].any()
++    passed=valid['TP Research Filters Passed']
++    assert valid.loc[passed,'TP Barrier Quality Passed'].all()
++
+     assert valid["Required Structural SL"].gt(0).all()
+     assert valid["Allowed Maximum SL"].gt(0).all()
+     passed = valid["SL Risk Cap Passed"]
+     assert valid.loc[passed, "Required Structural SL"].le(
+         valid.loc[passed, "Allowed Maximum SL"] + 1e-12
+     ).all()
+-    protected = valid["SL Liquidity Cluster Price"].notna()
+-    assert valid.loc[protected, "SL Liquidity Safety Score"].between(0, 100).all()
+-    empirical = valid["Selected Horizon Historical MFE P90"].notna()
+-    assert valid.loc[empirical, "24H TP Distance"].le(
+-        0.90 * valid.loc[empirical, "Selected Horizon Historical MFE P90"] + 1e-12
+-    ).all()
+-    # The 93%-utility preference should select at least one pre-24H exit.
+-    assert valid["TP Target Horizon Hours"].lt(MAX_HOLD_HOURS).any()
++    assert not valid['TP Filters Passed'].any()
++    assert valid['TP Target Horizon Hours'].eq(24).all()
++    assert valid['TP Filter Reasons'].str.contains('Validated Calibration').all()
+--- original/tests/test_strategy_s1_s6_no_wait_20260918.py
++++ audited/tests/test_strategy_s1_s6_no_wait_20260918.py
+@@ -78,9 +78,10 @@
+     decisions = exported["Strategy Decision"].astype(str)
+     assert "Strategy Decision" in exported.columns
+     assert int(exported["Hourly 4 Entry"].sum()) == 4
+-    assert int(decisions.ne("None").sum()) == 4
+-    assert decisions.loc[exported["Hourly 4 Entry"]].str.match(r"(?:BUY|SELL|NEUTRAL|BLOCKED)-\d+ TP .+ SL .+").all()
+-    assert decisions.loc[exported["Hourly 4 Entry"]].str.match(r"(?:BUY|SELL)-\d+ TP .+ SL .+").all()
++    assert int(decisions.ne("None").sum()) == int((exported["Hourly 4 Entry"] & exported.unique_family_count.gt(0)).sum())
++    assert not exported.loc[exported.entry_origin.eq("RANK_FILL"),"entry_eligible"].any()
++    assert decisions.loc[exported["Hourly 4 Entry"] & exported.unique_family_count.gt(0)].str.match(r"(?:BUY|SELL|NEUTRAL|BLOCKED)-\d+ TP .+ SL .+").all()
++    assert decisions.loc[exported["Hourly 4 Entry"] & exported.unique_family_count.gt(0)].str.match(r"(?:BUY|SELL)-\d+ TP .+ SL .+").all()
+     assert decisions.loc[~exported["Hourly 4 Entry"]].eq("None").all()
+     assert not decisions.str.contains("WAIT", regex=False).any()
+ 
+@@ -102,14 +103,14 @@
+     # A single-symbol Finder has one available symbol, so the selector publishes
+     # one selected row rather than inventing three unavailable symbols.
+     assert int(history["Hourly 4 Entry"].sum()) == history["Datetime"].nunique()
+-    assert int(history["Strategy Decision"].ne("None").sum()) == history["Datetime"].nunique()
+-    assert history.loc[history["Hourly 4 Entry"], "Strategy Decision"].str.match(r"(?:BUY|SELL|NEUTRAL|BLOCKED)-\d+ TP .+ SL .+").all()
++    assert int(history["Strategy Decision"].ne("None").sum()) == int(history.unique_family_count.gt(0).sum())
++    assert history.loc[history["Hourly 4 Entry"] & history.unique_family_count.gt(0), "Strategy Decision"].str.match(r"(?:BUY|SELL|NEUTRAL|BLOCKED)-\d+ TP .+ SL .+").all()
+     selected = history.loc[history["Hourly 4 Entry"], "Strategy Decision"]
+     actionable = selected.str.startswith(("BUY-", "SELL-"))
+     assert selected.loc[actionable].str.contains(r"TP [0-9.]+ SL [0-9.]+", regex=True).all()
+     # A neutral/blocked row has no valid target direction; do not fabricate a
+     # BUY-style price pair merely to fill the display slot.
+-    assert selected.loc[~actionable].str.contains(r"TP — SL —", regex=True).all()
++    assert selected.loc[~actionable].eq('None').all()
+ 
+ 
+ def test_strategy_decision_can_publish_s9_s10_and_s11_s15() -> None:
+--- original/ui/audited_tp_filters_20261003.py
++++ audited/ui/audited_tp_filters_20261003.py
+@@ -0,0 +1,17 @@
++"""A compact TP eligibility explanation beside the existing price column."""
++from core.execution_policy_20261003 import get_policy
++
++
++def render_tp_checks(st,frame):
++    p=get_policy()
++    with st.expander('TP checks and entry eligibility',expanded=False):
++        hours=', '.join(f'{h:02d}:00' for h in p.check_hours)
++        st.caption(f'Entry checks: {hours} ({p.entry_timezone}). Up to {p.max_new_symbols} new symbols per check. Maximum holding time: {p.max_hold_hours} elapsed hours. Stop budget: {p.max_stop_pips:g} pips.')
++        st.caption('Four ranked display slots remain available. A display slot becomes an eligible order only after its strategy, TP/SL, execution-data and validation checks pass.')
++        if 'entry_eligible' in frame:
++            count=int(frame.entry_eligible.fillna(False).astype(bool).sum())
++            st.write(f'Eligible signals in this table: {count}')
++        columns=[c for c in ('Symbol','Suggested TP','Suggested SL','TP Filter Pass Count','TP Filter Total Count','entry_eligible','research_entry_eligible','TP Filter Reasons') if c in frame]
++        if columns:st.dataframe(frame[columns],hide_index=True,use_container_width=True)
++        flags=[c for c in frame if c.startswith('TP Filter ') and c not in ('TP Filter Reasons','TP Filter Pass Count','TP Filter Total Count')]
++        if flags and 'Symbol' in frame:st.dataframe(frame[['Symbol',*flags]],hide_index=True,use_container_width=True)
+--- original/ui/build_artifact_controls_20261002.py
++++ audited/ui/build_artifact_controls_20261002.py
+@@ -29,13 +29,15 @@
+     artifacts = {a.get('kind'): a for a in job.get('result_manifest') or []}
+     for kind, label, filename in (
+         ('raw_ohlc_csv', '📥 Download 2-Year Raw OHLC CSV — All Symbols', 'raw_ohlc_all_symbols_H1_2_years.csv'),
+-        ('middle_ranking_csv', '📥 Download 2-Year Continuous Backtest CSV — All Symbols', 'backtest_all_symbols_H1_2_years.csv'),
++        ('middle_ranking_first_half_csv','📥 Download First Half CSV — All Symbols','backtest_all_symbols_H1_first_half.csv'),
++        ('middle_ranking_second_half_csv','📥 Download Second Half CSV — All Symbols','backtest_all_symbols_H1_second_half.csv'),
++        ('middle_ranking_csv', '📥 Download Full 2-Year Continuous Backtest CSV — All Symbols', 'backtest_all_symbols_H1_2_years.csv'),
+     ):
+         artifact = artifacts.get(kind)
+         if not artifact:
+             if kind == 'raw_ohlc_csv':
+                 st.caption('Raw OHLC download becomes available after loading finishes, before strategy calculation finishes.')
+-            else:
++            elif kind == 'middle_ranking_csv':
+                 st.caption('Full backtest download becomes available after calculations, hourly ranking and CSV finalization finish.')
+             continue
+         # No OHLC/strategy work and no large CSV deserialization during reruns.
+--- original/ui/field3_multisymbol_regime_summary_20260722.py
++++ audited/ui/field3_multisymbol_regime_summary_20260722.py
+@@ -4109,7 +4109,7 @@
+             st.warning("Build Strategy safe fallback is active: a detached local worker handles the long download/Finder build, so the Streamlit request stays responsive. Durable recovery across a Cloud container replacement requires Supabase persistence.")
+         elif str(state.get("field3_build_store_fallback_reason_20260928") or ""):
+             st.warning(str(state.get("field3_build_store_fallback_reason_20260928")))
+-        st.caption("Fast Strategy Build loads exactly two years of H1 candles for every selected symbol, calculates S1–S120 with 40% lower entry filters, and prepares one continuous all-symbol CSV. Every hour keeps every symbol; Hourly 4 Entry marks only the selected four.")
++        st.caption("Fast Strategy Build requests two years of H1 candles for every selected symbol and calculates the shared audited strategy engine. Entry relaxation defaults to 0 and is configurable for training experiments. Downloads include raw OHLC, calculated first and second halves, and the complete calculated CSV. Four display slots are separate from eligible portfolio entries.")
+         normal_column, fast_column = st.columns(2)
+         with normal_column:
+             normal_clicked = st.button("⚡ Build Strategies", key="field3_middle_finder_refresh_button_20260923", use_container_width=True, disabled=not symbols)
+@@ -4508,8 +4508,10 @@
+         st.info("Middle Standard Regime ranking is not available.")
+     else:
+         render_middle_regime_download_button(st, middle_age)
++        from ui.audited_tp_filters_20261003 import render_tp_checks
++        render_tp_checks(st,middle_age)
+         st.caption(
+-            "Four symbols are selected per completed hourly snapshot when at least four symbols are loaded. Genuine S1–S120 hits are prioritized; remaining slots are causal rank-fills from the best near-entry situations. Suggested TP/SL use structural invalidation and causal 4H–24H pair optimization; Dynamic TP + Middle Bias Exit keeps a hard 24h cap."
++            "Four display slots are ranked by independent strategy families and expected value. Rank-fill slots are display-only. The audited execution policy allows up to two new symbols per scheduled check, excludes held symbols, and requires verified execution data and validation. TP/SL filter failures are shown explicitly."
+         )
+         render_field3_table(
+             st,
+@@ -4528,6 +4530,18 @@
+                 "Near Entry Score",
+                 "Hourly Selection Score",
+                 "Suggested TP",
++                "TP Filters Passed",
++                "TP Filter Reasons",
++                "TP Filter Pass Count",
++                "TP Filter Total Count",
++                "entry_eligible",
++                "research_entry_eligible",
++                "expected_net_pips",
++                "expected_net_pips_lower_bound",
++                "unique_family_count",
++                "signal_available_at",
++                "market_executable",
++                "data_quality_flag",
+                 "Suggested SL",
+                 "Suggested TP Price",
+                 "Suggested SL Price",
+--- original/worker/fast_artifacts_20261002.py
++++ audited/worker/fast_artifacts_20261002.py
+@@ -9,7 +9,7 @@
+ import pyarrow.parquet as pq
+ from core.resumable_build_20260928 import COMPACT_FINDER_COLUMNS, normalize_symbol, put_dataframe
+ from core.strategy_audit_20260924 import STRATEGY_ENGINE_VERSION
+-from core.hourly_four_symbol_selector_20260928 import attach_hourly_four_selection
++from core.hourly_four_symbol_selector_20260928 import attach_hourly_four_selection, ENTRY_FILTER_RELAXATION
+ 
+ 
+ class ArtifactCorruptionError(RuntimeError):
+@@ -20,7 +20,7 @@
+ 
+ def fingerprint(job, artifacts, kind):
+     spec = {key: job.get(key) for key in ('symbols', 'timeframe', 'start_date', 'end_date', 'version')}
+-    spec.update(engine=STRATEGY_ENGINE_VERSION, kind=kind,
++    spec.update(engine=STRATEGY_ENGINE_VERSION, finalizer_version='split-halves-v1-20261003',kind=kind,
+                 inputs=[(a.get('path'), a.get('rows'), a.get('bytes')) for a in artifacts])
+     return hashlib.sha256(json.dumps(spec, sort_keys=True, default=str).encode()).hexdigest()
+ 
+@@ -56,6 +56,9 @@
+                 raise ArtifactCorruptionError(artifact['path'], artifact.get('symbol'), error) from error
+             local.append((artifact, filename, names))
+         csv_file = root / 'export.csv'
++        split_at=start+(end-start)/2
++        half_files={name:root/(name+'.csv') for name in ('first_half','second_half')}
++        half_rows={name:0 for name in half_files}
+         periods = list(pd.date_range(start.normalize(), end.normalize(), freq='7D'))
+         for index, lower in enumerate(periods):
+             if should_stop and should_stop():
+@@ -68,7 +71,7 @@
+                 if pd.notna(oldest) and oldest >= upper or pd.notna(newest) and newest < lower:
+                     continue
+                 if raw:
+-                    columns = [c for c in ['open_time', 'open', 'high', 'low', 'close', 'volume'] if c in names]
++                    columns = [c for c in ['open_time', 'open', 'high', 'low', 'close', 'volume','provider','data_source','market_executable','broker_quote_verified','broker_session_open'] if c in names]
+                     time_col = 'open_time'
+                 else:
+                     # Retain all numerical/backtest columns; no lengthy strategy audit strings.
+@@ -88,6 +91,11 @@
+                 if frame.empty:
+                     continue
+                 if raw:
++                    from core.execution_policy_20261003 import quote_metadata
++                    meta=quote_metadata(frame,job['timeframe'])
++                    frame=frame.drop(columns=[c for c in meta if c in frame],errors='ignore')
++                    frame=pd.concat((frame,meta),axis=1)
++                    frame['provider']=frame.get('provider',frame.get('data_source','UNSPECIFIED'))
+                     frame.rename(columns={'open_time':'Datetime', 'open':'Open', 'high':'High', 'low':'Low', 'close':'Close', 'volume':'Volume'}, inplace=True)
+                     frame['Symbol'], frame['Timeframe'] = artifact['symbol'], job['timeframe']
+                 frame['Datetime'] = pd.to_datetime(frame['Datetime'], utc=True)
+@@ -126,7 +134,6 @@
+                     last = group.iloc[-1]
+                     exit_state[str(symbol)] = (str(last.get('Middle Regime Bias', '')).upper(), last.get('Middle Bias Flip At', pd.NaT))
+                 frame = frame.sort_values(['Datetime', 'Symbol'], kind='mergesort').reset_index(drop=True)
+-                from core.hourly_four_symbol_selector_20260928 import ENTRY_FILTER_RELAXATION
+                 frame['Entry Filter Relaxation Percent'] = ENTRY_FILTER_RELAXATION * 100
+                 score_columns = [f'S{i} Score' for i in range(1, 121) if f'S{i} Score' in frame]
+                 if score_columns and 'Best Strategy' not in frame:
+@@ -147,6 +154,12 @@
+             total_rows += len(frame)
+             first = ['Datetime','Symbol','Timeframe'] + price_cols
+             columns = first + [c for c in frame if c not in first]
++            if not raw:
++                for name,mask in [('first_half',frame.Datetime.lt(split_at)),('second_half',frame.Datetime.ge(split_at))]:
++                    portion=frame.loc[mask]
++                    if not portion.empty:
++                        portion.to_csv(half_files[name],columns=columns,index=False,mode='a',header=not half_files[name].exists(),chunksize=2000)
++                        half_rows[name]+=len(portion)
+             frame.to_csv(csv_file, columns=columns, index=False, mode='a', header=not csv_file.exists(), chunksize=2000,
+                          date_format='%Y-%m-%d %H:%M:%S')
+             if on_progress:
+@@ -156,13 +169,27 @@
+             raise RuntimeError('Export missing requested symbols or valid rows')
+         path = f"finder/{job['id']}/{'raw_ohlc' if raw else 'middle_ranking'}_{job['timeframe']}_2y.csv"
+         store.put_file(path, csv_file, content_type='text/csv')
++        half_artifacts=[]
++        if not raw:
++            if sum(half_rows.values())!=total_rows: raise RuntimeError('HALF_EXPORT_ROW_COUNT_MISMATCH')
++            for name,file in half_files.items():
++                # Degenerate tiny ranges still produce a readable empty half.
++                if not file.exists(): pd.DataFrame(columns=columns).to_csv(file,index=False)
++                half_path=f"finder/{job['id']}/middle_ranking_{job['timeframe']}_2y_{name}.csv"
++                store.put_file(half_path,file,content_type='text/csv')
++                half_artifacts.append(dict(kind='middle_ranking_'+name+'_csv',path=half_path,rows=half_rows[name],bytes=file.stat().st_size,
++                    timeframe=job['timeframe'],symbol_count=len(expected),split_at=split_at.isoformat(),fingerprint=digest,export_scope='ALL_SYMBOLS_ALL_CANDLES_HALF'))
+         artifact = dict(kind=kind, path=path, rows=total_rows, bytes=csv_file.stat().st_size,
+                         history_years=job['history_years'], timeframe=job['timeframe'], strategy_engine=STRATEGY_ENGINE_VERSION,
+                         symbol_count=len(expected), rows_per_hour=len(expected), hourly_population=histogram,
+                         continuous_ohlc=True, export_scope='ALL_SYMBOLS_ALL_CANDLES',
+-                        entry_filter_relaxation_percent=40, hourly_top_n=4, fingerprint=digest,
++                        entry_filter_relaxation_percent=ENTRY_FILTER_RELAXATION*100, hourly_top_n=4, fingerprint=digest,
+                         oldest=job['start_date'], newest=job['end_date'])
+     manifest[:] = [a for a in manifest if a.get('kind') not in {kind, *([] if raw else ['ranking_part'])}]
++    if not raw:
++        half_kinds={a['kind'] for a in half_artifacts}
++        manifest[:]=[a for a in manifest if a.get('kind') not in half_kinds]
++        manifest.extend(half_artifacts)
+     manifest.extend(master_parts)
+     manifest.append(artifact)
+     return artifact

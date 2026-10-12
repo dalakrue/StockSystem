@@ -1,0 +1,44 @@
+{
+  "attachments": [
+    {
+      "filename": "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (3) - Copy(1).zip",
+      "bytes": 6822169,
+      "sha256": "58820c14f18de8bd5ac1ef4a790075d78c5363f941b319b9d82bfc68e82c04c8"
+    },
+    {
+      "filename": "Pasted markdown(4).md",
+      "bytes": 12079,
+      "sha256": "0529dc6300e540df52c912cfbf0469bc42408b148338a48c1a9026df10a19ce7"
+    }
+  ],
+  "archive": {
+    "entries": 1137,
+    "expanded_bytes": 31355505,
+    "csv_files": [
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/data_quality_events.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/doo_prime_account_history.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/engine_mix_snapshots.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/field3_middle_regime_history_20260722.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/home_snapshots.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/prelive_snapshots.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/pre_manual_runs.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/pro_quality_events.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/reversal_locked_v13.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/risk_snapshots.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/runtime_snapshots.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/saved_notes.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/system_events.csv",
+      "FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (2) - Copy/FIXED_FAST_BACKTEST_2Y_H1_ALL_SYMBOLS (1)/work_a/data/timer_history.csv"
+    ]
+  },
+  "matching_two_year_dataset_present": false,
+  "baseline_claims_verified": false,
+  "raw_ohlc_manufactured": false,
+  "old_saved_history": {
+    "rows": 4684,
+    "symbols": 34,
+    "start": "2026-01-02",
+    "end": "2026-09-27 14:00",
+    "matches_research_input": false
+  }
+}

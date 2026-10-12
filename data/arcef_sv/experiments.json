@@ -1,0 +1,1738 @@
+[
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-r1",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "a32c7824c4cdd8da37a5b5d0d1f471af8705399d3af342fc1e256bc0e37496f0",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T14:11:50.108843+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-31446a25",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T14:13:03.752771+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-persist",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "05e6775f899e74a47adff2476e6868d1052006b29de236f305208366250195ad",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T14:13:03.759422+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-1335ae67",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T14:13:07.649480+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-e02b1311",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T19:10:45.572134+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-12e86ff5",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T19:19:56.993790+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-9e9ab7b0",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T19:20:41.403732+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-cfa6a2f6",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T19:24:56.015609+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-741af09d",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-06-27T19:27:37.162903+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-b4badd78",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:14:20.544444+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-8c6833a1",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:14:52.536621+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-9dccb3ae",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:15:20.534655+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-88214aba",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:18:56.166515+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-67072a5b",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:20:13.285276+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-4abcca28",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:20:39.191876+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-ff1c7b5a",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:21:39.490192+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-c4bbab61",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:22:34.921873+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-5c47f27d",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:25:09.298261+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-feec67d1",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:27:43.953897+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-d5f2ad1d",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T17:29:19.895135+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-f2dd6b92",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-01T18:25:05.310782+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-add1232d",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T02:39:45.412875+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-e7d2ef2e",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T12:22:20.666456+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-e8f471c0",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T12:23:00.460430+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-b4683b30",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T12:23:52.619213+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-19e17a08",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T12:28:19.421687+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-3ada9b22",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T12:29:07.509403+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-a46e36e6",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T12:30:05.356201+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-c334bc27",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T12:34:52.084859+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-88871a5e",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T18:11:54.269360+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-467cf6f0",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-02T18:12:44.592105+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-28196486",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T10:27:29.948111+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-2d433ca0",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T10:28:06.146886+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-66de9e7a",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T10:28:59.458622+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-f37754da",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T10:36:24.021140+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-79380b78",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T13:21:57.966273+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-3f627570",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T13:24:10.819060+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-8fddd759",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T13:24:51.082048+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-7dac7062",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T13:25:32.529863+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-91e86bce",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T13:26:16.082200+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-53135035",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T13:26:56.678648+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-db344f77",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T13:28:13.699832+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-db505c90",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-04T13:29:55.967203+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-7b48a20d",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T12:47:20.696037+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-e591d9c9",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T12:48:00.292663+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-4dbe5365",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T12:48:44.461715+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-d36fc4c3",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:22:01.805696+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-0fde524f",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:42:36.161050+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-34f9d8dc",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:43:19.092081+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-32ab59d7",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:44:51.200339+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-731e86da",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:45:59.893222+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-a93556b3",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:46:51.303977+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-d70bd2cd",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:47:25.064249+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-52f3cc4f",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:48:15.370668+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-5d1976a2",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:48:56.558301+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-8a856ccb",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T14:52:34.673481+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-04cd1940",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T15:02:47.182531+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-4b855d9b",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T15:03:41.897430+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-81e3144e",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T15:06:20.245058+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-1f4720a6",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T15:07:48.495757+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-41d63bbe",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T15:08:44.208420+00:00"
+  },
+  {
+    "experiment_id": "ARCEF-SV-1.0.0-5dbf2cf2",
+    "algorithm_version": "ARCEF-SV-1.0.0",
+    "source_code_hash": "c47d1a92c5c79da5338f5b3aa8b35a4eb61f812b30a7ebbbd2a6840ed323d579",
+    "dataset_hash": "28beebefa37e4539556141488ca285120ecd0588228e3fcf20cedac0ecf7abc8",
+    "features": [
+      "decision"
+    ],
+    "parameter_values": {
+      "forgetting_factor": 0.97
+    },
+    "threshold_values": {
+      "buy": 0.24,
+      "sell": -0.24
+    },
+    "training_window": "strictly prior settled history",
+    "calibration_window": "separate",
+    "validation_window": "walk-forward",
+    "test_window": "held-out",
+    "number_of_attempted_variants": 6,
+    "benchmark": "existing production system",
+    "loss_function": "multiclass Brier/log loss",
+    "result": "shadow published",
+    "p_values": {},
+    "PBO": 0.0,
+    "deployment_status": "SHADOW_ONLY",
+    "created_timestamp": "2026-07-05T15:13:58.717364+00:00"
+  }
+]

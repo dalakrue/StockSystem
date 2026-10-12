@@ -1,0 +1,26 @@
+services:
+  - type: worker
+    name: strategy-build-worker
+    runtime: docker
+    dockerfilePath: ./worker/Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: BUILD_STORAGE_BUCKET
+        value: adx-build-data
+      - key: TWELVE_DATA_API_KEY_1
+        sync: false
+      - key: TWELVE_DATA_API_KEY_2
+        sync: false
+      - key: TWELVE_DATA_API_KEY_3
+        sync: false
+      - key: TWELVE_DATA_API_KEY_4
+        sync: false
+      - key: BUILD_WORKER_POLL_SECONDS
+        value: "3"
+      - key: BUILD_STALE_MINUTES
+        value: "10"

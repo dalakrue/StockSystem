@@ -1,0 +1,18 @@
+FIELD 3 DASHBOARD / FINDER REPAIR
+Date: 2026-09-28
+
+FIXED
+- Removed the Field 3 "safe cached view" fallback and its cached-table UI.
+- Fixed the hidden live-dashboard exception:
+  AttributeError: 'DataFrame' object has no attribute 'dtype'.
+- Removed the duplicate Strategy Decision projection that caused pandas to
+  return a DataFrame where the live audit expected a Series.
+- Added defensive duplicate-column normalization for legacy/persisted frames.
+
+VERIFIED
+- Middle Standard Regime Ranking renders with live candle data.
+- Middle Regime Historical Finder renders on the same page.
+- Finder build/import buttons and inclusive date/time controls are present.
+- No Safe Cache caption is shown.
+- No Streamlit exception or error is produced by the repaired live page.
+- Focused regression tests and Python compilation pass.

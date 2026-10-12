@@ -1,0 +1,37 @@
+UPGRADE SUMMARY — 2026-07-29
+
+1. FIELD 3 HIGHER-AGE RANKING
+- Added Lower Regime Bias.
+- Added Middle Regime Bias beside Higher Standard Regime Bias.
+- Ranking remains based only on Higher Candle After Regime Start.
+- Rank 1 remains the smallest/newest Higher regime age.
+- A blue color is applied to the complete row when Lower, Middle and Higher
+  regime biases are the same.
+
+2. NEW MIDDLE REGIME AGE RANKING
+- Added directly below the existing Regime Age Ranking table.
+- Ranking uses only Middle Candle After Regime Start.
+- Rank 1 is the smallest/newest Middle regime age.
+- Shows Lower, Middle and Higher regime states/biases.
+- A blue color is applied to the complete row when Middle Regime Bias and Lower
+  Regime Bias are the same.
+
+3. SUPER QUICK FAST PATH
+- Super Quick now calculates bounded fast Lower, Middle and Higher regime bias.
+- It displays the two age-ranking tables plus Higher Standard Summary.
+- Heavy Quick/Full research, AI, Field 10/11 and trust-history work remains
+  deferred, preserving the fast calculation design.
+- Repeated runs with unchanged candles still use the input-signature cache.
+
+4. SETTINGS TIMEFRAME
+- The automatic/default Settings timeframe was changed from H4 to H1.
+- This is applied as a one-time upgrade; later manual timeframe choices remain
+  under the user's control for the session.
+
+5. LOAD & UPDATE BUTTON
+- Added below the three existing calculation buttons:
+  "Load & Update Latest Candles + Run Super Quick".
+- It force-refreshes all configured selectors through their assigned provider
+  routes, preserves exact valid fallback data when a provider fails, activates
+  the refreshed loaded universe and queues Super Quick automatically.
+- The app does not need to be restarted to update candles and rerun Field 3.

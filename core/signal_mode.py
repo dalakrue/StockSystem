@@ -24,18 +24,21 @@ SYSTEM_CYCLE22 = "cycle22"    # F1-P4: 26 eq, hours (10,11,13,18) UTC, 20 symbol
                              # trailing 1.0/0.3 ATR + dynamic k (Rule A)
 SYSTEM_CYCLE18 = "cycle18"   # C18-A3: 26 eq, hours (10,11,13,18) UTC, 20 symbols
 SYSTEM_FTC01 = "ft-c01"      # FT-C01 baseline: 4 SELL eq, hour 18 UTC only
+SYSTEM_CYCLE24 = "cycle24"   # P55: 24 eq (14 mined mom/atr + 10 TREND fallbacks),
+                             # hours (1,15,17,18,20) UTC, exactly 1 entry/check
+                             # (October-only research; 11/12 checks, nearest pick)
 
 _ACTIVE = SYSTEM_CYCLE22     # default: the Cycle 22 winner (F1-P4)
 
 
 def set_active_system(name: str) -> str:
-    """Switch live-signal system. name in {'cycle22', 'cycle18', 'ft-c01'}.
+    """Switch live-signal system. name in {'cycle22', 'cycle18', 'ft-c01', 'cycle24'}.
     Returns the newly active system name."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE22, SYSTEM_CYCLE18, SYSTEM_FTC01):
+    if n not in (SYSTEM_CYCLE22, SYSTEM_CYCLE18, SYSTEM_FTC01, SYSTEM_CYCLE24):
         raise ValueError(
-            f"unknown system {name!r}; choose 'cycle22', 'cycle18' or 'ft-c01'")
+            f"unknown system {name!r}; choose 'cycle22', 'cycle18', 'ft-c01' or 'cycle24'")
     _ACTIVE = n
     return _ACTIVE
 
@@ -53,6 +56,11 @@ def describe_active() -> str:
         return ("cycle18 (C18-A3): 26 equations, entries 10:00/11:00/13:00/18:00 UTC "
                 "(16:30/17:30/19:30/00:30 MMT), 20 symbols, BUY+SELL -- "
                 "unseen +2198.8 pips / RoMAD 5.71")
+    if _ACTIVE == SYSTEM_CYCLE24:
+        return ("cycle24 (P55): 24 equations (14 mined + 10 TREND fallbacks), "
+                "entries 01:00/15:00/17:00/18:00/20:00 UTC "
+                "(07:30/21:30/23:30/00:30/02:30 MMT), exactly 1 entry/check -- "
+                "October unseen +875.6 pips / RoMAD 5.43 (11/12 checks)")
     return ("ft-c01 (FT-C01 baseline): 4 SELL equations, entry 18:00 UTC "
             "(00:30 MMT) only, 4 symbols -- unseen +1283.1 pips / RoMAD 44.52")
 
@@ -65,6 +73,9 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE18:
         from core.cycle18_best import evaluate_cycle18_signals
         return evaluate_cycle18_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE24:
+        from core.cycle24_best import evaluate_cycle24_signals
+        return evaluate_cycle24_signals(frames, check_time_utc)
     from core.cycle12_best import evaluate_cycle12_signals
     return evaluate_cycle12_signals(frames, check_time_utc)
 
@@ -82,6 +93,9 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE18:
         from core.cycle18_best import select_cycle18_entries
         return select_cycle18_entries(signals, open_symbols=open_symbols, k=k)
+    if _ACTIVE == SYSTEM_CYCLE24:
+        from core.cycle24_best import select_cycle24_entries
+        return select_cycle24_entries(signals, open_symbols=open_symbols)
     from core.cycle12_best import select_cycle12_entries
     return select_cycle12_entries(signals, open_symbols=open_symbols, k=k)
 
@@ -94,6 +108,8 @@ def active_check_hours():
     """
     if _ACTIVE == SYSTEM_FTC01:
         return (18,)
+    if _ACTIVE == SYSTEM_CYCLE24:
+        return (1, 15, 17, 18, 20)
     # cycle22 (F1-P4) and cycle18 (C18-A3) share the 4-check schedule
     return (10, 11, 13, 18)
 

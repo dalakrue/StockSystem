@@ -2886,13 +2886,18 @@ _CYCLE22_PANEL_SYMBOLS = (
 
 
 def _normalize_c22_frame(df):
-    """Provider-chain H1 frame -> naive-UTC datetime-indexed OHLC (Open/High/Low/Close)."""
+    """Cached/provider H1 frame -> naive-UTC datetime-indexed OHLC (Open/High/Low/Close).
+
+    Accepts the local candle-repository format (``open_time`` column) as
+    well as provider-chain formats (``time``/``datetime``/``timestamp``).
+    """
     try:
         import pandas as _pd
         if df is None or not isinstance(df, _pd.DataFrame) or df.empty:
             return None
         out = df.copy()
-        tcol = next((c for c in ("time", "Datetime", "datetime", "timestamp", "date")
+        tcol = next((c for c in ("time", "open_time", "Datetime", "datetime",
+                                 "timestamp", "date")
                      if c in out.columns), None)
         if tcol is None:
             return None
@@ -2941,6 +2946,7 @@ def _render_symbols_loaded_box(st, context):
 
 _C22_SIG_STATE_KEY = "cycle22_signals_latest_v2"
 _C22_SIG_AGE_KEY = "cycle22_candle_age_txt"
+_C22_SIG_DIAG_KEY = "cycle22_signals_diag_v2"
 
 
 def _c22_window_mmt_label(hour_utc):
@@ -2950,30 +2956,67 @@ def _c22_window_mmt_label(hour_utc):
 
 
 def _fetch_c22_frames(state):
-    """H1 frames for the 20 Cycle 22 symbols via the provider chain.
+    """H1 frames for the 20 Cycle 22 symbols — LOCAL SQLITE CACHE FIRST.
 
-    Returns (frames dict, latest_candle_naive_utc or None).
+    The app already loaded 20/20 symbols through the main pipeline; those
+    candles sit in the local candle repository (same DB the provider chain
+    itself uses). Reading them directly costs zero API calls, so it can
+    never hit Twelve Data rate limits or burn the daily quota — the reason
+    the old provider-chain loop silently produced zero frames in
+    production. The provider chain remains a per-symbol fallback for the
+    rare case the cache holds < 50 bars.
+
+    Returns (frames dict, latest_candle_naive_utc or None, diag dict).
     """
     import pandas as _pd
-    from core.data.market_data_orchestrator import fetch_forex_candles_provider_chain
     frames = {}
     latest_ts = None
+    n_cache = 0
+    n_live = 0
+    live_errors = []
+    repo = None
+    try:
+        from core.data.candle_repository import CandleRepository
+        repo = CandleRepository()
+    except Exception:
+        repo = None
     for sym in _CYCLE22_PANEL_SYMBOLS:
+        df = None
+        if repo is not None:
+            try:
+                cached = repo.load(sym, "H1", limit=400, completed_only=True)
+                if cached is not None and len(cached) >= 50:
+                    df = cached
+                    n_cache += 1
+            except Exception:
+                df = None
+        if df is None:
+            try:
+                from core.data.market_data_orchestrator import fetch_forex_candles_provider_chain
+                live_df, _status, _trace = fetch_forex_candles_provider_chain(
+                    sym, "H1", outputsize=300, state=state)
+                if live_df is not None and not live_df.empty:
+                    df = live_df
+                    n_live += 1
+                else:
+                    live_errors.append(f"{sym}: {(_status or 'empty')}")
+            except Exception as exc:
+                live_errors.append(f"{sym}: {type(exc).__name__}")
         try:
-            df, _status, _trace = fetch_forex_candles_provider_chain(
-                sym, "H1", outputsize=600, state=state)
             norm = _normalize_c22_frame(df)
-            if norm is not None:
-                frames[sym] = norm
-                try:
-                    ts = norm.index.max()
-                    if latest_ts is None or ts > latest_ts:
-                        latest_ts = ts
-                except Exception:
-                    pass
         except Exception:
-            continue
-    return frames, latest_ts
+            norm = None
+        if norm is not None:
+            frames[sym] = norm
+            try:
+                ts = norm.index.max()
+                if latest_ts is None or ts > latest_ts:
+                    latest_ts = ts
+            except Exception:
+                pass
+    diag = {"cache": n_cache, "live": n_live, "frames": len(frames),
+            "live_errors": live_errors[:6]}
+    return frames, latest_ts, diag
 
 
 def _c22_signals_to_display(entries):
@@ -3028,7 +3071,7 @@ def _evaluate_c22_window(state, hour_utc, day=None):
         day = (_pd.Timestamp(day).normalize() if day is not None
                else _pd.Timestamp(now_utc).normalize())
         check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
-        frames, latest_ts = _fetch_c22_frames(state)
+        frames, latest_ts, diag = _fetch_c22_frames(state)
         if latest_ts is not None:
             try:
                 age_min = (now_utc - latest_ts.to_pydatetime()
@@ -3039,6 +3082,11 @@ def _evaluate_c22_window(state, hour_utc, day=None):
             except Exception:
                 pass
         if not frames:
+            # Remember WHY so the UI can say it instead of a bare "waiting".
+            try:
+                state[_C22_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
             return None
         try:
             sig = evaluate_signals(frames, check_label)
@@ -3202,6 +3250,20 @@ def _render_cycle22_signals_table(st, state):
         if payload is None or win_ts is None:
             st.info("Waiting for the first entry window — signals will appear here "
                     "and stay visible for up to 2 hours.")
+            # If an evaluation was attempted and failed, say WHY instead of
+            # leaving the user guessing (e.g. 0/20 frames from cache+live).
+            try:
+                diag = state.get(_C22_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"⚠️ Last Cycle 22 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
         if age_min > 120:

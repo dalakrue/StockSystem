@@ -2965,7 +2965,7 @@ def _c22_window_mmt_label(hour_utc):
     return f"{m // 60:02d}:{m % 60:02d}"
 
 
-def _fetch_c22_frames(state):
+def _fetch_c22_frames(state, need_candles=None):
     """H1 frames for the 20 Cycle 22 symbols — LOCAL SQLITE CACHE FIRST.
 
     The app already loaded 20/20 symbols through the main pipeline; those
@@ -2975,6 +2975,14 @@ def _fetch_c22_frames(state):
     the old provider-chain loop silently produced zero frames in
     production. The provider chain remains a per-symbol fallback for the
     rare case the cache holds < 50 bars.
+
+    need_candles: optional iterable of naive-UTC candle stamps that MUST be
+    present (a check window's signal+entry stamps). The startup data load is
+    one-time; without this, the cache goes stale ~1h later and every window
+    evaluation silently returns empty ("no equations fired"). When needed
+    candles are missing from most frames, fresh candles are fetched via the
+    provider chain (only on window evaluations — never on plain rerenders —
+    so API quota stays safe: ~20 credits/window, ~6 windows/day).
 
     Returns (frames dict, latest_candle_naive_utc or None, diag dict).
     """
@@ -3031,6 +3039,57 @@ def _fetch_c22_frames(state):
                     latest_ts = ts
             except Exception:
                 pass
+    # Freshness-gated refresh: if the caller needs specific candles (a check
+    # window's stamps) and they're missing from most frames, the one-time
+    # startup cache has gone stale — fetch fresh via the provider chain.
+    # This runs only on window evaluations (need_candles is None on plain
+    # rerenders), so it cannot burn API quota in a refresh loop.
+    if need_candles:
+        try:
+            need_set = set(_pd.Timestamp(c).tz_localize(None)
+                           if _pd.Timestamp(c).tzinfo is None
+                           else _pd.Timestamp(c).tz_convert("UTC").tz_localize(None)
+                           for c in need_candles)
+        except Exception:
+            need_set = set()
+        if need_set:
+            missing_syms = []
+            for sym in _CYCLE22_PANEL_SYMBOLS:
+                norm = frames.get(sym)
+                try:
+                    if norm is None or not need_set.issubset(set(norm.index)):
+                        missing_syms.append(sym)
+                except Exception:
+                    missing_syms.append(sym)
+            if len(missing_syms) >= 4:
+                try:
+                    from core.data.market_data_orchestrator import fetch_forex_candles_provider_chain
+                except Exception:
+                    fetch_forex_candles_provider_chain = None
+                if fetch_forex_candles_provider_chain is not None:
+                    targets = (_CYCLE22_PANEL_SYMBOLS if len(missing_syms) > 10
+                               else missing_syms)
+                    for sym in targets:
+                        try:
+                            live_df, _st2, _tr2 = fetch_forex_candles_provider_chain(
+                                sym, "H1", outputsize=300, state=state)
+                            if live_df is not None and not live_df.empty:
+                                norm2 = _normalize_c22_frame(live_df)
+                                if norm2 is not None and len(norm2) >= 50:
+                                    frames[sym] = norm2
+                                    n_live += 1
+                                    try:
+                                        ts2 = norm2.index.max()
+                                        if latest_ts is None or ts2 > latest_ts:
+                                            latest_ts = ts2
+                                    except Exception:
+                                        pass
+                                else:
+                                    live_errors.append(f"{sym} refresh: normalized_empty")
+                            else:
+                                live_errors.append(f"{sym} refresh: {(_st2 or 'empty')}")
+                        except Exception as exc:
+                            live_errors.append(f"{sym} refresh: {type(exc).__name__}")
     diag = {"cache": n_cache, "live": n_live, "frames": len(frames),
             "live_errors": live_errors[:6]}
     return frames, latest_ts, diag
@@ -3088,7 +3147,11 @@ def _evaluate_c22_window(state, hour_utc, day=None):
         day = (_pd.Timestamp(day).normalize() if day is not None
                else _pd.Timestamp(now_utc).normalize())
         check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
-        frames, latest_ts, diag = _fetch_c22_frames(state)
+        # The window needs its signal candle (H-1:00) and entry candle
+        # (H:00, forming). Pass them so stale cache triggers a fresh fetch.
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
         if latest_ts is not None:
             try:
                 age_min = (now_utc - latest_ts.to_pydatetime()
@@ -3383,7 +3446,11 @@ def _evaluate_c24_window(state, hour_utc, day=None):
         day = (_pd.Timestamp(day).normalize() if day is not None
                else _pd.Timestamp(now_utc).normalize())
         check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
-        frames, latest_ts, diag = _fetch_c22_frames(state)
+        # The window needs its signal candle (H-1:00) and entry candle
+        # (H:00, forming). Pass them so stale cache triggers a fresh fetch.
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
         if latest_ts is not None:
             try:
                 age_min = (now_utc - latest_ts.to_pydatetime()

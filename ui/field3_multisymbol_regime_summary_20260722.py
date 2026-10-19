@@ -3178,11 +3178,20 @@ def _evaluate_c22_window(state, hour_utc, day=None):
             entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
+        # Data-health: how many symbols actually had BOTH needed candles.
+        # A low count means empty results are broken data, not "no signal".
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
         payload = {
             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
             "window_mmt": _c22_window_mmt_label(hour_utc),
             "evaluated_at_utc": now_utc,
             "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
         try:
@@ -3367,7 +3376,13 @@ def _render_cycle22_signals_table(st, state):
         )
         disp = payload.get("signals")
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
-            st.info("No Cycle 22 equations fired in this window.")
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"⚠️ Price data incomplete for this window — only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 22 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -3476,11 +3491,20 @@ def _evaluate_c24_window(state, hour_utc, day=None):
             entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
+        # Data-health: how many symbols actually had BOTH needed candles.
+        # A low count means empty results are broken data, not "no signal".
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
         payload = {
             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
             "window_mmt": _c22_window_mmt_label(hour_utc),
             "evaluated_at_utc": now_utc,
             "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
         try:
@@ -3615,7 +3639,13 @@ def _render_cycle24_signals_table(st, state):
         )
         disp = payload.get("signals")
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
-            st.info("No Cycle 24 equations fired in this window.")
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"⚠️ Price data incomplete for this window — only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 24 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload

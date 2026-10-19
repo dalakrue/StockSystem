@@ -8,6 +8,11 @@ F1-P4 unseen: 667 trades / +2,799.56 pips / RoMAD 7.72 / Sharpe 6.55 /
 DD -362.51 -- beats C18-A3 on every metric and survives the chronological
 10y (+$1,195.25 min equity vs C18-A3's -$996.81 ruin).
 
+2026-10-19 update: Cycle 24 (R4A01, October-only: 24 eq, hours 15/17/18 UTC,
+exactly 1 entry/check, 12/12 checks, unseen win 92.75%) is now the DEFAULT
+live-signal system, per the user's explicit decision. Cycle 22 remains
+selectable via set_active_system('cycle22').
+
 C18-A3 (core/cycle18_best.py) and FT-C01 (core/cycle12_best.py) are KEPT
 byte-identical and remain available as selectable modes via
 set_active_system('cycle18' / 'ft-c01').
@@ -28,7 +33,7 @@ SYSTEM_CYCLE24 = "cycle24"   # R4A01: 24 eq (18 mined mom/atr + 6 TREND fallback
                              # hours (15,17,18) UTC, exactly 1 entry/check
                              # (October-only research; 12/12 checks, user-promoted)
 
-_ACTIVE = SYSTEM_CYCLE22     # default: the Cycle 22 winner (F1-P4)
+_ACTIVE = SYSTEM_CYCLE24     # default: Cycle 24 (R4A01), per user decision 2026-10-19
 
 
 def set_active_system(name: str) -> str:
@@ -60,7 +65,7 @@ def describe_active() -> str:
         return ("cycle24 (R4A01): 24 equations (18 mined + 6 TREND fallbacks), "
                 "entries 15:00/17:00/18:00 UTC "
                 "(21:30/23:30/00:30 MMT), exactly 1 entry/check -- "
-                "October unseen +612.3 pips / RoMAD 8.33 / win 81.2% (10/12 checks)")
+                "October unseen +326.5 pips / RoMAD 3.23 / win 92.75% (12/12 checks)")
     return ("ft-c01 (FT-C01 baseline): 4 SELL equations, entry 18:00 UTC "
             "(00:30 MMT) only, 4 symbols -- unseen +1283.1 pips / RoMAD 44.52")
 

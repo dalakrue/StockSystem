@@ -3133,7 +3133,7 @@ def _latest_entry_window_utc(now_utc, hours=None):
     Rolls back across weekends: e.g. Monday 00:05 MMT (= Sunday 17:35 UTC)
     returns Friday 18:00 UTC. Returns a naive UTC Timestamp, or None.
     ``hours`` overrides the active system's check hours (Cycle 24 passes
-    its own (1, 15, 17, 18, 20)).
+    its own (15, 17, 18)).
     """
     import pandas as _pd
     from core.signal_mode import active_check_hours
@@ -3626,11 +3626,11 @@ def render_multisymbol_regime_summary(
     """Slim Field 3 page: banner + symbols box + signals table.
 
     The old monthly S1-S240 regime ranking table has been removed from the
-    UI entirely. Default mode shows the Cycle 22 table (26 equations,
-    ATR-based TP/SL, backtest-matched); with the signal router set to
-    'cycle24' it shows the Cycle 24 (R4A01) table instead -- 24 equations,
-    3 check hours (15/17/18 UTC = 21:30/23:30/00:30 MMT), exactly 1 entry
-    per check. Each entry window's signals
+    UI entirely. Default mode shows the Cycle 24 (R4A01) table -- 24
+    equations, 3 check hours (15/17/18 UTC = 21:30/23:30/00:30 MMT),
+    exactly 1 entry per check; the "Signal system" dropdown above the
+    banner switches back to the Cycle 22 table (26 equations, ATR-based
+    TP/SL, backtest-matched). Each entry window's signals
     are persisted in session state and stay visible for up to 2 hours
     (or until the next window arrives).
     """
@@ -3648,6 +3648,28 @@ def render_multisymbol_regime_summary(
             state
         )
     )
+
+    # Signal-system selector. The router default is Cycle 24 (R4A01), but
+    # the user can switch back to Cycle 22 (F1-P4). Only the two systems
+    # with dedicated, verified table renderers are offered here (cycle18 /
+    # ft-c01 have no table renderer, so offering them would show the wrong
+    # table). The choice is applied to the router on EVERY render, BEFORE
+    # the banner and the signals table read active_system().
+    try:
+        from core.signal_mode import set_active_system as _set_active_system
+        if "signal_system" not in st.session_state:
+            st.session_state["signal_system"] = "cycle24"
+        _sys_choice = st.selectbox(
+            "Signal system",
+            options=["cycle24", "cycle22"],
+            format_func=lambda v: (
+                "Cycle 24 (R4A01) — October system" if v == "cycle24"
+                else "Cycle 22 (F1-P4) — broad system"),
+            key="signal_system",
+        )
+        _set_active_system(_sys_choice)
+    except Exception:
+        pass
 
     try:
         from core.signal_mode import active_system as _active_system

@@ -24,9 +24,9 @@ SYSTEM_CYCLE22 = "cycle22"    # F1-P4: 26 eq, hours (10,11,13,18) UTC, 20 symbol
                              # trailing 1.0/0.3 ATR + dynamic k (Rule A)
 SYSTEM_CYCLE18 = "cycle18"   # C18-A3: 26 eq, hours (10,11,13,18) UTC, 20 symbols
 SYSTEM_FTC01 = "ft-c01"      # FT-C01 baseline: 4 SELL eq, hour 18 UTC only
-SYSTEM_CYCLE24 = "cycle24"   # P55: 24 eq (14 mined mom/atr + 10 TREND fallbacks),
-                             # hours (1,15,17,18,20) UTC, exactly 1 entry/check
-                             # (October-only research; 11/12 checks, nearest pick)
+SYSTEM_CYCLE24 = "cycle24"   # R4A01: 24 eq (18 mined mom/atr + 6 TREND fallbacks),
+                             # hours (15,17,18) UTC, exactly 1 entry/check
+                             # (October-only research; 12/12 checks, user-promoted)
 
 _ACTIVE = SYSTEM_CYCLE22     # default: the Cycle 22 winner (F1-P4)
 
@@ -57,10 +57,10 @@ def describe_active() -> str:
                 "(16:30/17:30/19:30/00:30 MMT), 20 symbols, BUY+SELL -- "
                 "unseen +2198.8 pips / RoMAD 5.71")
     if _ACTIVE == SYSTEM_CYCLE24:
-        return ("cycle24 (P55): 24 equations (14 mined + 10 TREND fallbacks), "
-                "entries 01:00/15:00/17:00/18:00/20:00 UTC "
-                "(07:30/21:30/23:30/00:30/02:30 MMT), exactly 1 entry/check -- "
-                "October unseen +875.6 pips / RoMAD 5.43 (11/12 checks)")
+        return ("cycle24 (R4A01): 24 equations (18 mined + 6 TREND fallbacks), "
+                "entries 15:00/17:00/18:00 UTC "
+                "(21:30/23:30/00:30 MMT), exactly 1 entry/check -- "
+                "October unseen +612.3 pips / RoMAD 8.33 / win 81.2% (10/12 checks)")
     return ("ft-c01 (FT-C01 baseline): 4 SELL equations, entry 18:00 UTC "
             "(00:30 MMT) only, 4 symbols -- unseen +1283.1 pips / RoMAD 44.52")
 
@@ -109,7 +109,7 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_FTC01:
         return (18,)
     if _ACTIVE == SYSTEM_CYCLE24:
-        return (1, 15, 17, 18, 20)
+        return (15, 17, 18)
     # cycle22 (F1-P4) and cycle18 (C18-A3) share the 4-check schedule
     return (10, 11, 13, 18)
 

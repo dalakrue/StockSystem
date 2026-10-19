@@ -2947,12 +2947,16 @@ def _render_symbols_loaded_box(st, context):
 _C22_SIG_STATE_KEY = "cycle22_signals_latest_v2"
 _C22_SIG_AGE_KEY = "cycle22_candle_age_txt"
 _C22_SIG_DIAG_KEY = "cycle22_signals_diag_v2"
-# Cycle 24 (P55) parallel state -- own keys so the Cycle 22 path is untouched.
+# Cycle 24 (R4A01) parallel state -- own keys so the Cycle 22 path is untouched.
 _C24_SIG_STATE_KEY = "cycle24_signals_latest_v1"
 _C24_SIG_AGE_KEY = "cycle24_candle_age_txt"
 _C24_SIG_DIAG_KEY = "cycle24_signals_diag_v1"
 _C24_SIG_FAIL_KEY = "cycle24_signals_fail_v1"
-_C24_CHECK_HOURS = (1, 15, 17, 18, 20)
+try:
+    # Single source of truth: core/cycle24_best.py (R4A01: hours 15/17/18 UTC).
+    from core.cycle24_best import CYCLE24_CHECK_HOURS as _C24_CHECK_HOURS
+except Exception:
+    _C24_CHECK_HOURS = (15, 17, 18)
 
 
 def _c22_window_mmt_label(hour_utc):
@@ -3352,12 +3356,12 @@ def render_cycle22_download_buttons(st, payload):
 
 
 # ============================================================================
-# Cycle 24 (P55) signals table -- parallel to the Cycle 22 path above.
+# Cycle 24 (R4A01) signals table -- parallel to the Cycle 22 path above.
 # Own session-state keys; the working Cycle 22 code is NOT refactored.
 # ============================================================================
 
 def _evaluate_c24_window(state, hour_utc, day=None):
-    """Evaluate the 24 Cycle 24 (P55) equations for one entry window.
+    """Evaluate the 24 Cycle 24 (R4A01) equations for one entry window.
 
     Calls core.cycle24_best directly (not the signal router) so the result
     is always the C24 system regardless of the active mode. Exactly 1
@@ -3452,7 +3456,7 @@ def _render_cycle24_signals_table(st, state):
     """Cycle 24 signals table: backfilled + persisted, exactly 1 entry/check.
 
     Mirrors _render_cycle22_signals_table: on EVERY render, computes the
-    latest C24 entry window <= now (hours 1/15/17/18/20 UTC); if no signals
+    latest C24 entry window <= now (hours 15/17/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
     stored window stays visible for UP TO 2 HOURS after the window time,
@@ -3624,8 +3628,9 @@ def render_multisymbol_regime_summary(
     The old monthly S1-S240 regime ranking table has been removed from the
     UI entirely. Default mode shows the Cycle 22 table (26 equations,
     ATR-based TP/SL, backtest-matched); with the signal router set to
-    'cycle24' it shows the Cycle 24 (P55) table instead -- 24 equations,
-    5 check hours, exactly 1 entry per check. Each entry window's signals
+    'cycle24' it shows the Cycle 24 (R4A01) table instead -- 24 equations,
+    3 check hours (15/17/18 UTC = 21:30/23:30/00:30 MMT), exactly 1 entry
+    per check. Each entry window's signals
     are persisted in session state and stay visible for up to 2 hours
     (or until the next window arrives).
     """
@@ -3653,7 +3658,7 @@ def render_multisymbol_regime_summary(
         st, state.get(_C24_SIG_AGE_KEY if _mode_is_c24 else _C22_SIG_AGE_KEY))
     _render_symbols_loaded_box(st, context)
     # Signals table follows the active system: Cycle 24 renders its own
-    # table (own state keys, 5 check hours, exactly 1 entry/check);
+    # table (own state keys, 3 check hours, exactly 1 entry/check);
     # every other mode keeps the proven Cycle 22 table untouched.
     if _mode_is_c24:
         payload = _render_cycle24_signals_table(st, state)

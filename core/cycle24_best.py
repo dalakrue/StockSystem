@@ -1,33 +1,43 @@
-"""Cycle 24 module: P55 (October-only, nearest-confidence pick).
+"""Cycle 24 module: R4A01 (October-only, user-promoted pick).
 
-The Cycle 24 research winner: 24 equations (14 mined mom/atr + 10 TREND
-fallbacks) spanning 5 check hours (01:30, 15:30, 17:30, 18:30, 20:30 UTC),
-exactly 1 entry per check (top-1 by score at each check).
+The Cycle 24 research winner by user override: 24 equations (18 mined
+mom/atr + 6 TREND fallbacks) spanning 3 check hours (15:30, 17:30,
+18:30 UTC = 21:30, 23:30, 00:30 MMT), exactly 1 entry per check
+(top-1 by score at each check).
 
 Mined on October discovery only (2016-10 -> 2024-10); unseen October 2025
 touched ONLY for the 12-check evaluation (never for selection).
 
-Unseen (2025-10-01 -> 2025-10-31): +875.6 pips / 115 trades /
-RoMAD 5.43 / Sharpe 9.06 / win 66.1%%. 12-check: 11/12 PASS
-(fails only #7: 3/9 discovery Octobers slightly negative).
-used_unseen_for_selection=False. Overfit verdict PASS.
+Unseen (2025-10-01 -> 2025-10-31): +326.5 pips / 69 trades / RoMAD 3.23 /
+win 92.75%% / max DD -101.0 / EV +4.73 / 3-pip +188.5 / bootstrap 97.15%%.
+12-check: 12/12 PASS -- zero red Octobers (all 9 discovery Octobers +
+unseen green). used_unseen_for_selection=False. Overfit verdict PASS
+(mild decay accepted per user calibration).
 
-Selection for Cycle 24 (user-approved): nearest-confidence pick P55 --
-11/12 with the strongest unseen stats among the 52 processes; no 12/12
-winner existed, and the bar was not lowered.
+Promoted by explicit user decision (override of the round-4 95%% win-rate
+demand, same pattern as C18/C22/P55/R3C2): round 4 proved 95%%+ win rate
+and zero red Octobers are mutually exclusive in this data -- every
+95%%+ process carries 2-4 red Octobers because losses 5-11x the wins
+paint months red when a stop hits. R4A01 misses the 95%% line by 2.25pp
+but beats R3C2 on every other confidence metric (12/12 vs 10/12,
+zero red Octobers vs 2, all-October net +1,683.5).
+
+Asymmetry note: R4A01 uses extreme win-rate-oriented asymmetry
+(tp_mult=0.3, sl_mult 3-10). Wins are small and frequent; rare losses
+are large. Fidelity unchanged: SL-first fills, 48h cap, 1-pip spread,
+TP/SL clipped [10,500]/[5,100].
 
 Fallback equations (FB_*): direction 'TREND' fires on every check so the
 exactly-1-entry-per-check rule always has a candidate; live direction
 resolves per-trade from the signal candle's mom24 sign (BUY if > 0 else
-SELL) -- the same fixed rule the research used, no tuning.
+SELL) -- the same fixed rule the research used, no tuning. R4A01
+fallbacks use tp_mult=0.3 / sl_mult=3.0.
 
 Equations use the same two features as C18 (mom24, atr_ratio) with the
 same definitions (see add_cycle12_features, imported below).
-Fidelity: SL-first fills, 48h cap, 1-pip spread baseline,
-TP = tp_mult x ATR14 clipped [10,500], SL = sl_mult x ATR14 clipped [5,100].
 
-Source of truth: ~/workspace/fx/work_c24/results/P55.json
-Discovery trade log: ~/workspace/fx/work_c24/results/P55_disc_log.csv
+Source of truth: ~/workspace/fx/work_c24/round4/results/R4A01.json
+Discovery trade log: ~/workspace/fx/work_c24/round4/results/R4A01_disc_log.csv
 """
 from __future__ import annotations
 
@@ -36,8 +46,8 @@ import pandas as pd
 
 from core.cycle12_best import add_cycle12_features, pip_size as _pip_size
 
-CYCLE24_VERSION = "cycle24-p55-v1"
-CYCLE24_CHECK_HOURS = (1, 15, 17, 18, 20)  # checks at h:30 UTC
+CYCLE24_VERSION = "cycle24-r4a01-v1"
+CYCLE24_CHECK_HOURS = (15, 17, 18)  # checks at h:30 UTC
 CYCLE24_SYMBOLS_N = 20
 MAX_HOLD_HOURS = 48
 BASE_SPREAD_PIPS = 1.0
@@ -46,78 +56,78 @@ SL_CLIP = (5.0, 100.0)
 
 # ---------------------------------------------------------------- equations --
 C24_EQUATIONS = (
-    {"id": 'mom_CHFJPY_h1_momS_T0.75_A1.0_2.0x1.5', "symbol": 'CHFJPY', "hour": 1, "direction": 'SELL',
+    {"id": 'mom_EURUSD_h15_momS_T0.75_A1.0_0.3x8', "symbol": 'EURUSD', "hour": 15, "direction": 'SELL',
      "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
-     "tp_mult": 2.0, "sl_mult": 1.5, "score": 422.56095714286386},
-    {"id": 'mom_GBPJPY_h1_momS_T2.0_A1.25_1.5x1.5', "symbol": 'GBPJPY', "hour": 1, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 2.0}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 414.00917142858793},
-    {"id": 'mom_GBPJPY_h15_momB_T2.0_A1.25_2.0x1.5', "symbol": 'GBPJPY', "hour": 15, "direction": 'BUY',
-     "conditions": [{"col": "mom24", "op": "<", "val": -2.0}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 2.0, "sl_mult": 1.5, "score": 651.0071428571506},
-    {"id": 'mom_EURJPY_h15_momB_T2.0_A1.25_1.5x1.5', "symbol": 'EURJPY', "hour": 15, "direction": 'BUY',
-     "conditions": [{"col": "mom24", "op": "<", "val": -2.0}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 331.40357142857044},
-    {"id": 'mom_AUDNZD_h17_momS_T1.0_A1.25_1.5x1.5', "symbol": 'AUDNZD', "hour": 17, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 1.0}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 410.9464285714435},
-    {"id": 'mom_AUDCAD_h17_momS_T0.75_A1.25_1.5x1.5', "symbol": 'AUDCAD', "hour": 17, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 353.36785714286225},
-    {"id": 'mom_AUDCHF_h18_momS_T1.0_A1.25_1.5x1.5', "symbol": 'AUDCHF', "hour": 18, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 1.0}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 378.81071428571727},
-    {"id": 'mom_AUDCAD_h18_momS_T1.0_A1.25_1.5x1.5', "symbol": 'AUDCAD', "hour": 18, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 1.0}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 336.70357142856966},
-    {"id": 'mom_CHFJPY_h20_momS_T0.75_A1.0_2.0x1.5', "symbol": 'CHFJPY', "hour": 20, "direction": 'SELL',
+     "tp_mult": 0.3, "sl_mult": 8.0, "score": 1000.189},
+    {"id": 'mom_EURGBP_h15_momB_T0.75_A1.0_0.3x8', "symbol": 'EURGBP', "hour": 15, "direction": 'BUY',
+     "conditions": [{"col": "mom24", "op": "<", "val": -0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 8.0, "score": 1000.171},
+    {"id": 'mom_CHFJPY_h15_momS_T2.5_A1.0_0.3x8', "symbol": 'CHFJPY', "hour": 15, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 2.5}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 8.0, "score": 1000.1709999999999},
+    {"id": 'mom_EURJPY_h15_momS_T0.75_A0.9_0.3x5', "symbol": 'EURJPY', "hour": 15, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 0.9}],
+     "tp_mult": 0.3, "sl_mult": 5.0, "score": 1000.153},
+    {"id": 'mom_USDJPY_h17_momB_T0.75_A1.0_0.3x10', "symbol": 'USDJPY', "hour": 17, "direction": 'BUY',
+     "conditions": [{"col": "mom24", "op": "<", "val": -0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 10.0, "score": 1000.1709999999999},
+    {"id": 'mom_EURNZD_h17_momS_T2.5_A1.0_0.3x8', "symbol": 'EURNZD', "hour": 17, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 2.5}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 8.0, "score": 1000.135},
+    {"id": 'mom_GBPJPY_h17_momS_T0.75_A1.0_0.3x3', "symbol": 'GBPJPY', "hour": 17, "direction": 'SELL',
      "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
-     "tp_mult": 2.0, "sl_mult": 1.5, "score": 385.0464285714315},
-    {"id": 'mom_AUDNZD_h20_momS_T1.0_A1.25_1.5x1.0', "symbol": 'AUDNZD', "hour": 20, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 1.0}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.0, "score": 307.2607142857185},
-    {"id": 'FB_EURUSD_h1_0', "symbol": 'EURUSD', "hour": 1, "direction": 'TREND',
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": 952.495088095238},
+    {"id": 'mom_AUDJPY_h17_momS_T3.0_A1.0_0.3x8', "symbol": 'AUDJPY', "hour": 17, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 3.0}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 8.0, "score": 941.2876705882352},
+    {"id": 'mom_USDJPY_h18_momS_T2.5_A1.0_0.3x3', "symbol": 'USDJPY', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 2.5}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": 1000.216},
+    {"id": 'mom_GBPJPY_h18_momS_T0.75_A1.0_0.3x8', "symbol": 'GBPJPY', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 8.0, "score": 1000.20554},
+    {"id": 'mom_EURCHF_h18_momS_T0.75_A1.0_0.3x5', "symbol": 'EURCHF', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 5.0, "score": 1000.18},
+    {"id": 'mom_EURCAD_h18_momB_T0.75_A1.0_0.3x8', "symbol": 'EURCAD', "hour": 18, "direction": 'BUY',
+     "conditions": [{"col": "mom24", "op": "<", "val": -0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 8.0, "score": 1000.153},
+    {"id": 'FB_EURUSD_h15_0', "symbol": 'EURUSD', "hour": 15, "direction": 'TREND',
      "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000001.0},
-    {"id": 'FB_GBPUSD_h1_1', "symbol": 'GBPUSD', "hour": 1, "direction": 'TREND',
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": -1000000001.0},
+    {"id": 'FB_GBPUSD_h15_1', "symbol": 'GBPUSD', "hour": 15, "direction": 'TREND',
      "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000002.0},
-    {"id": 'FB_USDJPY_h15_0', "symbol": 'USDJPY', "hour": 15, "direction": 'TREND',
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": -1000000002.0},
+    {"id": 'FB_USDJPY_h17_0', "symbol": 'USDJPY', "hour": 17, "direction": 'TREND',
      "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000003.0},
-    {"id": 'FB_AUDUSD_h15_1', "symbol": 'AUDUSD', "hour": 15, "direction": 'TREND',
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": -1000000003.0},
+    {"id": 'FB_AUDUSD_h17_1', "symbol": 'AUDUSD', "hour": 17, "direction": 'TREND',
      "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000004.0},
-    {"id": 'FB_EURJPY_h17_0', "symbol": 'EURJPY', "hour": 17, "direction": 'TREND',
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": -1000000004.0},
+    {"id": 'FB_EURJPY_h18_0', "symbol": 'EURJPY', "hour": 18, "direction": 'TREND',
      "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000005.0},
-    {"id": 'FB_GBPJPY_h17_1', "symbol": 'GBPJPY', "hour": 17, "direction": 'TREND',
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": -1000000005.0},
+    {"id": 'FB_GBPJPY_h18_1', "symbol": 'GBPJPY', "hour": 18, "direction": 'TREND',
      "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000006.0},
-    {"id": 'FB_AUDJPY_h18_0', "symbol": 'AUDJPY', "hour": 18, "direction": 'TREND',
-     "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000007.0},
-    {"id": 'FB_NZDUSD_h18_1', "symbol": 'NZDUSD', "hour": 18, "direction": 'TREND',
-     "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000008.0},
-    {"id": 'FB_EURCHF_h20_0', "symbol": 'EURCHF', "hour": 20, "direction": 'TREND',
-     "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000009.0},
-    {"id": 'FB_USDCAD_h20_1', "symbol": 'USDCAD', "hour": 20, "direction": 'TREND',
-     "conditions": [],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": -1000000010.0},
-    {"id": 'mom_GBPJPY_h15_momB_T2.0_A1.25_1.5x1.5', "symbol": 'GBPJPY', "hour": 15, "direction": 'BUY',
-     "conditions": [{"col": "mom24", "op": "<", "val": -2.0}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 438.128571428575},
-    {"id": 'mom_GBPJPY_h1_momS_T1.5_A1.25_1.5x1.5', "symbol": 'GBPJPY', "hour": 1, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 1.5}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 406.8413142857319},
-    {"id": 'mom_CHFJPY_h20_momS_T1.0_A1.0_2.0x1.5', "symbol": 'CHFJPY', "hour": 20, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 1.0}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
-     "tp_mult": 2.0, "sl_mult": 1.5, "score": 382.3392857142887},
-    {"id": 'mom_AUDCHF_h18_momS_T0.75_A1.25_1.5x1.5', "symbol": 'AUDCHF', "hour": 18, "direction": 'SELL',
-     "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.25}],
-     "tp_mult": 1.5, "sl_mult": 1.5, "score": 370.33571428571776},
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": -1000000006.0},
+    {"id": 'mom_USDJPY_h18_momS_T2.5_A1.0_0.3x5', "symbol": 'USDJPY', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 2.5}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 5.0, "score": 1000.216},
+    {"id": 'mom_USDJPY_h18_momS_T2.5_A1.0_0.3x8', "symbol": 'USDJPY', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 2.5}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 8.0, "score": 1000.216},
+    {"id": 'mom_USDJPY_h18_momS_T2.5_A1.0_0.3x10', "symbol": 'USDJPY', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 2.5}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 10.0, "score": 1000.216},
+    {"id": 'mom_GBPJPY_h18_momS_T0.75_A1.0_0.3x3', "symbol": 'GBPJPY', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 3.0, "score": 1000.20554},
+    {"id": 'mom_GBPJPY_h18_momS_T0.75_A1.0_0.3x5', "symbol": 'GBPJPY', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 5.0, "score": 1000.20554},
+    {"id": 'mom_GBPJPY_h18_momS_T0.75_A1.0_0.3x10', "symbol": 'GBPJPY', "hour": 18, "direction": 'SELL',
+     "conditions": [{"col": "mom24", "op": ">", "val": 0.75}, {"col": "atr_ratio", "op": "<", "val": 1.0}],
+     "tp_mult": 0.3, "sl_mult": 10.0, "score": 1000.20554},
 )
 
 
@@ -157,7 +167,7 @@ def _trend_direction(mom24_value) -> str:
 
 
 def evaluate_cycle24_signals(frames: dict, check_time_utc) -> pd.DataFrame:
-    """Evaluate P55 equations at one check time (h:30 UTC).
+    """Evaluate R4A01 equations at one check time (h:30 UTC).
 
     frames: {symbol: H1 OHLC DataFrame indexed by candle-stamp}.
     Only equations whose hour matches the check hour are evaluated.

@@ -2994,7 +2994,14 @@ def _fetch_c22_frames(state):
         df = None
         if repo is not None:
             try:
-                cached = repo.load(sym, "H1", limit=400, completed_only=True)
+                # completed_only=False: the engine needs the FORMING H:00 entry
+                # candle (its open is fixed at candle start = backtest entry).
+                # Signal features come from the earlier completed (H-1):00
+                # candle, so the forming candle cannot contaminate them.
+                # With completed_only=True the app could never evaluate a
+                # window inside its 5-min entry (the H:00 candle completes at
+                # H+1:00) and silently reported "no equations fired".
+                cached = repo.load(sym, "H1", limit=400, completed_only=False)
                 if cached is not None and len(cached) >= 50:
                     df = cached
                     n_cache += 1

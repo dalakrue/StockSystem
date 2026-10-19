@@ -1,0 +1,10 @@
+{
+  "entry_app_import": "PASS",
+  "populated_ranking_and_strategy_decision": "PASS",
+  "monthly_replay_ui": "PASS",
+  "replay_download_buttons": 9,
+  "strict_mode_rerun": "PASS",
+  "uncaught_exceptions": 0,
+  "error_elements": 0,
+  "authenticated_provider_execution": "NOT TESTED"
+}

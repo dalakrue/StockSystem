@@ -1,0 +1,35 @@
+Middle Regime Finder / Ranking Fix — 2026-08-18
+
+Changes
+1. Removed phone-card rendering for the CURRENT Middle Standard Regime Ranking.
+   - The Middle ranking now remains a table on phone/mobile.
+2. Widened the Strategy Decision column.
+3. Strategy Decision text is direction-first:
+   - BUY — S1
+   - SELL — S2
+   - BUY/SELL — S3
+   - BUY/SELL/NEUTRAL — S4
+   - BUY/SELL/NEUTRAL — None
+4. Fixed the core Finder history design.
+   - Super Quick now vectorizes all already-loaded completed candles into searchable Middle Regime historical rows.
+   - No extra provider request is made for this backfill.
+   - Historical rows are merged/deduplicated by Datetime + Symbol.
+5. History persistence now uses both:
+   - data/field3_middle_regime_history_20260722.parquet
+   - data/field3_middle_regime_history_20260722.csv
+6. Finder improvements:
+   - Removed duplicate Finder title inside the expander.
+   - Added loaded-history coverage display.
+   - Added Custom, Last 7 Days, Last 30 Days, Last 365 Days, All Loaded History presets.
+   - Exact custom start/end date and time remain supported.
+   - Empty ranges no longer create misleading header-only CSV files.
+   - If a range is outside loaded candle coverage, the UI explains the actual available coverage.
+
+Important data rule
+The Finder can only calculate history from genuine candles that are loaded into the application. It does not fabricate missing market history. To extend coverage (for example one year), Load & Update must load that historical candle period; then Super Quick builds the Finder rows from it.
+
+Validation
+- Python compileall for ui/ and core/: PASS
+- Synthetic H1 historical Finder test: PASS
+- Direction-first Strategy Decision test: PASS
+- History persistence + CSV fallback test: PASS

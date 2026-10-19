@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "synthetic_only": true,
+  "input_rows": 192,
+  "input_symbols": 2,
+  "scenario_table_rows": 96,
+  "deployment_enabled": false,
+  "calibration_insufficient_data_correctly_reported": true,
+  "market_performance_claimed": false,
+  "note": "Workflow smoke only. No synthetic returns or ranks are delivered as historical evidence."
+}

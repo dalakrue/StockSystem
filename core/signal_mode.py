@@ -13,6 +13,23 @@ exactly 1 entry/check, 12/12 checks, unseen win 92.75%) is now the DEFAULT
 live-signal system, per the user's explicit decision. Cycle 22 remains
 selectable via set_active_system('cycle22').
 
+2026-10-20 update: Cycle 26 (C26-33, November-only: 28 eq, hours 10/11/18 UTC,
+exactly 1 entry/check, 9/12 checks best-nearly, unseen win 91.67%) added as
+SYSTEM_CYCLE26. The UI selector defaults to cycle26 in November, else cycle24.
+
+2026-10-20 update: Cycle 27 (C27-01, December-only: 30 eq, hours 10/11/13 UTC,
+exactly 1 entry/check, 11/12 checks best-nearly, unseen win 92.42%) added as
+SYSTEM_CYCLE27. The UI selector defaults to cycle27 in December, cycle26 in
+November, else cycle24.
+
+2026-10-20 update: Cycles 29-36 (February-September monthly systems: 24 eq
+each, 15 mined + 9 TREND fallbacks, exactly 1 entry/check) added as
+SYSTEM_CYCLE29..36. The UI selector now auto-defaults by month across the
+full year: Jan->cycle28, Feb->cycle29, Mar->cycle30, Apr->cycle31,
+May->cycle32, Jun->cycle33, Jul->cycle34, Aug->cycle35, Sep->cycle36,
+Oct->cycle24, Nov->cycle26, Dec->cycle27. Each new engine passed a
+bit-exact replay vs its research discovery log (0 mismatches).
+
 C18-A3 (core/cycle18_best.py) and FT-C01 (core/cycle12_best.py) are KEPT
 byte-identical and remain available as selectable modes via
 set_active_system('cycle18' / 'ft-c01').
@@ -32,18 +49,59 @@ SYSTEM_FTC01 = "ft-c01"      # FT-C01 baseline: 4 SELL eq, hour 18 UTC only
 SYSTEM_CYCLE24 = "cycle24"   # R4A01: 24 eq (18 mined mom/atr + 6 TREND fallbacks),
                              # hours (15,17,18) UTC, exactly 1 entry/check
                              # (October-only research; 12/12 checks, user-promoted)
+SYSTEM_CYCLE26 = "cycle26"   # C26-33: 28 eq (16 mined mom/atr + 12 TREND fallbacks),
+                             # hours (10,11,18) UTC, exactly 1 entry/check
+                             # (November-only research; 9/12 checks, best-nearly pick)
+SYSTEM_CYCLE27 = "cycle27"   # C27-01: 30 eq (18 mined mom/atr + 12 TREND fallbacks),
+                             # hours (10,11,13) UTC, exactly 1 entry/check
+                             # (December-only research; 11/12 checks, best-nearly pick)
+SYSTEM_CYCLE28 = "cycle28"   # C28-30: 24 eq (15 mined mom/atr + 9 TREND fallbacks,
+                             # per-symbol tuned), hours (11,13,17) UTC,
+                             # exactly 1 entry/check, MAJORS 10 symbols
+                             # (January-only research; 10/12 checks, best-nearly pick)
+SYSTEM_CYCLE29 = "cycle29"   # C29-31: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (11,13,16) UTC, exactly 1 entry/check
+                             # (February-only research; 8/12 checks, best-nearly pick)
+SYSTEM_CYCLE30 = "cycle30"   # C30-31: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (11,16,17) UTC, exactly 1 entry/check
+                             # (March-only research; 9/12 checks, best-nearly pick)
+SYSTEM_CYCLE31 = "cycle31"   # C31-29: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (16,17,18) UTC, exactly 1 entry/check
+                             # (April-only research; 10/12 checks, best-nearly pick)
+SYSTEM_CYCLE32 = "cycle32"   # C32-20: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (10,16,18) UTC, exactly 1 entry/check
+                             # (May-only research; 11/12 checks, best-nearly pick)
+SYSTEM_CYCLE33 = "cycle33"   # C33-18: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (1,15,18) UTC, exactly 1 entry/check
+                             # (June-only research; 10/12 checks, best-nearly pick)
+SYSTEM_CYCLE34 = "cycle34"   # C34-17: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (15,17,18) UTC, exactly 1 entry/check
+                             # (July-only research; 10/12 checks, best-nearly pick)
+SYSTEM_CYCLE35 = "cycle35"   # C35-31: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (1,15,18) UTC, exactly 1 entry/check
+                             # (August-only research; 10/12 checks, best-nearly pick)
+SYSTEM_CYCLE36 = "cycle36"   # C36-40: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (1,10,11) UTC, exactly 1 entry/check
+                             # (September-only research; 10/12 checks, best-nearly pick)
 
 _ACTIVE = SYSTEM_CYCLE24     # default: Cycle 24 (R4A01), per user decision 2026-10-19
 
 
 def set_active_system(name: str) -> str:
-    """Switch live-signal system. name in {'cycle22', 'cycle18', 'ft-c01', 'cycle24'}.
+    """Switch live-signal system. name in {'cycle22', 'cycle18', 'ft-c01',
+    'cycle24', 'cycle26', 'cycle27', 'cycle28', 'cycle29', 'cycle30',
+    'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35', 'cycle36'}.
     Returns the newly active system name."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE22, SYSTEM_CYCLE18, SYSTEM_FTC01, SYSTEM_CYCLE24):
+    if n not in (SYSTEM_CYCLE22, SYSTEM_CYCLE18, SYSTEM_FTC01, SYSTEM_CYCLE24,
+                 SYSTEM_CYCLE26, SYSTEM_CYCLE27, SYSTEM_CYCLE28, SYSTEM_CYCLE29,
+                 SYSTEM_CYCLE30, SYSTEM_CYCLE31, SYSTEM_CYCLE32, SYSTEM_CYCLE33,
+                 SYSTEM_CYCLE34, SYSTEM_CYCLE35, SYSTEM_CYCLE36):
         raise ValueError(
-            f"unknown system {name!r}; choose 'cycle22', 'cycle18', 'ft-c01' or 'cycle24'")
+            f"unknown system {name!r}; choose 'cycle22', 'cycle18', 'ft-c01', "
+            f"'cycle24', 'cycle26', 'cycle27', 'cycle28', 'cycle29', 'cycle30', "
+            f"'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35' or 'cycle36'")
     _ACTIVE = n
     return _ACTIVE
 
@@ -66,6 +124,61 @@ def describe_active() -> str:
                 "entries 15:00/17:00/18:00 UTC "
                 "(21:30/23:30/00:30 MMT), exactly 1 entry/check -- "
                 "October unseen +326.5 pips / RoMAD 3.23 / win 92.75% (12/12 checks)")
+    if _ACTIVE == SYSTEM_CYCLE26:
+        return ("cycle26 (C26-33): 28 equations (16 mined + 12 TREND fallbacks), "
+                "entries 10:00/11:00/18:00 UTC "
+                "(16:30/17:30/00:30 MMT), exactly 1 entry/check -- "
+                "November unseen +224.5 pips / RoMAD 1.04 / win 91.67% (9/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE27:
+        return ("cycle27 (C27-01): 30 equations (18 mined + 12 TREND fallbacks), "
+                "entries 10:00/11:00/13:00 UTC "
+                "(16:30/17:30/19:30 MMT), exactly 1 entry/check -- "
+                "December unseen +442.6 pips / RoMAD 5.45 / win 92.42% (11/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE28:
+        return ("cycle28 (C28-30): 24 equations (15 mined + 9 TREND fallbacks, "
+                "per-symbol tuned), entries 11:00/13:00/17:00 UTC "
+                "(17:30/19:30/23:30 MMT), exactly 1 entry/check, MAJORS -- "
+                "January unseen +300.4 pips / RoMAD 1.73 / win 90.91% (10/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE29:
+        return ("cycle29 (C29-31): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 11:00/13:00/16:00 UTC "
+                "(17:30/19:30/22:30 MMT), exactly 1 entry/check -- "
+                "February unseen +63.3 pips / RoMAD 0.50 / win 86.67% (8/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE30:
+        return ("cycle30 (C30-31): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 11:00/16:00/17:00 UTC "
+                "(17:30/22:30/23:30 MMT), exactly 1 entry/check -- "
+                "March unseen +235.3 pips / RoMAD 2.23 / win 92.06% (9/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE31:
+        return ("cycle31 (C31-29): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 16:00/17:00/18:00 UTC "
+                "(22:30/23:30/00:30 MMT), exactly 1 entry/check -- "
+                "April unseen +424.9 pips / RoMAD 4.21 / win 90.91% (10/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE32:
+        return ("cycle32 (C32-20): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 10:00/16:00/18:00 UTC "
+                "(16:30/22:30/00:30 MMT), exactly 1 entry/check -- "
+                "May unseen +566.2 pips / RoMAD 4.23 / win 93.94% (11/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE33:
+        return ("cycle33 (C33-18): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 01:00/15:00/18:00 UTC "
+                "(07:30/21:30/00:30 MMT), exactly 1 entry/check -- "
+                "June unseen +595.9 pips / RoMAD 22.15 / win 96.83% (10/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE34:
+        return ("cycle34 (C34-17): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 15:00/17:00/18:00 UTC "
+                "(21:30/23:30/00:30 MMT), exactly 1 entry/check -- "
+                "July unseen +486.8 pips / RoMAD 4.82 / win 95.65% (10/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE35:
+        return ("cycle35 (C35-31): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 01:00/15:00/18:00 UTC "
+                "(07:30/21:30/00:30 MMT), exactly 1 entry/check -- "
+                "August unseen +304.6 pips / RoMAD 4.58 / win 88.89% (10/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE36:
+        return ("cycle36 (C36-40): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 01:00/10:00/11:00 UTC "
+                "(07:30/16:30/17:30 MMT), exactly 1 entry/check -- "
+                "September unseen +199.2 pips / RoMAD 1.41 / win 90.91% (10/12 checks, best-nearly)")
     return ("ft-c01 (FT-C01 baseline): 4 SELL equations, entry 18:00 UTC "
             "(00:30 MMT) only, 4 symbols -- unseen +1283.1 pips / RoMAD 44.52")
 
@@ -81,6 +194,39 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE24:
         from core.cycle24_best import evaluate_cycle24_signals
         return evaluate_cycle24_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE26:
+        from core.cycle26_best import evaluate_cycle26_signals
+        return evaluate_cycle26_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE27:
+        from core.cycle27_best import evaluate_cycle27_signals
+        return evaluate_cycle27_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE28:
+        from core.cycle28_best import evaluate_cycle28_signals
+        return evaluate_cycle28_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE29:
+        from core.cycle29_best import evaluate_cycle29_signals
+        return evaluate_cycle29_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE30:
+        from core.cycle30_best import evaluate_cycle30_signals
+        return evaluate_cycle30_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE31:
+        from core.cycle31_best import evaluate_cycle31_signals
+        return evaluate_cycle31_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE32:
+        from core.cycle32_best import evaluate_cycle32_signals
+        return evaluate_cycle32_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE33:
+        from core.cycle33_best import evaluate_cycle33_signals
+        return evaluate_cycle33_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE34:
+        from core.cycle34_best import evaluate_cycle34_signals
+        return evaluate_cycle34_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE35:
+        from core.cycle35_best import evaluate_cycle35_signals
+        return evaluate_cycle35_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE36:
+        from core.cycle36_best import evaluate_cycle36_signals
+        return evaluate_cycle36_signals(frames, check_time_utc)
     from core.cycle12_best import evaluate_cycle12_signals
     return evaluate_cycle12_signals(frames, check_time_utc)
 
@@ -101,6 +247,39 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE24:
         from core.cycle24_best import select_cycle24_entries
         return select_cycle24_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE26:
+        from core.cycle26_best import select_cycle26_entries
+        return select_cycle26_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE27:
+        from core.cycle27_best import select_cycle27_entries
+        return select_cycle27_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE28:
+        from core.cycle28_best import select_cycle28_entries
+        return select_cycle28_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE29:
+        from core.cycle29_best import select_cycle29_entries
+        return select_cycle29_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE30:
+        from core.cycle30_best import select_cycle30_entries
+        return select_cycle30_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE31:
+        from core.cycle31_best import select_cycle31_entries
+        return select_cycle31_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE32:
+        from core.cycle32_best import select_cycle32_entries
+        return select_cycle32_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE33:
+        from core.cycle33_best import select_cycle33_entries
+        return select_cycle33_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE34:
+        from core.cycle34_best import select_cycle34_entries
+        return select_cycle34_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE35:
+        from core.cycle35_best import select_cycle35_entries
+        return select_cycle35_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE36:
+        from core.cycle36_best import select_cycle36_entries
+        return select_cycle36_entries(signals, open_symbols=open_symbols)
     from core.cycle12_best import select_cycle12_entries
     return select_cycle12_entries(signals, open_symbols=open_symbols, k=k)
 
@@ -115,6 +294,28 @@ def active_check_hours():
         return (18,)
     if _ACTIVE == SYSTEM_CYCLE24:
         return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE26:
+        return (10, 11, 18)
+    if _ACTIVE == SYSTEM_CYCLE27:
+        return (10, 11, 13)
+    if _ACTIVE == SYSTEM_CYCLE28:
+        return (11, 13, 17)
+    if _ACTIVE == SYSTEM_CYCLE29:
+        return (11, 13, 16)
+    if _ACTIVE == SYSTEM_CYCLE30:
+        return (11, 16, 17)
+    if _ACTIVE == SYSTEM_CYCLE31:
+        return (16, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE32:
+        return (10, 16, 18)
+    if _ACTIVE == SYSTEM_CYCLE33:
+        return (1, 15, 18)
+    if _ACTIVE == SYSTEM_CYCLE34:
+        return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE35:
+        return (1, 15, 18)
+    if _ACTIVE == SYSTEM_CYCLE36:
+        return (1, 10, 11)
     # cycle22 (F1-P4) and cycle18 (C18-A3) share the 4-check schedule
     return (10, 11, 13, 18)
 

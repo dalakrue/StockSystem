@@ -3701,6 +3701,2872 @@ def render_cycle24_download_buttons(st, payload):
         return
 
 
+# ============================================================================
+# Cycle 26 (C26-33, November-only) signals table.
+# Mirrors the Cycle 24 renderer: own session-state keys; the working
+# Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C26_SIG_STATE_KEY = "cycle26_signals_latest_v1"
+_C26_SIG_AGE_KEY = "cycle26_candle_age_txt"
+_C26_SIG_DIAG_KEY = "cycle26_signals_diag_v1"
+_C26_SIG_FAIL_KEY = "cycle26_signals_fail_v1"
+
+
+def _evaluate_c26_window(state, hour_utc, day=None):
+    """Evaluate the 28 Cycle 26 (C26-33) equations for one entry window.
+
+    Calls core.cycle26_best directly (not the signal router) so the result
+    is always the C26 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle26_best import evaluate_cycle26_signals, select_cycle26_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C26_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C26_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle26_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle26_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C26_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c26_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C26 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C26_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c26_mark_fail(window_utc, state):
+    """Record a failed C26 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C26_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C26_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle26_signals_table(st, state):
+    """Cycle 26 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors _render_cycle24_signals_table: on EVERY render, computes the
+    latest C26 entry window <= now (hours 10/11/18 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle26_best import CYCLE26_CHECK_HOURS as _C26_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C26_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C26_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c26_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 26 signals…"):
+                new_payload = _evaluate_c26_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c26_mark_fail(latest_win, state)
+
+        st.markdown("### 🎯 Cycle 26 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 26 entry window — signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C26_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"⚠️ Last Cycle 26 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 26 window's signals have expired after 2 hours — "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
+            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"⚠️ Price data incomplete for this window — only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 26 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C26_SIG_STATE_KEY) if isinstance(state.get(_C26_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle26_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 26 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle26_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 26 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="📥 Download Cycle 26 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle26_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle26")
+            st.download_button(
+                label="📥 Download Cycle 26 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle26_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+# ============================================================================
+# Cycle 27 (C27-01, December-only) signals table.
+# Mirrors the Cycle 26 renderer: own session-state keys; the working
+# Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C27_SIG_STATE_KEY = "cycle27_signals_latest_v1"
+_C27_SIG_AGE_KEY = "cycle27_candle_age_txt"
+_C27_SIG_DIAG_KEY = "cycle27_signals_diag_v1"
+_C27_SIG_FAIL_KEY = "cycle27_signals_fail_v1"
+
+
+def _evaluate_c27_window(state, hour_utc, day=None):
+    """Evaluate the 30 Cycle 27 (C27-01) equations for one entry window.
+
+    Calls core.cycle27_best directly (not the signal router) so the result
+    is always the C27 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle27_best import evaluate_cycle27_signals, select_cycle27_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C27_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C27_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle27_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle27_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C27_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c27_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C27 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C27_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c27_mark_fail(window_utc, state):
+    """Record a failed C27 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C27_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C27_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle27_signals_table(st, state):
+    """Cycle 27 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C26 renderer: on EVERY render, computes the
+    latest C27 entry window <= now (hours 10/11/13 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle27_best import CYCLE27_CHECK_HOURS as _C27_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C27_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C27_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c27_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 27 signals…"):
+                new_payload = _evaluate_c27_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c27_mark_fail(latest_win, state)
+
+        st.markdown("### 🎯 Cycle 27 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 27 entry window — signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C27_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"⚠️ Last Cycle 27 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 27 window's signals have expired after 2 hours — "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
+            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"⚠️ Price data incomplete for this window — only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 27 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C27_SIG_STATE_KEY) if isinstance(state.get(_C27_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle27_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 27 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle27_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 27 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="📥 Download Cycle 27 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle27_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle27")
+            st.download_button(
+                label="📥 Download Cycle 27 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle27_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+# ============================================================================
+# Cycle 28 (C28-30, January-only) signals table.
+# Mirrors the Cycle 27 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C28_SIG_STATE_KEY = "cycle28_signals_latest_v1"
+_C28_SIG_AGE_KEY = "cycle28_candle_age_txt"
+_C28_SIG_DIAG_KEY = "cycle28_signals_diag_v1"
+_C28_SIG_FAIL_KEY = "cycle28_signals_fail_v1"
+
+
+def _evaluate_c28_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 28 (C28-30) equations for one entry window.
+
+    Calls core.cycle28_best directly (not the signal router) so the result
+    is always the C28 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle28_best import evaluate_cycle28_signals, select_cycle28_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C28_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C28_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle28_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle28_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C28_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c28_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C28 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C28_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c28_mark_fail(window_utc, state):
+    """Record a failed C28 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C28_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C28_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle28_signals_table(st, state):
+    """Cycle 28 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C28 entry window <= now (hours 11/13/17 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle28_best import CYCLE28_CHECK_HOURS as _C28_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C28_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C28_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c28_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 28 signals..."):
+                new_payload = _evaluate_c28_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c28_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 28 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 28 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C28_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 28 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 28 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 28 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C28_SIG_STATE_KEY) if isinstance(state.get(_C28_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle28_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 28 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle28_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 28 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 28 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle28_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle28")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 28 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle28_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+
+# ============================================================================
+# Cycle 29 (C29-31, February-only) signals table.
+# Mirrors the Cycle 29 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C29_SIG_STATE_KEY = "cycle29_signals_latest_v1"
+_C29_SIG_AGE_KEY = "cycle29_candle_age_txt"
+_C29_SIG_DIAG_KEY = "cycle29_signals_diag_v1"
+_C29_SIG_FAIL_KEY = "cycle29_signals_fail_v1"
+
+
+def _evaluate_c29_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 29 (C29-31) equations for one entry window.
+
+    Calls core.cycle29_best directly (not the signal router) so the result
+    is always the C29 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle29_best import evaluate_cycle29_signals, select_cycle29_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C29_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C29_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle29_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle29_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C29_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c29_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C29 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C29_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c29_mark_fail(window_utc, state):
+    """Record a failed C29 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C29_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C29_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle29_signals_table(st, state):
+    """Cycle 29 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C29 entry window <= now (hours 11/13/16 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle29_best import CYCLE29_CHECK_HOURS as _C29_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C29_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C29_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c29_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 29 signals..."):
+                new_payload = _evaluate_c29_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c29_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 29 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 29 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C29_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 29 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 29 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 29 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C29_SIG_STATE_KEY) if isinstance(state.get(_C29_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle29_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 29 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle29_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 29 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 29 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle29_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle29")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 29 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle29_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+
+# ============================================================================
+# Cycle 30 (C30-31, March-only) signals table.
+# Mirrors the Cycle 30 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C30_SIG_STATE_KEY = "cycle30_signals_latest_v1"
+_C30_SIG_AGE_KEY = "cycle30_candle_age_txt"
+_C30_SIG_DIAG_KEY = "cycle30_signals_diag_v1"
+_C30_SIG_FAIL_KEY = "cycle30_signals_fail_v1"
+
+
+def _evaluate_c30_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 30 (C30-31) equations for one entry window.
+
+    Calls core.cycle30_best directly (not the signal router) so the result
+    is always the C30 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle30_best import evaluate_cycle30_signals, select_cycle30_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C30_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C30_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle30_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle30_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C30_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c30_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C30 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C30_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c30_mark_fail(window_utc, state):
+    """Record a failed C30 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C30_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C30_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle30_signals_table(st, state):
+    """Cycle 30 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C30 entry window <= now (hours 11/16/17 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle30_best import CYCLE30_CHECK_HOURS as _C30_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C30_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C30_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c30_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 30 signals..."):
+                new_payload = _evaluate_c30_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c30_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 30 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 30 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C30_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 30 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 30 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 30 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C30_SIG_STATE_KEY) if isinstance(state.get(_C30_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle30_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 30 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle30_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 30 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 30 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle30_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle30")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 30 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle30_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+
+# ============================================================================
+# Cycle 31 (C31-29, April-only) signals table.
+# Mirrors the Cycle 31 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C31_SIG_STATE_KEY = "cycle31_signals_latest_v1"
+_C31_SIG_AGE_KEY = "cycle31_candle_age_txt"
+_C31_SIG_DIAG_KEY = "cycle31_signals_diag_v1"
+_C31_SIG_FAIL_KEY = "cycle31_signals_fail_v1"
+
+
+def _evaluate_c31_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 31 (C31-29) equations for one entry window.
+
+    Calls core.cycle31_best directly (not the signal router) so the result
+    is always the C31 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle31_best import evaluate_cycle31_signals, select_cycle31_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C31_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C31_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle31_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle31_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C31_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c31_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C31 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C31_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c31_mark_fail(window_utc, state):
+    """Record a failed C31 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C31_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C31_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle31_signals_table(st, state):
+    """Cycle 31 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C31 entry window <= now (hours 16/17/18 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle31_best import CYCLE31_CHECK_HOURS as _C31_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C31_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C31_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c31_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 31 signals..."):
+                new_payload = _evaluate_c31_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c31_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 31 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 31 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C31_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 31 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 31 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 31 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C31_SIG_STATE_KEY) if isinstance(state.get(_C31_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle31_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 31 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle31_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 31 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 31 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle31_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle31")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 31 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle31_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+
+# ============================================================================
+# Cycle 32 (C32-20, May-only) signals table.
+# Mirrors the Cycle 32 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C32_SIG_STATE_KEY = "cycle32_signals_latest_v1"
+_C32_SIG_AGE_KEY = "cycle32_candle_age_txt"
+_C32_SIG_DIAG_KEY = "cycle32_signals_diag_v1"
+_C32_SIG_FAIL_KEY = "cycle32_signals_fail_v1"
+
+
+def _evaluate_c32_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 32 (C32-20) equations for one entry window.
+
+    Calls core.cycle32_best directly (not the signal router) so the result
+    is always the C32 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle32_best import evaluate_cycle32_signals, select_cycle32_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C32_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C32_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle32_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle32_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C32_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c32_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C32 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C32_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c32_mark_fail(window_utc, state):
+    """Record a failed C32 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C32_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C32_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle32_signals_table(st, state):
+    """Cycle 32 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C32 entry window <= now (hours 10/16/18 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle32_best import CYCLE32_CHECK_HOURS as _C32_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C32_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C32_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c32_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 32 signals..."):
+                new_payload = _evaluate_c32_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c32_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 32 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 32 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C32_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 32 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 32 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 32 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C32_SIG_STATE_KEY) if isinstance(state.get(_C32_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle32_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 32 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle32_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 32 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 32 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle32_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle32")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 32 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle32_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+
+# ============================================================================
+# Cycle 33 (C33-18, June-only) signals table.
+# Mirrors the Cycle 33 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C33_SIG_STATE_KEY = "cycle33_signals_latest_v1"
+_C33_SIG_AGE_KEY = "cycle33_candle_age_txt"
+_C33_SIG_DIAG_KEY = "cycle33_signals_diag_v1"
+_C33_SIG_FAIL_KEY = "cycle33_signals_fail_v1"
+
+
+def _evaluate_c33_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 33 (C33-18) equations for one entry window.
+
+    Calls core.cycle33_best directly (not the signal router) so the result
+    is always the C33 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle33_best import evaluate_cycle33_signals, select_cycle33_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C33_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C33_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle33_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle33_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C33_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c33_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C33 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C33_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c33_mark_fail(window_utc, state):
+    """Record a failed C33 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C33_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C33_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle33_signals_table(st, state):
+    """Cycle 33 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C33 entry window <= now (hours 1/15/18 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle33_best import CYCLE33_CHECK_HOURS as _C33_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C33_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C33_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c33_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 33 signals..."):
+                new_payload = _evaluate_c33_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c33_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 33 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 33 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C33_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 33 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 33 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 33 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C33_SIG_STATE_KEY) if isinstance(state.get(_C33_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle33_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 33 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle33_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 33 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 33 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle33_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle33")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 33 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle33_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+
+# ============================================================================
+# Cycle 34 (C34-17, July-only) signals table.
+# Mirrors the Cycle 34 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C34_SIG_STATE_KEY = "cycle34_signals_latest_v1"
+_C34_SIG_AGE_KEY = "cycle34_candle_age_txt"
+_C34_SIG_DIAG_KEY = "cycle34_signals_diag_v1"
+_C34_SIG_FAIL_KEY = "cycle34_signals_fail_v1"
+
+
+def _evaluate_c34_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 34 (C34-17) equations for one entry window.
+
+    Calls core.cycle34_best directly (not the signal router) so the result
+    is always the C34 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle34_best import evaluate_cycle34_signals, select_cycle34_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C34_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C34_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle34_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle34_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C34_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c34_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C34 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C34_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c34_mark_fail(window_utc, state):
+    """Record a failed C34 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C34_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C34_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle34_signals_table(st, state):
+    """Cycle 34 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C34 entry window <= now (hours 15/17/18 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle34_best import CYCLE34_CHECK_HOURS as _C34_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C34_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C34_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c34_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 34 signals..."):
+                new_payload = _evaluate_c34_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c34_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 34 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 34 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C34_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 34 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 34 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 34 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C34_SIG_STATE_KEY) if isinstance(state.get(_C34_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle34_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 34 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle34_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 34 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 34 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle34_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle34")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 34 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle34_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+
+# ============================================================================
+# Cycle 35 (C35-31, August-only) signals table.
+# Mirrors the Cycle 35 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C35_SIG_STATE_KEY = "cycle35_signals_latest_v1"
+_C35_SIG_AGE_KEY = "cycle35_candle_age_txt"
+_C35_SIG_DIAG_KEY = "cycle35_signals_diag_v1"
+_C35_SIG_FAIL_KEY = "cycle35_signals_fail_v1"
+
+
+def _evaluate_c35_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 35 (C35-31) equations for one entry window.
+
+    Calls core.cycle35_best directly (not the signal router) so the result
+    is always the C35 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle35_best import evaluate_cycle35_signals, select_cycle35_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C35_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C35_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle35_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle35_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C35_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c35_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C35 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C35_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c35_mark_fail(window_utc, state):
+    """Record a failed C35 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C35_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C35_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle35_signals_table(st, state):
+    """Cycle 35 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C35 entry window <= now (hours 1/15/18 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle35_best import CYCLE35_CHECK_HOURS as _C35_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C35_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C35_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c35_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 35 signals..."):
+                new_payload = _evaluate_c35_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c35_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 35 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 35 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C35_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 35 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 35 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 35 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C35_SIG_STATE_KEY) if isinstance(state.get(_C35_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle35_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 35 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle35_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 35 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 35 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle35_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle35")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 35 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle35_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
+
+
+# ============================================================================
+# Cycle 36 (C36-40, September-only) signals table.
+# Mirrors the Cycle 36 renderer: own session-state keys; the working
+# Cycle 27 / Cycle 26 / Cycle 24 / Cycle 22 code is NOT refactored.
+# ============================================================================
+_C36_SIG_STATE_KEY = "cycle36_signals_latest_v1"
+_C36_SIG_AGE_KEY = "cycle36_candle_age_txt"
+_C36_SIG_DIAG_KEY = "cycle36_signals_diag_v1"
+_C36_SIG_FAIL_KEY = "cycle36_signals_fail_v1"
+
+
+def _evaluate_c36_window(state, hour_utc, day=None):
+    """Evaluate the 24 Cycle 36 (C36-40) equations for one entry window.
+
+    Calls core.cycle36_best directly (not the signal router) so the result
+    is always the C36 system regardless of the active mode. Exactly 1
+    entry per check (top-1 by score). Stores the result in session state
+    keyed by window; returns the payload dict or None.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle36_best import evaluate_cycle36_signals, select_cycle36_entries
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        day = (_pd.Timestamp(day).normalize() if day is not None
+               else _pd.Timestamp(now_utc).normalize())
+        check_label = day + _pd.Timedelta(hours=int(hour_utc), minutes=30)
+        need = [check_label - _pd.Timedelta(hours=1, minutes=30),
+                check_label - _pd.Timedelta(minutes=30)]
+        frames, latest_ts, diag = _fetch_c22_frames(state, need_candles=need)
+        if latest_ts is not None:
+            try:
+                age_min = (now_utc - latest_ts.to_pydatetime()
+                           if hasattr(latest_ts, "to_pydatetime") else now_utc - latest_ts
+                           ).total_seconds() / 60.0
+                if age_min >= 0:
+                    state[_C36_SIG_AGE_KEY] = f"{age_min:.0f}m old"
+            except Exception:
+                pass
+        if not frames:
+            try:
+                state[_C36_SIG_DIAG_KEY] = dict(diag or {})
+            except Exception:
+                pass
+            return None
+        try:
+            sig = evaluate_cycle36_signals(frames, check_label)
+        except Exception:
+            sig = _pd.DataFrame()
+        try:
+            entries = select_cycle36_entries(sig, open_symbols=())
+        except Exception:
+            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
+        if not isinstance(entries, _pd.DataFrame):
+            entries = _pd.DataFrame()
+        try:
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        payload = {
+            "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+            "window_mmt": _c22_window_mmt_label(hour_utc),
+            "evaluated_at_utc": now_utc,
+            "n_symbols": len(frames),
+            "n_evaluable": n_evaluable,
+            "signals": _c22_signals_to_display(entries),
+        }
+        try:
+            state[_C36_SIG_STATE_KEY] = payload
+        except Exception:
+            pass
+        return payload
+    except Exception:
+        return None
+
+
+def _c36_recent_fail(window_utc, state, cool_minutes=10):
+    """True if this C36 window's evaluation failed within the cooldown."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C36_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            return False
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        ts = fails.get(key)
+        if ts is None:
+            return False
+        failed_at = _pd.Timestamp(ts)
+        now = _pd.Timestamp(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None))
+        return (now - failed_at).total_seconds() < cool_minutes * 60
+    except Exception:
+        return False
+
+
+def _c36_mark_fail(window_utc, state):
+    """Record a failed C36 evaluation for this window (starts the cooldown)."""
+    import datetime as _dt
+    import pandas as _pd
+    try:
+        fails = state.get(_C36_SIG_FAIL_KEY)
+        if not isinstance(fails, dict):
+            fails = {}
+        key = _pd.Timestamp(window_utc).strftime("%Y-%m-%dT%H:%M")
+        fails[key] = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None).isoformat()
+        state[_C36_SIG_FAIL_KEY] = fails
+    except Exception:
+        pass
+
+
+def _render_cycle36_signals_table(st, state):
+    """Cycle 36 signals table: backfilled + persisted, exactly 1 entry/check.
+
+    Mirrors the C27 renderer: on EVERY render, computes the
+    latest C36 entry window <= now (hours 1/10/11 UTC); if no signals
+    are stored for it and H1 data is loaded, the window is evaluated
+    IMMEDIATELY (backtest-identical), stored, displayed. The most recent
+    stored window stays visible for UP TO 2 HOURS after the window time,
+    or until a newer window arrives -- whichever is first.
+    Returns the payload dict (or None) for the download buttons.
+    """
+    import datetime as _dt
+    import pandas as _pd
+    from core.cycle36_best import CYCLE36_CHECK_HOURS as _C36_CHECK_HOURS
+    try:
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        payload = state.get(_C36_SIG_STATE_KEY)
+        if not isinstance(payload, dict):
+            payload = None
+
+        stored_win = None
+        if payload is not None:
+            try:
+                stored_win = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                stored_win = None
+
+        latest_win = _latest_entry_window_utc(now_utc, hours=_C36_CHECK_HOURS)
+        fresh_this_window = False
+        if (latest_win is not None
+                and (stored_win is None or stored_win != latest_win)
+                and not _c36_recent_fail(latest_win, state)
+                and _c22_data_loaded(state)):
+            with st.spinner("Evaluating Cycle 36 signals..."):
+                new_payload = _evaluate_c36_window(
+                    state, int(latest_win.hour), day=latest_win.normalize())
+            if new_payload is not None:
+                payload = new_payload
+                fresh_this_window = True
+            else:
+                _c36_mark_fail(latest_win, state)
+
+        st.markdown("### \U0001F3AF Cycle 36 signals")
+        win_ts = None
+        if payload is not None:
+            try:
+                win_ts = _pd.Timestamp(payload.get("window_utc")).tz_localize(None)
+            except Exception:
+                win_ts = None
+        if payload is None or win_ts is None:
+            st.info("Waiting for the first Cycle 36 entry window -- signals will "
+                    "appear here and stay visible for up to 2 hours.")
+            try:
+                diag = state.get(_C36_SIG_DIAG_KEY)
+            except Exception:
+                diag = None
+            if isinstance(diag, dict) and diag.get("frames", 0) == 0 and \
+                    (diag.get("cache", 0) or diag.get("live", 0) or diag.get("live_errors")):
+                errs = diag.get("live_errors") or []
+                detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
+                st.warning(
+                    f"\u26a0\ufe0f Last Cycle 36 evaluation built 0 price frames "
+                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"{detail} Retrying automatically.")
+            return None
+        age_min = int((now_utc - win_ts).total_seconds() // 60)
+        if age_min > 120:
+            st.info("The last Cycle 36 window's signals have expired after 2 hours -- "
+                    "waiting for the next entry window.")
+            return None
+        expires_in = max(0, 120 - age_min)
+        try:
+            mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
+        except Exception:
+            mins_ago = 0
+        live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
+        st.markdown(
+            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
+            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+            f"visible {expires_in} more min{live_tag}</div>",
+            unsafe_allow_html=True,
+        )
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            n_eval = payload.get("n_evaluable", 20)
+            if n_eval < 10:
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                         f"had the needed candles. This is a data problem, not a signal. "
+                         f"Refreshing automatically; if it persists, check the data connection.")
+            else:
+                st.info("No Cycle 36 equations fired in this window.")
+        else:
+            st.dataframe(disp, use_container_width=True, hide_index=True)
+        return payload
+    except Exception:
+        return state.get(_C36_SIG_STATE_KEY) if isinstance(state.get(_C36_SIG_STATE_KEY), dict) else None
+
+
+def render_cycle36_download_buttons(st, payload):
+    """CSV + Excel downloads for the displayed Cycle 36 signals."""
+    try:
+        import pandas as _pd
+        if not isinstance(payload, dict):
+            return
+        disp = payload.get("signals")
+        if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+            return
+        export = disp.copy()
+        export["Window MMT"] = payload.get("window_mmt", "")
+        try:
+            export["Evaluated (UTC)"] = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            export["Evaluated (UTC)"] = ""
+        fname_base = f"cycle36_signals_{payload.get('window_mmt', 'na').replace(':', '')}MMT"
+        try:
+            csv = export.to_csv(index=False, encoding="utf-8")
+        except Exception as exc:
+            st.error(f"Cycle 36 CSV could not be prepared: {type(exc).__name__}: {exc}")
+            csv = None
+        if csv is not None:
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 36 signals CSV",
+                data=csv,
+                file_name=f"{fname_base}.csv",
+                mime="text/csv",
+                key="dl_cycle36_csv_v1",
+            )
+        try:
+            from io import BytesIO as _Bio
+            bio = _Bio()
+            with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
+                export.to_excel(_xw, index=False, sheet_name="Cycle36")
+            st.download_button(
+                label="\U0001F4E5 Download Cycle 36 signals Excel",
+                data=bio.getvalue(),
+                file_name=f"{fname_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_cycle36_xlsx_v1",
+            )
+        except Exception:
+            pass
+    except Exception:
+        return
+
+
 def _auto_refresh_field3(st: Any, interval_ms: int = 30_000) -> None:
     """Rerun the Field 3 page every 30 s so the countdown and Cycle 22
     signals update without a manual reload.
@@ -3730,13 +6596,14 @@ def render_multisymbol_regime_summary(
     """Slim Field 3 page: banner + symbols box + signals table.
 
     The old monthly S1-S240 regime ranking table has been removed from the
-    UI entirely. Default mode shows the Cycle 24 (R4A01) table -- 24
-    equations, 3 check hours (15/17/18 UTC = 21:30/23:30/00:30 MMT),
-    exactly 1 entry per check; the "Signal system" dropdown above the
-    banner switches back to the Cycle 22 table (26 equations, ATR-based
-    TP/SL, backtest-matched). Each entry window's signals
-    are persisted in session state and stay visible for up to 2 hours
-    (or until the next window arrives).
+    UI entirely. The "Signal system" dropdown above the banner selects
+    among 12 month-specific systems (Cycle 28 January .. Cycle 36
+    September, Cycle 24 October, Cycle 26 November, Cycle 27 December)
+    plus the broad Cycle 22; the selector auto-defaults to the current
+    month's system. Each monthly system runs 24 equations at 3 check hours
+    with exactly 1 entry per check; Cycle 22 keeps its 26-equation table.
+    Each entry window's signals are persisted in session state and stay
+    visible for up to 2 hours (or until the next window arrives).
     """
     _auto_refresh_field3(st)
     from ui.monthly_equation_panel import render_monthly_panel
@@ -3753,21 +6620,46 @@ def render_multisymbol_regime_summary(
         )
     )
 
-    # Signal-system selector. The router default is Cycle 24 (R4A01), but
-    # the user can switch back to Cycle 22 (F1-P4). Only the two systems
-    # with dedicated, verified table renderers are offered here (cycle18 /
-    # ft-c01 have no table renderer, so offering them would show the wrong
-    # table). The choice is applied to the router on EVERY render, BEFORE
-    # the banner and the signals table read active_system().
+    # Signal-system selector. All 12 monthly systems (Cycle 28 January ..
+    # Cycle 36 September, Cycle 24 October, Cycle 26 November, Cycle 27
+    # December) plus the broad Cycle 22.
+    # Month-aware auto-default: Jan->"cycle28", Feb->"cycle29",
+    # Mar->"cycle30", Apr->"cycle31", May->"cycle32", Jun->"cycle33",
+    # Jul->"cycle34", Aug->"cycle35", Sep->"cycle36", Oct->"cycle24",
+    # Nov->"cycle26", Dec->"cycle27".
+    # Only the thirteen systems with dedicated, verified table renderers are
+    # offered here (cycle18 / ft-c01 have no table renderer, so offering
+    # them would show the wrong table). The choice is applied to the router
+    # on EVERY render, BEFORE the banner and the signals table read
+    # active_system().
     try:
+        import datetime as _dtm
         from core.signal_mode import set_active_system as _set_active_system
         if "signal_system" not in st.session_state:
-            st.session_state["signal_system"] = "cycle24"
+            _mnow = _dtm.datetime.now(_dtm.timezone.utc).month
+            _MONTH_SYSTEM = {1: "cycle28", 2: "cycle29", 3: "cycle30",
+                             4: "cycle31", 5: "cycle32", 6: "cycle33",
+                             7: "cycle34", 8: "cycle35", 9: "cycle36",
+                             10: "cycle24", 11: "cycle26", 12: "cycle27"}
+            st.session_state["signal_system"] = _MONTH_SYSTEM.get(_mnow, "cycle24")
         _sys_choice = st.selectbox(
             "Signal system",
-            options=["cycle24", "cycle22"],
+            options=["cycle28", "cycle29", "cycle30", "cycle31", "cycle32",
+                     "cycle33", "cycle34", "cycle35", "cycle36",
+                     "cycle24", "cycle26", "cycle27", "cycle22"],
             format_func=lambda v: (
-                "Cycle 24 (R4A01) — October system" if v == "cycle24"
+                "Cycle 28 (C28-30) — January system" if v == "cycle28"
+                else "Cycle 29 (C29-31) — February system" if v == "cycle29"
+                else "Cycle 30 (C30-31) — March system" if v == "cycle30"
+                else "Cycle 31 (C31-29) — April system" if v == "cycle31"
+                else "Cycle 32 (C32-20) — May system" if v == "cycle32"
+                else "Cycle 33 (C33-18) — June system" if v == "cycle33"
+                else "Cycle 34 (C34-17) — July system" if v == "cycle34"
+                else "Cycle 35 (C35-31) — August system" if v == "cycle35"
+                else "Cycle 36 (C36-40) — September system" if v == "cycle36"
+                else "Cycle 24 (R4A01) — October system" if v == "cycle24"
+                else "Cycle 26 (C26-33) — November system" if v == "cycle26"
+                else "Cycle 27 (C27-01) — December system" if v == "cycle27"
                 else "Cycle 22 (F1-P4) — broad system"),
             key="signal_system",
         )
@@ -3777,16 +6669,74 @@ def render_multisymbol_regime_summary(
 
     try:
         from core.signal_mode import active_system as _active_system
-        _mode_is_c24 = (_active_system() == "cycle24")
+        _active = _active_system()
+        _mode_is_c28 = (_active == "cycle28")
+        _mode_is_c29 = (_active == "cycle29")
+        _mode_is_c30 = (_active == "cycle30")
+        _mode_is_c31 = (_active == "cycle31")
+        _mode_is_c32 = (_active == "cycle32")
+        _mode_is_c33 = (_active == "cycle33")
+        _mode_is_c34 = (_active == "cycle34")
+        _mode_is_c35 = (_active == "cycle35")
+        _mode_is_c36 = (_active == "cycle36")
+        _mode_is_c27 = (_active == "cycle27")
+        _mode_is_c26 = (_active == "cycle26")
+        _mode_is_c24 = (_active == "cycle24")
     except Exception:
+        _mode_is_c28 = False
+        _mode_is_c29 = False
+        _mode_is_c30 = False
+        _mode_is_c31 = False
+        _mode_is_c32 = False
+        _mode_is_c33 = False
+        _mode_is_c34 = False
+        _mode_is_c35 = False
+        _mode_is_c36 = False
+        _mode_is_c27 = False
+        _mode_is_c26 = False
         _mode_is_c24 = False
     _render_cycle12_check_banner(
-        st, state.get(_C24_SIG_AGE_KEY if _mode_is_c24 else _C22_SIG_AGE_KEY))
+        st, state.get(_C36_SIG_AGE_KEY if _mode_is_c36
+                      else _C35_SIG_AGE_KEY if _mode_is_c35
+                      else _C34_SIG_AGE_KEY if _mode_is_c34
+                      else _C33_SIG_AGE_KEY if _mode_is_c33
+                      else _C32_SIG_AGE_KEY if _mode_is_c32
+                      else _C31_SIG_AGE_KEY if _mode_is_c31
+                      else _C30_SIG_AGE_KEY if _mode_is_c30
+                      else _C29_SIG_AGE_KEY if _mode_is_c29
+                      else _C28_SIG_AGE_KEY if _mode_is_c28
+                      else _C27_SIG_AGE_KEY if _mode_is_c27
+                      else _C26_SIG_AGE_KEY if _mode_is_c26
+                      else _C24_SIG_AGE_KEY if _mode_is_c24
+                      else _C22_SIG_AGE_KEY))
     _render_symbols_loaded_box(st, context)
-    # Signals table follows the active system: Cycle 24 renders its own
-    # table (own state keys, 3 check hours, exactly 1 entry/check);
-    # every other mode keeps the proven Cycle 22 table untouched.
-    if _mode_is_c24:
+    # Signals table follows the active system: Cycle 28, Cycle 27, Cycle 26
+    # and Cycle 24 render their own tables (own state keys, 3 check hours
+    # each, exactly 1 entry/check); every other mode keeps the proven
+    # Cycle 22 table untouched.
+    if _mode_is_c36:
+        payload = _render_cycle36_signals_table(st, state)
+    elif _mode_is_c35:
+        payload = _render_cycle35_signals_table(st, state)
+    elif _mode_is_c34:
+        payload = _render_cycle34_signals_table(st, state)
+    elif _mode_is_c33:
+        payload = _render_cycle33_signals_table(st, state)
+    elif _mode_is_c32:
+        payload = _render_cycle32_signals_table(st, state)
+    elif _mode_is_c31:
+        payload = _render_cycle31_signals_table(st, state)
+    elif _mode_is_c30:
+        payload = _render_cycle30_signals_table(st, state)
+    elif _mode_is_c29:
+        payload = _render_cycle29_signals_table(st, state)
+    elif _mode_is_c28:
+        payload = _render_cycle28_signals_table(st, state)
+    elif _mode_is_c27:
+        payload = _render_cycle27_signals_table(st, state)
+    elif _mode_is_c26:
+        payload = _render_cycle26_signals_table(st, state)
+    elif _mode_is_c24:
         payload = _render_cycle24_signals_table(st, state)
     else:
         payload = _render_cycle22_signals_table(st, state)
@@ -3794,7 +6744,29 @@ def render_multisymbol_regime_summary(
     # Downloads sit BELOW the signals table (full-width, mobile-friendly).
     if payload is not None:
         st.markdown("<div style='margin-top:4px;'></div>", unsafe_allow_html=True)
-        if _mode_is_c24:
+        if _mode_is_c36:
+            render_cycle36_download_buttons(st, payload)
+        elif _mode_is_c35:
+            render_cycle35_download_buttons(st, payload)
+        elif _mode_is_c34:
+            render_cycle34_download_buttons(st, payload)
+        elif _mode_is_c33:
+            render_cycle33_download_buttons(st, payload)
+        elif _mode_is_c32:
+            render_cycle32_download_buttons(st, payload)
+        elif _mode_is_c31:
+            render_cycle31_download_buttons(st, payload)
+        elif _mode_is_c30:
+            render_cycle30_download_buttons(st, payload)
+        elif _mode_is_c29:
+            render_cycle29_download_buttons(st, payload)
+        elif _mode_is_c28:
+            render_cycle28_download_buttons(st, payload)
+        elif _mode_is_c27:
+            render_cycle27_download_buttons(st, payload)
+        elif _mode_is_c26:
+            render_cycle26_download_buttons(st, payload)
+        elif _mode_is_c24:
             render_cycle24_download_buttons(st, payload)
         else:
             render_cycle22_download_buttons(st, payload)

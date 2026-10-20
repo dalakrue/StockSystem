@@ -30,6 +30,29 @@ May->cycle32, Jun->cycle33, Jul->cycle34, Aug->cycle35, Sep->cycle36,
 Oct->cycle24, Nov->cycle26, Dec->cycle27. Each new engine passed a
 bit-exact replay vs its research discovery log (0 mismatches).
 
+2026-10-21 update: Cycle 48 (C48-02, December-only: 30 eq, hours 10/11/13
+UTC, exactly 1 entry/check) added as SYSTEM_CYCLE48. C48-02 won the
+Cycles 37-48 improvement program (20 end-to-end processes judged at the
+2.5-pip primary cost): weak ratings 0 vs C27-01's 1, unseen net@2.5 +483.7,
+win 95.45%, 11/12 checks -- it REPLACES cycle27 as December's default.
+Cycle 27 remains selectable via set_active_system('cycle27'). The UI
+selector now auto-defaults December to cycle48.
+
+2026-10-21 update (user override promotions from the same program):
+Cycle 42 (C42-18, June-only: 24 eq, hours 1/15/18 UTC, exactly 1
+entry/check) added as SYSTEM_CYCLE42 -- a one-change surgery of C33-18
+(EURUSD h1 TREND fallback replaced by an AUDUSD one); weak 1 vs 3 at
+2.5-pip, unseen net@2.5 +477.7, win 95.24%; it had failed the program's
+leftover gate (82.67% vs 87.25%) and the user waived that gate. It
+REPLACES cycle33 as June's default; cycle33 remains selectable.
+Cycle 44 (C44-15, August-only: 9 List D equations, USD majors, hours
+1/13/16 UTC, up to 2 entries/check, no fallbacks) added as
+SYSTEM_CYCLE44; weak 2 vs 8 at 2.5-pip, win 100%, leftover 100%; it had
+failed the program's frequency gate (0.62 entries/day) and the user
+waived that gate. It REPLACES cycle35 as August's default; cycle35
+remains selectable. The UI selector now auto-defaults June to cycle42
+and August to cycle44.
+
 C18-A3 (core/cycle18_best.py) and FT-C01 (core/cycle12_best.py) are KEPT
 byte-identical and remain available as selectable modes via
 set_active_system('cycle18' / 'ft-c01').
@@ -83,6 +106,18 @@ SYSTEM_CYCLE35 = "cycle35"   # C35-31: 24 eq (15 mined mom/atr + 9 TREND fallbac
 SYSTEM_CYCLE36 = "cycle36"   # C36-40: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
                              # hours (1,10,11) UTC, exactly 1 entry/check
                              # (September-only research; 10/12 checks, best-nearly pick)
+SYSTEM_CYCLE48 = "cycle48"   # C48-02: 30 eq (18 mined mom/atr + 12 TREND fallbacks),
+                             # hours (10,11,13) UTC, exactly 1 entry/check
+                             # (December-only; improvement-program winner at 2.5-pip:
+                             # weak 0, 11/12 checks; replaces C27-01 as December default)
+SYSTEM_CYCLE42 = "cycle42"   # C42-18: 24 eq (15 mined mom/atr + 9 TREND fallbacks),
+                             # hours (1,15,18) UTC, exactly 1 entry/check
+                             # (June-only; C33-18 surgery, user-override promotion
+                             # at 2.5-pip: weak 1, win 95.24%; replaces C33-18)
+SYSTEM_CYCLE44 = "cycle44"   # C44-15: 9 eq (all book List D, USD majors, no fallbacks),
+                             # hours (1,13,16) UTC, up to 2 entries/check
+                             # (August-only; user-override promotion at 2.5-pip:
+                             # weak 2, win 100%, 0.62 entries/day; replaces C35-31)
 
 _ACTIVE = SYSTEM_CYCLE24     # default: Cycle 24 (R4A01), per user decision 2026-10-19
 
@@ -90,18 +125,21 @@ _ACTIVE = SYSTEM_CYCLE24     # default: Cycle 24 (R4A01), per user decision 2026
 def set_active_system(name: str) -> str:
     """Switch live-signal system. name in {'cycle22', 'cycle18', 'ft-c01',
     'cycle24', 'cycle26', 'cycle27', 'cycle28', 'cycle29', 'cycle30',
-    'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35', 'cycle36'}.
+    'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35', 'cycle36',
+    'cycle48', 'cycle42', 'cycle44'}.
     Returns the newly active system name."""
     global _ACTIVE
     n = str(name).strip().lower()
     if n not in (SYSTEM_CYCLE22, SYSTEM_CYCLE18, SYSTEM_FTC01, SYSTEM_CYCLE24,
                  SYSTEM_CYCLE26, SYSTEM_CYCLE27, SYSTEM_CYCLE28, SYSTEM_CYCLE29,
                  SYSTEM_CYCLE30, SYSTEM_CYCLE31, SYSTEM_CYCLE32, SYSTEM_CYCLE33,
-                 SYSTEM_CYCLE34, SYSTEM_CYCLE35, SYSTEM_CYCLE36):
+                 SYSTEM_CYCLE34, SYSTEM_CYCLE35, SYSTEM_CYCLE36, SYSTEM_CYCLE48,
+                 SYSTEM_CYCLE42, SYSTEM_CYCLE44):
         raise ValueError(
             f"unknown system {name!r}; choose 'cycle22', 'cycle18', 'ft-c01', "
             f"'cycle24', 'cycle26', 'cycle27', 'cycle28', 'cycle29', 'cycle30', "
-            f"'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35' or 'cycle36'")
+            f"'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35', 'cycle36', "
+            f"'cycle48', 'cycle42' or 'cycle44'")
     _ACTIVE = n
     return _ACTIVE
 
@@ -134,6 +172,24 @@ def describe_active() -> str:
                 "entries 10:00/11:00/13:00 UTC "
                 "(16:30/17:30/19:30 MMT), exactly 1 entry/check -- "
                 "December unseen +442.6 pips / RoMAD 5.45 / win 92.42% (11/12 checks, best-nearly)")
+    if _ACTIVE == SYSTEM_CYCLE48:
+        return ("cycle48 (C48-02): 30 equations (18 mined + 12 TREND fallbacks), "
+                "entries 10:00/11:00/13:00 UTC "
+                "(16:30/17:30/19:30 MMT), exactly 1 entry/check -- "
+                "December @2.5-pip net +483.7 pips / win 95.45% / weak 0 "
+                "(11/12 checks; improvement-program winner, replaced C27-01)")
+    if _ACTIVE == SYSTEM_CYCLE42:
+        return ("cycle42 (C42-18): 24 equations (15 mined + 9 TREND fallbacks), "
+                "entries 01:00/15:00/18:00 UTC "
+                "(07:30/21:30/00:30 MMT), exactly 1 entry/check -- "
+                "June @2.5-pip net +477.7 pips / win 95.24% / weak 1 "
+                "(10/12 checks; user-override promotion, replaced C33-18)")
+    if _ACTIVE == SYSTEM_CYCLE44:
+        return ("cycle44 (C44-15): 9 equations (all book List D, USD majors, "
+                "no fallbacks), entries 01:00/13:00/16:00 UTC "
+                "(07:30/19:30/22:30 MMT), up to 2 entries/check -- "
+                "August @2.5-pip net +155.0 pips / win 100% / weak 2 "
+                "(9/12 checks; user-override promotion, replaced C35-31)")
     if _ACTIVE == SYSTEM_CYCLE28:
         return ("cycle28 (C28-30): 24 equations (15 mined + 9 TREND fallbacks, "
                 "per-symbol tuned), entries 11:00/13:00/17:00 UTC "
@@ -227,6 +283,15 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE36:
         from core.cycle36_best import evaluate_cycle36_signals
         return evaluate_cycle36_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE48:
+        from core.cycle48_best import evaluate_cycle48_signals
+        return evaluate_cycle48_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE42:
+        from core.cycle42_best import evaluate_cycle42_signals
+        return evaluate_cycle42_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE44:
+        from core.cycle44_best import evaluate_cycle44_signals
+        return evaluate_cycle44_signals(frames, check_time_utc)
     from core.cycle12_best import evaluate_cycle12_signals
     return evaluate_cycle12_signals(frames, check_time_utc)
 
@@ -280,6 +345,15 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE36:
         from core.cycle36_best import select_cycle36_entries
         return select_cycle36_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE48:
+        from core.cycle48_best import select_cycle48_entries
+        return select_cycle48_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE42:
+        from core.cycle42_best import select_cycle42_entries
+        return select_cycle42_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE44:
+        from core.cycle44_best import select_cycle44_entries
+        return select_cycle44_entries(signals, open_symbols=open_symbols)
     from core.cycle12_best import select_cycle12_entries
     return select_cycle12_entries(signals, open_symbols=open_symbols, k=k)
 
@@ -316,6 +390,12 @@ def active_check_hours():
         return (1, 15, 18)
     if _ACTIVE == SYSTEM_CYCLE36:
         return (1, 10, 11)
+    if _ACTIVE == SYSTEM_CYCLE48:
+        return (10, 11, 13)
+    if _ACTIVE == SYSTEM_CYCLE42:
+        return (1, 15, 18)
+    if _ACTIVE == SYSTEM_CYCLE44:
+        return (1, 13, 16)
     # cycle22 (F1-P4) and cycle18 (C18-A3) share the 4-check schedule
     return (10, 11, 13, 18)
 

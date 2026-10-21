@@ -508,6 +508,7 @@ class MarketDataOrchestrator:
         provider: str,
         provider_symbol: str,
         status: str,
+        include_forming: bool = False,
     ) -> tuple[pd.DataFrame, str, dict[str, Any]]:
         message = ""
         frame = raw
@@ -530,9 +531,17 @@ class MarketDataOrchestrator:
             frame, symbol=symbol, timeframe=timeframe, provider=provider,
             provider_symbol=provider_symbol, source_status=status,
         )
-        valid = normalized[(normalized["validation_status"] == "VALID") & normalized["is_complete"].astype(bool)]
-        if valid.empty:
-            raise RuntimeError(f"{provider} returned no complete valid candles")
+        if include_forming:
+            # Forming-aware callers (live-signal panels) need the still-
+            # forming candle too; every other caller keeps completed-only.
+            valid = normalized[normalized["validation_status"] == "VALID"]
+            completed = valid[valid["is_complete"].astype(bool)]
+            if completed.empty:
+                raise RuntimeError(f"{provider} returned no complete valid candles")
+        else:
+            valid = normalized[(normalized["validation_status"] == "VALID") & normalized["is_complete"].astype(bool)]
+            if valid.empty:
+                raise RuntimeError(f"{provider} returned no complete valid candles")
         return valid, message, metadata
 
     def fetch(
@@ -546,24 +555,43 @@ class MarketDataOrchestrator:
         force_live: bool = False,
         essential: bool = False,
         disabled_providers: Collection[str] | None = None,
+        include_forming: bool = False,
     ) -> MarketDataResult:
         state = state if isinstance(state, Mapping) else {}
         canonical_symbol = normalize_symbol(symbol)
         tf = normalize_timeframe(timeframe)
         expected = latest_completed_candle(timeframe=tf)
-        cached = self.repository.load(canonical_symbol, tf, limit=bars, completed_only=True)
+        cached = self.repository.load(canonical_symbol, tf, limit=bars,
+                                      completed_only=not include_forming)
+        cached_completed = cached
+        if include_forming and not cached.empty and "is_complete" in cached.columns:
+            cached_completed = cached[cached["is_complete"].astype(bool)]
         cache_current = False
-        if not cached.empty:
-            latest = pd.to_datetime(cached["open_time"], errors="coerce", utc=True).max()
+        if not cached_completed.empty:
+            latest = pd.to_datetime(cached_completed["open_time"], errors="coerce", utc=True).max()
             cache_current = pd.notna(latest) and pd.Timestamp(latest) >= pd.Timestamp(expected)
+        # The live-signal evaluators enter at the open of the FORMING candle
+        # (backtest-matched), so a forming-aware caller also needs that candle
+        # in the returned frame. Completed-only persistence could never serve
+        # it (upsert rejected incomplete rows and every load here filtered
+        # them out), which silently starved every entry-window evaluation.
+        forming_present = True
+        if include_forming:
+            forming_present = False
+            if not cached.empty:
+                newest = pd.to_datetime(cached["open_time"], errors="coerce", utc=True).max()
+                # The forming candle opens strictly after the last completed
+                # candle's open (``expected``), whatever the timeframe is.
+                if pd.notna(newest):
+                    forming_present = pd.Timestamp(newest) > pd.Timestamp(expected)
         from core.timeframe_window_contract_20260706 import minimum_calculation_candles
         minimum_history = min(max(1, int(bars)), int(minimum_calculation_candles(tf, "higher")))
-        cache_sufficient = int(len(cached)) >= minimum_history
+        cache_sufficient = int(len(cached_completed)) >= minimum_history
         # A current *and complete* validated local series is the same canonical
         # input all fields should reuse.  A one-candle/current cache must not
         # suppress the live history request and later appear as 100%-processed
         # but insufficient in Field 10.
-        if cache_current and cache_sufficient and not force_live:
+        if cache_current and cache_sufficient and not force_live and forming_present:
             return self._cached_result(canonical_symbol, tf, cached, run_id=run_id, current=True)
 
         attempts: list[dict[str, Any]] = []
@@ -651,6 +679,7 @@ class MarketDataOrchestrator:
                     frame, message, metadata = self._normalize_adapter_result(
                         raw, symbol=canonical_symbol, timeframe=tf, provider=provider,
                         provider_symbol=provider_symbol, status=provider_status,
+                        include_forming=include_forming,
                     )
                     provider_key_alias = str(metadata.get("provider_key_alias") or metadata.get("actual_key_name") or "").strip() or None
                     if provider_key_alias:
@@ -664,15 +693,20 @@ class MarketDataOrchestrator:
                             str(reservation["request_id"]), response_status="SUCCESS",
                             http_status=200, retry_count=provider_attempt,
                         )
-                    persisted = self.repository.upsert(frame, run_id=run_id, require_complete=True)
+                    persisted = self.repository.upsert(
+                        frame, run_id=run_id, require_complete=not include_forming)
                     # A provider may return only the newest page even when the
                     # repository already contains older validated candles.  The
                     # child publication contract needs the complete causal
                     # history, not just the last response page.  Reloading after
                     # the atomic upsert combines both without synthesizing or
-                    # borrowing any price from another symbol.
+                    # borrowing any price from another symbol. Forming-aware
+                    # callers also persist + reload the still-forming candle
+                    # (stored is_complete=0; the completed version replaces it
+                    # on a later fetch by the repository's quality rule).
                     combined = self.repository.load(
-                        canonical_symbol, tf, limit=int(bars), completed_only=True,
+                        canonical_symbol, tf, limit=int(bars),
+                        completed_only=not include_forming,
                     )
                     available = combined if not combined.empty and len(combined) >= len(frame) else frame
                     attempt.update({
@@ -782,7 +816,8 @@ class MarketDataOrchestrator:
                         continue
                     break
 
-        cached = self.repository.load(canonical_symbol, tf, limit=bars, completed_only=True)
+        cached = self.repository.load(canonical_symbol, tf, limit=bars,
+                                      completed_only=not include_forming)
         if not cached.empty:
             result = self._cached_result(canonical_symbol, tf, cached, run_id=run_id, current=False)
             result.attempts = attempts
@@ -808,11 +843,24 @@ class MarketDataOrchestrator:
             validation_status="INSUFFICIENT", run_id=run_id,
         )
 
+    @staticmethod
+    def _latest_completed_open(frame: pd.DataFrame) -> Any:
+        """Newest open_time among COMPLETED rows (a forming row must never be
+        reported as the latest completed candle)."""
+        if frame is None or frame.empty or "open_time" not in frame.columns:
+            return pd.NaT
+        sub = frame
+        if "is_complete" in frame.columns:
+            done = frame[frame["is_complete"].astype(bool)]
+            if not done.empty:
+                sub = done
+        return pd.to_datetime(sub["open_time"], errors="coerce", utc=True).max()
+
     def _live_result(self, symbol: str, timeframe: str, frame: pd.DataFrame, provider: str, provider_symbol: str,
                      message: str, attempts: list[dict[str, Any]], run_id: str, *,
                      status: str | None = None, primary_provider: str = TWELVE_POOL_PROVIDER,
                      provider_key_alias: str | None = None) -> MarketDataResult:
-        latest = pd.to_datetime(frame["open_time"], errors="coerce", utc=True).max()
+        latest = self._latest_completed_open(frame)
         age = max(0.0, (pd.Timestamp.now(tz="UTC") - pd.Timestamp(latest)).total_seconds()) if pd.notna(latest) else None
         return MarketDataResult(
             ok=True, symbol=symbol, timeframe=timeframe, frame=frame,
@@ -826,7 +874,7 @@ class MarketDataOrchestrator:
         )
 
     def _cached_result(self, symbol: str, timeframe: str, frame: pd.DataFrame, *, run_id: str, current: bool) -> MarketDataResult:
-        latest = pd.to_datetime(frame["open_time"], errors="coerce", utc=True).max()
+        latest = self._latest_completed_open(frame)
         age = max(0.0, (pd.Timestamp.now(tz="UTC") - pd.Timestamp(latest)).total_seconds()) if pd.notna(latest) else None
         provider = str(frame.iloc[-1].get("provider") or "LOCAL_VALID_CACHE")
         provider_key_alias = str(frame.iloc[-1].get("provider_key_alias") or "") if "provider_key_alias" in frame.columns else ""
@@ -1268,9 +1316,14 @@ def fetch_forex_candles_provider_chain(
     state: Mapping[str, Any] | None = None,
     *,
     force_live: bool = False,
+    include_forming: bool = False,
     db_path: str | Path | None = None,
 ) -> tuple[pd.DataFrame, str, dict[str, Any]]:
-    """Cache → Twelve Data key pool → Finnhub candles → last-known valid cache."""
+    """Cache → Twelve Data key pool → Finnhub candles → last-known valid cache.
+
+    include_forming=True (live-signal panels): the still-forming candle is
+    persisted (is_complete=0) and included in the returned frame, because the
+    evaluators enter at the forming candle's open."""
     state_map = state if isinstance(state, Mapping) else {}
     canonical_symbol = normalize_symbol(symbol)
     tf = normalize_timeframe(timeframe)
@@ -1294,6 +1347,7 @@ def fetch_forex_candles_provider_chain(
         bars=int(outputsize),
         run_id=str(state_map.get("canonical_last_load_run_id") or ""),
         force_live=bool(force_live),
+        include_forming=bool(include_forming),
     )
     for attempt in result.attempts:
         provider = canonical_provider_name(attempt.get("provider"))

@@ -364,6 +364,36 @@ SYSTEM_CYCLE67 = "cycle67"   # C67-04: C55-15 core frozen (delegates to cycle55 
                              # (paired P 62.43% structurally capped, own p5 91.03%;
                              # replaces C55-15)
 
+# Verified position-sizing Best N per system (the WINNER's sizing run).
+# The app engines carry no sizing metadata; these are the verified
+# values from Report Book V3, each cross-checked against the winning
+# cycle's comparison table (work_cNN/results/comparison_table.csv).
+# Only the 12 final month-default systems have verified winner values;
+# any other system returns None from best_n_for_system() and the UI
+# shows "--" rather than an unverified number. NOTE: August's winner
+# C67-04 is N=121 -- 103 was the replaced incumbent C55-15's value.
+SYSTEM_BEST_N = {
+    SYSTEM_CYCLE60: 83,    # C60-03 January
+    SYSTEM_CYCLE56: 104,   # C56-15 February
+    SYSTEM_CYCLE62: 102,   # C62-10 March
+    SYSTEM_CYCLE63: 104,   # C63-04 April
+    SYSTEM_CYCLE64: 100,   # C64-09 May
+    SYSTEM_CYCLE65: 84,    # C65-01 June
+    SYSTEM_CYCLE66: 103,   # C66-08 July
+    SYSTEM_CYCLE67: 121,   # C67-04 August
+    SYSTEM_CYCLE59: 101,   # C59-18 September
+    SYSTEM_CYCLE69: 83,    # C69-07 October
+    SYSTEM_CYCLE70: 83,    # C70-07 November
+    SYSTEM_CYCLE71: 105,   # C71-04 December
+}
+
+
+def best_n_for_system(name=None):
+    """Verified Best N for `name` (default: the active system) or None."""
+    n = _ACTIVE if name is None else str(name).strip().lower()
+    return SYSTEM_BEST_N.get(n)
+
+
 _ACTIVE = SYSTEM_CYCLE24     # default: Cycle 24 (R4A01), per user decision 2026-10-19
 
 

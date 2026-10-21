@@ -2715,6 +2715,57 @@ def render_middle_regime_download_button(
 # ONE condition: core.cycle12_best.is_entry_check_time / check_time_status.
 # The banner never breaks the page: any failure degrades to a small caption.
 # ============================================================================
+
+def _best_n_label(system_id):
+    """Verified position-sizing Best N for a system id, as display text.
+
+    Source of truth: core.signal_mode.best_n_for_system (the winners'
+    sizing values from Report Book V3). Systems without a verified
+    value show an em dash rather than an unverified number.
+    """
+    try:
+        from core.signal_mode import best_n_for_system
+        n = best_n_for_system(system_id)
+    except Exception:
+        n = None
+    return str(n) if n else "\u2014"
+
+
+def _age_text(mins):
+    """Human age for a minute count: '45 min ago', '3h 05m ago', '2d 4h ago'."""
+    try:
+        m = max(0, int(mins))
+    except Exception:
+        return "\u2014"
+    if m < 60:
+        return f"{m} min ago"
+    if m < 1440:
+        return f"{m // 60}h {m % 60:02d}m ago"
+    return f"{m // 1440}d {(m % 1440) // 60}h ago"
+
+
+def _window_header_html(payload, win_ts, age_min, mins_ago, system_id, live_tag):
+    """Header line above a cycle signals table.
+
+    Shows the LATEST CHECK time of the stored window (MMT) with NO time
+    limit -- the 2-hour expiry was removed on the user's order
+    (2026-10-21) -- plus the window's age, when it was evaluated, the
+    symbol count and the system's verified Best N.
+    """
+    try:
+        mmt_ts = win_ts + pd.Timedelta(hours=6, minutes=30)
+        check_txt = mmt_ts.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        check_txt = str(payload.get("window_mmt", "\u2014"))
+    return (
+        "<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
+        f"Latest check <b>{check_txt} MMT</b> \u00b7 {_age_text(age_min)} \u00b7 "
+        f"evaluated {_age_text(mins_ago)} \u00b7 "
+        f"{payload.get('n_symbols', '\u2014')} symbols \u00b7 "
+        f"Best N <b>{_best_n_label(system_id)}</b>{live_tag}</div>"
+    )
+
+
 def _cycle12_latest_candle(middle_age):
     """Newest completed-candle timestamp found in the ranking frame, or None."""
     try:
@@ -2821,6 +2872,14 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
 
         age_box = (f"📊 <b>{age_txt}</b>" if not stale
                    else f"⚠️ <b>{age_txt}</b><br><span style='font-size:11px;'>stale — refresh</span>")
+        try:
+            from core.signal_mode import best_n_for_system as _best_n_fn
+            _bn_val = _best_n_fn(active_system())
+        except Exception:
+            _bn_val = None
+        _bn_txt = str(_bn_val) if _bn_val else "\u2014"
+        bestn_box = (f"\U0001f3af <b>Best N {_bn_txt}</b><br>"
+                     f"<span style='font-size:11px;'>position sizing</span>")
         box = ("<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;"
                "padding:6px 10px;text-align:center;min-width:86px;flex:1 1 0;'>"
                "<span style='font-size:13px;color:#0f172a;'>{}</span></div>")
@@ -2834,6 +2893,7 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
             + box.format(f"🇲🇲 <b>{mmt_now}</b> MMT<br><span style='font-size:11px;'>{mmt_date}</span>")
             + box.format(f"🌍 <b>{utc_now}</b> UTC")
             + box.format(age_box)
+            + box.format(bestn_box)
             + f"</div></div>",
             unsafe_allow_html=True,
         )
@@ -3100,7 +3160,7 @@ def _c22_signals_to_display(entries):
     import pandas as _pd
     from core.cycle12_best import pip_size as _pip_size
     if entries is None or not isinstance(entries, _pd.DataFrame) or entries.empty:
-        return _pd.DataFrame(columns=["Symbol", "Direction", "Entry", "TP", "SL", "Score"])
+        return _pd.DataFrame(columns=["Symbol", "Direction", "Strategy", "Entry", "TP", "SL", "Score"])
     rows = []
     for _, r in entries.iterrows():
         try:
@@ -3116,9 +3176,19 @@ def _c22_signals_to_display(entries):
             else:
                 tp_x, sl_x = entry - tp_p * pip, entry + sl_p * pip
             dec = 3 if pip >= 0.01 else 5
+            strat = "\u2014"
+            for _col in ("equation", "strategy", "Equation ID", "strategy_id"):
+                try:
+                    _v = r.get(_col)
+                except Exception:
+                    _v = None
+                if _v is not None and str(_v).strip() not in ("", "nan", "None"):
+                    strat = str(_v)
+                    break
             rows.append({
                 "Symbol": sym,
                 "Direction": d,
+                "Strategy": strat,
                 "Entry": round(entry, dec),
                 "TP": round(tp_x, dec),
                 "SL": round(sl_x, dec),
@@ -3126,7 +3196,7 @@ def _c22_signals_to_display(entries):
             })
         except Exception:
             continue
-    return _pd.DataFrame(rows, columns=["Symbol", "Direction", "Entry", "TP", "SL", "Score"])
+    return _pd.DataFrame(rows, columns=["Symbol", "Direction", "Strategy", "Entry", "TP", "SL", "Score"])
 
 
 def _evaluate_c22_window(state, hour_utc, day=None):
@@ -3289,7 +3359,7 @@ def _render_cycle22_signals_table(st, state):
       signals are stored for it and H1 data is loaded, the window is
       evaluated IMMEDIATELY (backtest-identical: features from the
       completed (H-1):00 candle, entry = H:00 open), stored, displayed.
-    - Displays the most recent stored window for UP TO 2 HOURS after the
+    - Displays the most recent stored window for NO TIME LIMIT after the
       window time, or until a newer window arrives (whichever is first).
       After 2 h with no newer window, the table shows a waiting notice.
     - Never renders the old monthly S1-S240 table.
@@ -3328,10 +3398,9 @@ def _render_cycle22_signals_table(st, state):
                 _c22_mark_fail(latest_win, state)
 
         st.markdown("### 🎯 Cycle 22 signals")
-        # 2-HOUR DISPLAY RULE: a window's signals stay visible for up to
-        # 2 hours after the WINDOW time (not the evaluation time, so a
-        # late backfill still expires on schedule), or until a newer
-        # window arrives and replaces them — whichever comes first.
+        # UNLIMITED DISPLAY RULE (user order 2026-10-21; replaces the
+        # former 2-HOUR rule): a window's signals stay visible until a
+        # newer window arrives and replaces them -- no time limit.
         win_ts = None
         if payload is not None:
             try:
@@ -3340,7 +3409,7 @@ def _render_cycle22_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first entry window — signals will appear here "
-                    "and stay visible for up to 2 hours.")
+                    "and stay visible until a newer window arrives.")
             # If an evaluation was attempted and failed, say WHY instead of
             # leaving the user guessing (e.g. 0/20 frames from cache+live).
             try:
@@ -3357,24 +3426,30 @@ def _render_cycle22_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last window's signals have expired after 2 hours — "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
-            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle22", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C22_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -3382,7 +3457,17 @@ def _render_cycle22_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 22 equations fired in this window.")
+                _last_entry = state.get(_C22_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 22 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 22 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -3557,7 +3642,7 @@ def _render_cycle24_signals_table(st, state):
     latest C24 entry window <= now (hours 15/17/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -3594,9 +3679,9 @@ def _render_cycle24_signals_table(st, state):
                 _c24_mark_fail(latest_win, state)
 
         st.markdown("### 🎯 Cycle 24 signals")
-        # 2-HOUR DISPLAY RULE (same as Cycle 22): a window's signals stay
-        # visible for up to 2 hours after the WINDOW time, or until a
-        # newer window arrives -- whichever comes first.
+        # UNLIMITED DISPLAY RULE (user order 2026-10-21; replaces the
+        # former 2-HOUR rule): a window's signals stay visible until a
+        # newer window arrives and replaces them -- no time limit.
         win_ts = None
         if payload is not None:
             try:
@@ -3605,7 +3690,7 @@ def _render_cycle24_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 24 entry window — signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C24_SIG_DIAG_KEY)
             except Exception:
@@ -3620,24 +3705,30 @@ def _render_cycle24_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 24 window's signals have expired after 2 hours — "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
-            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle24", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C24_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -3645,7 +3736,17 @@ def _render_cycle24_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 24 equations fired in this window.")
+                _last_entry = state.get(_C24_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 24 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 24 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -3820,7 +3921,7 @@ def _render_cycle26_signals_table(st, state):
     latest C26 entry window <= now (hours 10/11/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -3864,7 +3965,7 @@ def _render_cycle26_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 26 entry window — signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C26_SIG_DIAG_KEY)
             except Exception:
@@ -3879,24 +3980,30 @@ def _render_cycle26_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 26 window's signals have expired after 2 hours — "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
-            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle26", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C26_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -3904,7 +4011,17 @@ def _render_cycle26_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 26 equations fired in this window.")
+                _last_entry = state.get(_C26_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 26 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 26 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -4079,7 +4196,7 @@ def _render_cycle27_signals_table(st, state):
     latest C27 entry window <= now (hours 10/11/13 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -4123,7 +4240,7 @@ def _render_cycle27_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 27 entry window — signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C27_SIG_DIAG_KEY)
             except Exception:
@@ -4138,24 +4255,30 @@ def _render_cycle27_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 27 window's signals have expired after 2 hours — "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
-            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle27", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C27_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -4163,7 +4286,17 @@ def _render_cycle27_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 27 equations fired in this window.")
+                _last_entry = state.get(_C27_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 27 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 27 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -4339,7 +4472,7 @@ def _render_cycle28_signals_table(st, state):
     latest C28 entry window <= now (hours 11/13/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -4383,7 +4516,7 @@ def _render_cycle28_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 28 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C28_SIG_DIAG_KEY)
             except Exception:
@@ -4398,24 +4531,30 @@ def _render_cycle28_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 28 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle28", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C28_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -4423,7 +4562,17 @@ def _render_cycle28_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 28 equations fired in this window.")
+                _last_entry = state.get(_C28_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 28 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 28 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -4600,7 +4749,7 @@ def _render_cycle29_signals_table(st, state):
     latest C29 entry window <= now (hours 11/13/16 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -4644,7 +4793,7 @@ def _render_cycle29_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 29 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C29_SIG_DIAG_KEY)
             except Exception:
@@ -4659,24 +4808,30 @@ def _render_cycle29_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 29 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle29", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C29_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -4684,7 +4839,17 @@ def _render_cycle29_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 29 equations fired in this window.")
+                _last_entry = state.get(_C29_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 29 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 29 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -4861,7 +5026,7 @@ def _render_cycle30_signals_table(st, state):
     latest C30 entry window <= now (hours 11/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -4905,7 +5070,7 @@ def _render_cycle30_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 30 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C30_SIG_DIAG_KEY)
             except Exception:
@@ -4920,24 +5085,30 @@ def _render_cycle30_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 30 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle30", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C30_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -4945,7 +5116,17 @@ def _render_cycle30_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 30 equations fired in this window.")
+                _last_entry = state.get(_C30_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 30 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 30 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -5122,7 +5303,7 @@ def _render_cycle31_signals_table(st, state):
     latest C31 entry window <= now (hours 16/17/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -5166,7 +5347,7 @@ def _render_cycle31_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 31 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C31_SIG_DIAG_KEY)
             except Exception:
@@ -5181,24 +5362,30 @@ def _render_cycle31_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 31 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle31", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C31_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -5206,7 +5393,17 @@ def _render_cycle31_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 31 equations fired in this window.")
+                _last_entry = state.get(_C31_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 31 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 31 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -5383,7 +5580,7 @@ def _render_cycle32_signals_table(st, state):
     latest C32 entry window <= now (hours 10/16/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -5427,7 +5624,7 @@ def _render_cycle32_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 32 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C32_SIG_DIAG_KEY)
             except Exception:
@@ -5442,24 +5639,30 @@ def _render_cycle32_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 32 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle32", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C32_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -5467,7 +5670,17 @@ def _render_cycle32_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 32 equations fired in this window.")
+                _last_entry = state.get(_C32_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 32 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 32 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -5644,7 +5857,7 @@ def _render_cycle33_signals_table(st, state):
     latest C33 entry window <= now (hours 1/15/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -5688,7 +5901,7 @@ def _render_cycle33_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 33 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C33_SIG_DIAG_KEY)
             except Exception:
@@ -5703,24 +5916,30 @@ def _render_cycle33_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 33 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle33", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C33_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -5728,7 +5947,17 @@ def _render_cycle33_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 33 equations fired in this window.")
+                _last_entry = state.get(_C33_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 33 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 33 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -5905,7 +6134,7 @@ def _render_cycle34_signals_table(st, state):
     latest C34 entry window <= now (hours 15/17/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -5949,7 +6178,7 @@ def _render_cycle34_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 34 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C34_SIG_DIAG_KEY)
             except Exception:
@@ -5964,24 +6193,30 @@ def _render_cycle34_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 34 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle34", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C34_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -5989,7 +6224,17 @@ def _render_cycle34_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 34 equations fired in this window.")
+                _last_entry = state.get(_C34_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 34 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 34 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -6166,7 +6411,7 @@ def _render_cycle35_signals_table(st, state):
     latest C35 entry window <= now (hours 1/15/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -6210,7 +6455,7 @@ def _render_cycle35_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 35 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C35_SIG_DIAG_KEY)
             except Exception:
@@ -6225,24 +6470,30 @@ def _render_cycle35_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 35 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle35", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C35_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -6250,7 +6501,17 @@ def _render_cycle35_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 35 equations fired in this window.")
+                _last_entry = state.get(_C35_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 35 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 35 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -6427,7 +6688,7 @@ def _render_cycle36_signals_table(st, state):
     latest C36 entry window <= now (hours 1/10/11 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -6471,7 +6732,7 @@ def _render_cycle36_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 36 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C36_SIG_DIAG_KEY)
             except Exception:
@@ -6486,24 +6747,30 @@ def _render_cycle36_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 36 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle36", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C36_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -6511,7 +6778,17 @@ def _render_cycle36_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 36 equations fired in this window.")
+                _last_entry = state.get(_C36_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 36 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 36 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -6687,7 +6964,7 @@ def _render_cycle48_signals_table(st, state):
     latest C48 entry window <= now (hours 10/11/13 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -6731,7 +7008,7 @@ def _render_cycle48_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 48 entry window — signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C48_SIG_DIAG_KEY)
             except Exception:
@@ -6746,24 +7023,30 @@ def _render_cycle48_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 48 window's signals have expired after 2 hours — "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
-            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle48", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C48_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -6771,7 +7054,17 @@ def _render_cycle48_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 48 equations fired in this window.")
+                _last_entry = state.get(_C48_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 48 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 48 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -6950,7 +7243,7 @@ def _render_cycle42_signals_table(st, state):
     latest C42 entry window <= now (hours 1/15/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -6994,7 +7287,7 @@ def _render_cycle42_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 42 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C42_SIG_DIAG_KEY)
             except Exception:
@@ -7009,24 +7302,30 @@ def _render_cycle42_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 42 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle42", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C42_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -7034,7 +7333,17 @@ def _render_cycle42_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 42 equations fired in this window.")
+                _last_entry = state.get(_C42_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 42 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 42 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -7214,7 +7523,7 @@ def _render_cycle44_signals_table(st, state):
     latest C44 entry window <= now (hours 1/13/16 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -7258,7 +7567,7 @@ def _render_cycle44_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 44 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C44_SIG_DIAG_KEY)
             except Exception:
@@ -7273,24 +7582,30 @@ def _render_cycle44_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 44 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle44", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C44_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -7298,7 +7613,17 @@ def _render_cycle44_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 44 equations fired in this window.")
+                _last_entry = state.get(_C44_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 44 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 44 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -7478,7 +7803,7 @@ def _render_cycle52_signals_table(st, state):
     latest C52 entry window <= now (hours 11/13/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -7522,7 +7847,7 @@ def _render_cycle52_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 52 entry window — signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C52_SIG_DIAG_KEY)
             except Exception:
@@ -7537,24 +7862,30 @@ def _render_cycle52_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 52 window's signals have expired after 2 hours — "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
-            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle52", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C52_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -7562,7 +7893,17 @@ def _render_cycle52_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 52 equations fired in this window.")
+                _last_entry = state.get(_C52_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 52 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 52 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -7743,7 +8084,7 @@ def _render_cycle51_signals_table(st, state):
     latest C51 entry window <= now (hours 10/11/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -7787,7 +8128,7 @@ def _render_cycle51_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 51 entry window — signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C51_SIG_DIAG_KEY)
             except Exception:
@@ -7802,24 +8143,30 @@ def _render_cycle51_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 51 window's signals have expired after 2 hours — "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
-            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle51", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C51_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -7827,7 +8174,17 @@ def _render_cycle51_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 51 equations fired in this window.")
+                _last_entry = state.get(_C51_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 51 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 51 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -8008,7 +8365,7 @@ def _render_cycle53_signals_table(st, state):
     latest C53 entry window <= now (hours 11/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -8052,7 +8409,7 @@ def _render_cycle53_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 53 entry window — signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C53_SIG_DIAG_KEY)
             except Exception:
@@ -8067,24 +8424,30 @@ def _render_cycle53_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 53 window's signals have expired after 2 hours — "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " · <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '—')} MMT</b> · "
-            f"evaluated {mins_ago} min ago · {payload.get('n_symbols', '—')} symbols · "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle53", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C53_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -8092,7 +8455,17 @@ def _render_cycle53_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 53 equations fired in this window.")
+                _last_entry = state.get(_C53_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 53 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 53 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -8274,7 +8647,7 @@ def _render_cycle55_signals_table(st, state):
     latest C55 entry window <= now (hours 6/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -8318,7 +8691,7 @@ def _render_cycle55_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 55 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C55_SIG_DIAG_KEY)
             except Exception:
@@ -8333,24 +8706,30 @@ def _render_cycle55_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 55 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle55", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C55_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -8358,7 +8737,17 @@ def _render_cycle55_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 55 equations fired in this window.")
+                _last_entry = state.get(_C55_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 55 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 55 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -8538,7 +8927,7 @@ def _render_cycle56_signals_table(st, state):
     latest C56 entry window <= now (hours 6/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -8582,7 +8971,7 @@ def _render_cycle56_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 56 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C56_SIG_DIAG_KEY)
             except Exception:
@@ -8597,24 +8986,30 @@ def _render_cycle56_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 56 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle56", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C56_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -8622,7 +9017,17 @@ def _render_cycle56_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 56 equations fired in this window.")
+                _last_entry = state.get(_C56_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 56 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 56 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -8802,7 +9207,7 @@ def _render_cycle57_signals_table(st, state):
     latest C57 entry window <= now (hours 6/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -8846,7 +9251,7 @@ def _render_cycle57_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 57 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C57_SIG_DIAG_KEY)
             except Exception:
@@ -8861,24 +9266,30 @@ def _render_cycle57_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 57 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle57", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C57_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -8886,7 +9297,17 @@ def _render_cycle57_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 57 equations fired in this window.")
+                _last_entry = state.get(_C57_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 57 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 57 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -9066,7 +9487,7 @@ def _render_cycle56_signals_table(st, state):
     latest C56 entry window <= now (hours 6/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -9110,7 +9531,7 @@ def _render_cycle56_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 56 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C56_SIG_DIAG_KEY)
             except Exception:
@@ -9125,24 +9546,30 @@ def _render_cycle56_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 56 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle56", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C56_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -9150,7 +9577,17 @@ def _render_cycle56_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 56 equations fired in this window.")
+                _last_entry = state.get(_C56_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 56 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 56 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -9330,7 +9767,7 @@ def _render_cycle59_signals_table(st, state):
     latest C59 entry window <= now (hours 1/10/11 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -9374,7 +9811,7 @@ def _render_cycle59_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 59 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C59_SIG_DIAG_KEY)
             except Exception:
@@ -9389,24 +9826,30 @@ def _render_cycle59_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 59 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle59", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C59_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -9414,7 +9857,17 @@ def _render_cycle59_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 59 equations fired in this window.")
+                _last_entry = state.get(_C59_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 59 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 59 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -9594,7 +10047,7 @@ def _render_cycle56_signals_table(st, state):
     latest C56 entry window <= now (hours 6/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -9638,7 +10091,7 @@ def _render_cycle56_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 56 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C56_SIG_DIAG_KEY)
             except Exception:
@@ -9653,24 +10106,30 @@ def _render_cycle56_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 56 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle56", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C56_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -9678,7 +10137,17 @@ def _render_cycle56_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 56 equations fired in this window.")
+                _last_entry = state.get(_C56_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 56 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 56 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -9858,7 +10327,7 @@ def _render_cycle57_signals_table(st, state):
     latest C57 entry window <= now (hours 6/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -9902,7 +10371,7 @@ def _render_cycle57_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 57 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C57_SIG_DIAG_KEY)
             except Exception:
@@ -9917,24 +10386,30 @@ def _render_cycle57_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 57 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle57", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C57_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -9942,7 +10417,17 @@ def _render_cycle57_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 57 equations fired in this window.")
+                _last_entry = state.get(_C57_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 57 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 57 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -10122,7 +10607,7 @@ def _render_cycle56_signals_table(st, state):
     latest C56 entry window <= now (hours 6/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -10166,7 +10651,7 @@ def _render_cycle56_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 56 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C56_SIG_DIAG_KEY)
             except Exception:
@@ -10181,24 +10666,30 @@ def _render_cycle56_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 56 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle56", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C56_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -10206,7 +10697,17 @@ def _render_cycle56_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 56 equations fired in this window.")
+                _last_entry = state.get(_C56_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 56 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 56 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -10387,7 +10888,7 @@ def _render_cycle65_signals_table(st, state):
     latest C65 entry window <= now (hours 1/15/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -10431,7 +10932,7 @@ def _render_cycle65_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 65 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C65_SIG_DIAG_KEY)
             except Exception:
@@ -10446,24 +10947,30 @@ def _render_cycle65_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 65 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle65", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C65_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -10471,7 +10978,17 @@ def _render_cycle65_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 65 equations fired in this window.")
+                _last_entry = state.get(_C65_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 65 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 65 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -10652,7 +11169,7 @@ def _render_cycle71_signals_table(st, state):
     latest C71 entry window <= now (hours 10/11/13 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -10696,7 +11213,7 @@ def _render_cycle71_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 71 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C71_SIG_DIAG_KEY)
             except Exception:
@@ -10711,24 +11228,30 @@ def _render_cycle71_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 71 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle71", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C71_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -10736,7 +11259,17 @@ def _render_cycle71_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 71 equations fired in this window.")
+                _last_entry = state.get(_C71_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 71 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 71 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -10917,7 +11450,7 @@ def _render_cycle70_signals_table(st, state):
     latest C70 entry window <= now (hours 9/13/15 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -10961,7 +11494,7 @@ def _render_cycle70_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 70 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C70_SIG_DIAG_KEY)
             except Exception:
@@ -10976,24 +11509,30 @@ def _render_cycle70_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 70 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle70", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C70_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -11001,7 +11540,17 @@ def _render_cycle70_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 70 equations fired in this window.")
+                _last_entry = state.get(_C70_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 70 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 70 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -11182,7 +11731,7 @@ def _render_cycle64_signals_table(st, state):
     latest C64 entry window <= now (hours 10/16/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -11226,7 +11775,7 @@ def _render_cycle64_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 64 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C64_SIG_DIAG_KEY)
             except Exception:
@@ -11241,24 +11790,30 @@ def _render_cycle64_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 64 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle64", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C64_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -11266,7 +11821,17 @@ def _render_cycle64_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 64 equations fired in this window.")
+                _last_entry = state.get(_C64_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 64 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 64 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -11447,7 +12012,7 @@ def _render_cycle69_signals_table(st, state):
     latest C69 entry window <= now (hours 15/17/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -11491,7 +12056,7 @@ def _render_cycle69_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 69 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C69_SIG_DIAG_KEY)
             except Exception:
@@ -11506,24 +12071,30 @@ def _render_cycle69_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 69 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle69", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C69_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -11531,7 +12102,17 @@ def _render_cycle69_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 69 equations fired in this window.")
+                _last_entry = state.get(_C69_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 69 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 69 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -11712,7 +12293,7 @@ def _render_cycle63_signals_table(st, state):
     latest C63 entry window <= now (hours 16/17/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -11756,7 +12337,7 @@ def _render_cycle63_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 63 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C63_SIG_DIAG_KEY)
             except Exception:
@@ -11771,24 +12352,30 @@ def _render_cycle63_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 63 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle63", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C63_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -11796,7 +12383,17 @@ def _render_cycle63_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 63 equations fired in this window.")
+                _last_entry = state.get(_C63_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 63 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 63 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -11977,7 +12574,7 @@ def _render_cycle66_signals_table(st, state):
     latest C66 entry window <= now (hours 15/17/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -12021,7 +12618,7 @@ def _render_cycle66_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 66 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C66_SIG_DIAG_KEY)
             except Exception:
@@ -12036,24 +12633,30 @@ def _render_cycle66_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 66 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle66", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C66_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -12061,7 +12664,17 @@ def _render_cycle66_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 66 equations fired in this window.")
+                _last_entry = state.get(_C66_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 66 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 66 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -12242,7 +12855,7 @@ def _render_cycle62_signals_table(st, state):
     latest C62 entry window <= now (hours 11/16/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -12286,7 +12899,7 @@ def _render_cycle62_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 62 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C62_SIG_DIAG_KEY)
             except Exception:
@@ -12301,24 +12914,30 @@ def _render_cycle62_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 62 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle62", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C62_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -12326,7 +12945,17 @@ def _render_cycle62_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 62 equations fired in this window.")
+                _last_entry = state.get(_C62_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 62 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 62 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -12507,7 +13136,7 @@ def _render_cycle60_signals_table(st, state):
     latest C60 entry window <= now (hours 11/13/17 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -12551,7 +13180,7 @@ def _render_cycle60_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 60 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C60_SIG_DIAG_KEY)
             except Exception:
@@ -12566,24 +13195,30 @@ def _render_cycle60_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 60 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle60", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C60_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -12591,7 +13226,17 @@ def _render_cycle60_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 60 equations fired in this window.")
+                _last_entry = state.get(_C60_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 60 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 60 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -12772,7 +13417,7 @@ def _render_cycle67_signals_table(st, state):
     latest C67 entry window <= now (hours 1/6/16/17/18 UTC); if no signals
     are stored for it and H1 data is loaded, the window is evaluated
     IMMEDIATELY (backtest-identical), stored, displayed. The most recent
-    stored window stays visible for UP TO 2 HOURS after the window time,
+    stored window stays visible for NO TIME LIMIT after the window time,
     or until a newer window arrives -- whichever is first.
     Returns the payload dict (or None) for the download buttons.
     """
@@ -12816,7 +13461,7 @@ def _render_cycle67_signals_table(st, state):
                 win_ts = None
         if payload is None or win_ts is None:
             st.info("Waiting for the first Cycle 67 entry window -- signals will "
-                    "appear here and stay visible for up to 2 hours.")
+                    "appear here and stay visible until a newer window arrives.")
             try:
                 diag = state.get(_C67_SIG_DIAG_KEY)
             except Exception:
@@ -12831,24 +13476,30 @@ def _render_cycle67_signals_table(st, state):
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
-        if age_min > 120:
-            st.info("The last Cycle 67 window's signals have expired after 2 hours -- "
-                    "waiting for the next entry window.")
-            return None
-        expires_in = max(0, 120 - age_min)
+        # UNLIMITED VISIBILITY (user order 2026-10-21): the former
+        # 2-hour expiry is removed -- the latest stored window (its
+        # check time + entries) stays visible until a newer window
+        # replaces it. age_min now only feeds the header age text.
         try:
             mins_ago = max(0, int((now_utc - payload["evaluated_at_utc"]).total_seconds() // 60))
         except Exception:
             mins_ago = 0
         live_tag = " \u00b7 <b style='color:#16a34a;'>LIVE</b>" if fresh_this_window else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#334155;margin:-6px 0 8px 0;'>"
-            f"Window <b>{payload.get('window_mmt', '\u2014')} MMT</b> \u00b7 "
-            f"evaluated {mins_ago} min ago \u00b7 {payload.get('n_symbols', '\u2014')} symbols \u00b7 "
-            f"visible {expires_in} more min{live_tag}</div>",
+            _window_header_html(payload, win_ts, age_min, mins_ago,
+                                "cycle67", live_tag),
             unsafe_allow_html=True,
         )
         disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            try:
+                state[_C67_SIG_STATE_KEY + ":last_entry"] = {
+                    "window_mmt": payload.get("window_mmt"),
+                    "window_utc": payload.get("window_utc"),
+                    "signals": disp,
+                }
+            except Exception:
+                pass
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
@@ -12856,7 +13507,17 @@ def _render_cycle67_signals_table(st, state):
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
             else:
-                st.info("No Cycle 67 equations fired in this window.")
+                _last_entry = state.get(_C67_SIG_STATE_KEY + ":last_entry")
+                if (isinstance(_last_entry, dict)
+                        and isinstance(_last_entry.get("signals"), _pd.DataFrame)
+                        and not _last_entry["signals"].empty):
+                    st.info("No Cycle 67 equations fired in this window \u2014 "
+                            "showing the last entry (Window "
+                            f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
+                    st.dataframe(_last_entry["signals"],
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("No Cycle 67 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
         return payload
@@ -12952,7 +13613,8 @@ def render_multisymbol_regime_summary(
     month's system. Each monthly system runs 24 equations at 3 check hours
     with exactly 1 entry per check; Cycle 22 keeps its 26-equation table.
     Each entry window's signals are persisted in session state and stay
-    visible for up to 2 hours (or until the next window arrives).
+    visible until the next window arrives (no time limit -- the former
+    2-hour expiry was removed on the user's order, 2026-10-21).
     """
     _auto_refresh_field3(st)
     from ui.monthly_equation_panel import render_monthly_panel

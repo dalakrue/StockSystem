@@ -210,6 +210,20 @@ record, and its own 5th-percentile is 91.03%. It REPLACES
 cycle55 as August's default. Cycle 55 remains selectable
 (and remains the frozen core inside cycle67).
 
+2026-10-21 update (Program 3, Top-40 H1+M15 round): Cycle 78
+(C78-34, July-only: the C66-08 entry engine FROZEN -- checks
+delegate to cycle66 verbatim -- + the X30 at-entry exit layer:
+when ER15(16) <= 0.20 and r1(1) >= 0 at entry, the stop is
+tightened to 0.90x) added as SYSTEM_CYCLE78. C78-34 was
+PROMOTED BY MUSE'S DECISION under the user's standing rule:
+15/16 on the Program-3 bar, failing ONLY battery check 8 (no
+red discovery weeks), which C66-08 itself fails; it passes
+all four user priorities incl. LCT-middle (paired P 90.56%,
+5th-percentile 42.18%), unseen leftover 62.48% vs 61.20%,
+net +487.7 vs +477.7. It REPLACES cycle66 as July's default.
+Cycle 66 remains selectable (and remains the frozen entry
+engine inside cycle78).
+
 C18-A3 (core/cycle18_best.py) and FT-C01 (core/cycle12_best.py) are KEPT
 byte-identical and remain available as selectable modes via
 set_active_system('cycle18' / 'ft-c01').
@@ -363,6 +377,14 @@ SYSTEM_CYCLE67 = "cycle67"   # C67-04: C55-15 core frozen (delegates to cycle55 
                              # August-only; LCT-fix round, Muse's-decision promotion
                              # (paired P 62.43% structurally capped, own p5 91.03%;
                              # replaces C55-15)
+SYSTEM_CYCLE78 = "cycle78"   # C78-34: C66-08 frozen (delegates to cycle66)
+                             # + X30 at-entry stop-tightening layer (M15
+                             # ER15(16) <= 0.20 & H1 r1(1) >= 0 -> SL x0.90),
+                             # hours (15,17,18) UTC, exactly 1 entry/check
+                             # (July-only; Program 3, Muse's-decision promotion:
+                             # 15/16, fails only check 8 which C66-08 itself
+                             # fails; LCT middle PASS P 90.56% / p5 42.18%;
+                             # replaces C66-08)
 
 # Verified position-sizing Best N per system (the WINNER's sizing run).
 # The app engines carry no sizing metadata; these are the verified
@@ -380,6 +402,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE64: 100,   # C64-09 May
     SYSTEM_CYCLE65: 84,    # C65-01 June
     SYSTEM_CYCLE66: 103,   # C66-08 July
+    SYSTEM_CYCLE78: 103,   # C78-34 July (Program 3; own sizing run)
     SYSTEM_CYCLE67: 121,   # C67-04 August
     SYSTEM_CYCLE59: 101,   # C59-18 September
     SYSTEM_CYCLE69: 83,    # C69-07 October
@@ -402,7 +425,7 @@ def set_active_system(name: str) -> str:
     'cycle24', 'cycle26', 'cycle27', 'cycle28', 'cycle29', 'cycle30',
     'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35', 'cycle36',
     'cycle48', 'cycle42', 'cycle44', 'cycle52', 'cycle51', 'cycle53',
-    'cycle55', 'cycle56', 'cycle57', 'cycle59', 'cycle60', 'cycle62', 'cycle63', 'cycle64', 'cycle65', 'cycle66', 'cycle67', 'cycle69', 'cycle70', 'cycle71'}.
+    'cycle55', 'cycle56', 'cycle57', 'cycle59', 'cycle60', 'cycle62', 'cycle63', 'cycle64', 'cycle65', 'cycle66', 'cycle67', 'cycle69', 'cycle70', 'cycle71', 'cycle78'}.
     Returns the newly active system name."""
     global _ACTIVE
     n = str(name).strip().lower()
@@ -411,13 +434,13 @@ def set_active_system(name: str) -> str:
                  SYSTEM_CYCLE30, SYSTEM_CYCLE31, SYSTEM_CYCLE32, SYSTEM_CYCLE33,
                  SYSTEM_CYCLE34, SYSTEM_CYCLE35, SYSTEM_CYCLE36, SYSTEM_CYCLE48,
                  SYSTEM_CYCLE42, SYSTEM_CYCLE44, SYSTEM_CYCLE52, SYSTEM_CYCLE51,
-                 SYSTEM_CYCLE53, SYSTEM_CYCLE55, SYSTEM_CYCLE56, SYSTEM_CYCLE57, SYSTEM_CYCLE59, SYSTEM_CYCLE65, SYSTEM_CYCLE71, SYSTEM_CYCLE70, SYSTEM_CYCLE64, SYSTEM_CYCLE69, SYSTEM_CYCLE63, SYSTEM_CYCLE66, SYSTEM_CYCLE62, SYSTEM_CYCLE60, SYSTEM_CYCLE67):
+                 SYSTEM_CYCLE53, SYSTEM_CYCLE55, SYSTEM_CYCLE56, SYSTEM_CYCLE57, SYSTEM_CYCLE59, SYSTEM_CYCLE65, SYSTEM_CYCLE71, SYSTEM_CYCLE70, SYSTEM_CYCLE64, SYSTEM_CYCLE69, SYSTEM_CYCLE63, SYSTEM_CYCLE66, SYSTEM_CYCLE62, SYSTEM_CYCLE60, SYSTEM_CYCLE67, SYSTEM_CYCLE78):
         raise ValueError(
             f"unknown system {name!r}; choose 'cycle22', 'cycle18', 'ft-c01', "
             f"'cycle24', 'cycle26', 'cycle27', 'cycle28', 'cycle29', 'cycle30', "
             f"'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35', 'cycle36', "
             f"'cycle48', 'cycle42', 'cycle44', 'cycle52', 'cycle51', 'cycle53', "
-            f"'cycle55', 'cycle56', 'cycle57', 'cycle59', 'cycle65', 'cycle71', 'cycle70', 'cycle64', 'cycle69', 'cycle63', 'cycle66', 'cycle62', 'cycle60' or 'cycle67'")
+            f"'cycle55', 'cycle56', 'cycle57', 'cycle59', 'cycle65', 'cycle71', 'cycle70', 'cycle64', 'cycle69', 'cycle63', 'cycle66', 'cycle62', 'cycle60', 'cycle67' or 'cycle78'")
     _ACTIVE = n
     return _ACTIVE
 
@@ -589,6 +612,15 @@ def describe_active() -> str:
                 "96.15% / leftover 76.1% / weak 0 (11/12 checks; paired "
                 "LCT P structurally capped, Muse's-decision promotion, "
                 "replaced C55-15)")
+    if _ACTIVE == SYSTEM_CYCLE78:
+        return ("cycle78 (C78-34): C66-08 entry engine frozen (hours "
+                "15/17/18 delegate to cycle66) + X30 at-entry stop "
+                "tightening (ER15(16) <= 0.20 & r1(1) >= 0 -> SL x0.90), "
+                "exactly 1 entry/check -- July @2.5-pip net +487.7 pips / "
+                "win 95.59% / leftover 62.48% / weak 1 (15/16 Program-3 "
+                "checks, fails only check 8 which C66-08 itself fails; "
+                "LCT middle PASS, Muse's-decision promotion, replaced "
+                "C66-08)")
     if _ACTIVE == SYSTEM_CYCLE28:
         return ("cycle28 (C28-30): 24 equations (15 mined + 9 TREND fallbacks, "
                 "per-symbol tuned), entries 11:00/13:00/17:00 UTC "
@@ -742,6 +774,12 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE67:
         from core.cycle67_best import evaluate_cycle67_signals
         return evaluate_cycle67_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE78:
+        from core.cycle78_best import (evaluate_cycle78_signals,
+                                       fetch_cycle78_m15_frames)
+        return evaluate_cycle78_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle78_m15_frames())
     from core.cycle12_best import evaluate_cycle12_signals
     return evaluate_cycle12_signals(frames, check_time_utc)
 
@@ -855,6 +893,9 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE67:
         from core.cycle67_best import select_cycle67_entries
         return select_cycle67_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE78:
+        from core.cycle78_best import select_cycle78_entries
+        return select_cycle78_entries(signals, open_symbols=open_symbols)
     from core.cycle12_best import select_cycle12_entries
     return select_cycle12_entries(signals, open_symbols=open_symbols, k=k)
 
@@ -931,6 +972,8 @@ def active_check_hours():
         return (11, 13, 17)
     if _ACTIVE == SYSTEM_CYCLE67:
         return (1, 6, 16, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE78:
+        return (15, 17, 18)
     # cycle22 (F1-P4) and cycle18 (C18-A3) share the 4-check schedule
     return (10, 11, 13, 18)
 

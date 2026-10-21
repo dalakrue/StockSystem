@@ -3216,6 +3216,290 @@ def _c22_signals_to_display(entries):
 
 
 
+_RANKING_COLUMNS = ["Rank", "Symbol", "Status", "Quick look", "Direction",
+                    "Entry", "TP", "SL", "Score", "Equation"]
+
+
+def _c22_build_check_ranking(sig, entries, frames, need):
+    """Full per-symbol ranking for one evaluated check window.
+
+    One row per evaluated symbol (every symbol in ``frames``), ordered the
+    way the engine already orders candidates: the selected entry first,
+    then the other firing candidates by score, then symbols whose entry
+    condition was NOT met, then symbols whose candles were missing. Fired
+    rows carry entry/TP/SL plus the Quick-look string; unmet rows stay
+    present and explicitly marked, so the panel NEVER collapses to a bare
+    text line (user order 2026-10-22, round 2). Pure display computation
+    on already-fetched frames -- no provider calls, no re-evaluation.
+    """
+    import pandas as _pd
+    cols = _RANKING_COLUMNS
+    try:
+        frames = frames or {}
+        need_set = set()
+        for c in (need or []):
+            try:
+                need_set.add(_pd.Timestamp(c).tz_localize(None))
+            except Exception:
+                pass
+        evaluable, no_data = [], []
+        for sym, f in frames.items():
+            ok = False
+            try:
+                ok = f is not None and need_set.issubset(
+                    set(_pd.Timestamp(t).tz_localize(None) for t in f.index))
+            except Exception:
+                ok = False
+            (evaluable if ok else no_data).append(str(sym).upper())
+        # Best firing candidate per symbol (highest score, engine order).
+        best = {}
+        if isinstance(sig, _pd.DataFrame) and not sig.empty \
+                and "symbol" in sig.columns:
+            _s = sig
+            try:
+                _s = sig.sort_values("score", ascending=False,
+                                     kind="mergesort")
+            except Exception:
+                pass
+            for _, r in _s.iterrows():
+                s = str(r.get("symbol", "")).upper()
+                if s and s not in best:
+                    best[s] = r
+        selected = []
+        if isinstance(entries, _pd.DataFrame) and not entries.empty:
+            for _, r in entries.iterrows():
+                s = str(r.get("symbol", "")).upper()
+                if s:
+                    selected.append(s)
+        selected_set = set(selected)
+        # Display values (entry/TP/SL/Quick look) via the same formatter
+        # as the signals table, for consistent prices everywhere.
+        cand_rows = {}
+        if best:
+            _disp = _c22_signals_to_display(_pd.DataFrame(list(best.values())))
+            if isinstance(_disp, _pd.DataFrame):
+                for _, dr in _disp.iterrows():
+                    cand_rows[str(dr.get("Symbol", "")).upper()] = dr
+        rows = []
+        rank = [0]
+
+        def _push(sym, status):
+            rank[0] += 1
+            dr = cand_rows.get(sym)
+            r = best.get(sym)
+            rows.append({
+                "Rank": rank[0],
+                "Symbol": sym,
+                "Status": status,
+                "Quick look": (str(dr.get("Quick look")) if dr is not None else "\u2014"),
+                "Direction": (str(dr.get("Direction")) if dr is not None else "\u2014"),
+                "Entry": (dr.get("Entry") if dr is not None else "\u2014"),
+                "TP": (dr.get("TP") if dr is not None else "\u2014"),
+                "SL": (dr.get("SL") if dr is not None else "\u2014"),
+                "Score": (dr.get("Score") if dr is not None else "\u2014"),
+                "Equation": (str(r.get("equation")) if r is not None else "\u2014"),
+            })
+
+        for s in selected:
+            _push(s, "\u2705 ENTRY")
+        for s in sorted((s for s in best if s not in selected_set),
+                        key=lambda s: -float(best[s].get("score", 0.0) or 0.0)):
+            _push(s, "Fired \u2014 not selected")
+        for s in evaluable:
+            if s not in best:
+                _push(s, "\u2014 No entry")
+        for s in no_data:
+            if s not in best:
+                _push(s, "\u26a0 No data")
+        return _pd.DataFrame(rows, columns=cols)
+    except Exception:
+        return _pd.DataFrame(columns=cols)
+
+
+def _eval_history_db_path():
+    """Persistent store for signal evaluation history (last 24h tables).
+
+    Lives in the app's data area next to the candle repository DB, so the
+    history survives app restarts. FOREX_EVAL_HISTORY_DB overrides the
+    location (used by tests)."""
+    import os as _os
+    from pathlib import Path as _Path
+    _env = _os.environ.get("FOREX_EVAL_HISTORY_DB")
+    if _env:
+        return _Path(_env)
+    return (_Path(__file__).resolve().parents[1] / "data"
+            / "signal_eval_history.sqlite3")
+
+
+def _record_eval_history(sysname, payload, replace=True):
+    """Persist one evaluation result (cycle, check window, x/20 evaluated,
+    fired entries with Quick-look strings) into the local history store.
+    Local sqlite only -- no provider calls. Never raises."""
+    try:
+        import json as _json
+        import sqlite3 as _sq
+        import pandas as _pd
+        if not isinstance(payload, dict) or payload.get("window_utc") is None:
+            return
+        win_iso = _pd.Timestamp(payload["window_utc"]).tz_localize(None).isoformat()
+        try:
+            ev_iso = _pd.Timestamp(
+                payload.get("evaluated_at_utc")).tz_localize(None).isoformat()
+        except Exception:
+            ev_iso = ""
+
+        def _num(v):
+            try:
+                return float(v)
+            except Exception:
+                return v
+
+        entries = []
+        disp = payload.get("signals")
+        if isinstance(disp, _pd.DataFrame) and not disp.empty:
+            for _, r in disp.iterrows():
+                try:
+                    entries.append({
+                        "symbol": str(r.get("Symbol", "")),
+                        "direction": str(r.get("Direction", "")),
+                        "entry": _num(r.get("Entry")),
+                        "tp": _num(r.get("TP")),
+                        "sl": _num(r.get("SL")),
+                        "quick": str(r.get("Quick look", "")),
+                    })
+                except Exception:
+                    continue
+
+        def _int_or_none(v):
+            try:
+                return int(v)
+            except Exception:
+                return None
+
+        path = _eval_history_db_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        conn = _sq.connect(str(path), timeout=10)
+        try:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS signal_eval_history ("
+                "cycle TEXT NOT NULL, window_utc TEXT NOT NULL, "
+                "window_mmt TEXT, evaluated_at_utc TEXT, n_symbols INTEGER, "
+                "n_evaluable INTEGER, entries_json TEXT, "
+                "PRIMARY KEY (cycle, window_utc))")
+            _verb = "INSERT OR REPLACE" if replace else "INSERT OR IGNORE"
+            conn.execute(
+                _verb + " INTO signal_eval_history"
+                " (cycle, window_utc, window_mmt, evaluated_at_utc,"
+                "  n_symbols, n_evaluable, entries_json)"
+                " VALUES (?,?,?,?,?,?,?)",
+                (str(sysname), win_iso, str(payload.get("window_mmt", "")),
+                 ev_iso, _int_or_none(payload.get("n_symbols")),
+                 _int_or_none(payload.get("n_evaluable")),
+                 _json.dumps(entries)))
+            import datetime as _dt
+            _cut = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+                    - _dt.timedelta(hours=48)).isoformat()
+            conn.execute(
+                "DELETE FROM signal_eval_history WHERE window_utc < ?", (_cut,))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+
+def _load_eval_history(sysname, hours=24):
+    """History rows for one system from the persistent store, newest
+    check first. Local read only -- no provider calls."""
+    try:
+        import datetime as _dt
+        import json as _json
+        import sqlite3 as _sq
+        path = _eval_history_db_path()
+        if not path.exists():
+            return []
+        _cut = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+                - _dt.timedelta(hours=hours)).isoformat()
+        conn = _sq.connect(str(path), timeout=10)
+        try:
+            cur = conn.execute(
+                "SELECT window_utc, n_symbols, n_evaluable, entries_json "
+                "FROM signal_eval_history WHERE cycle = ? AND window_utc >= ? "
+                "ORDER BY window_utc DESC", (str(sysname), _cut))
+            out = []
+            for win_iso, n_sym, n_ev, ej in cur.fetchall():
+                try:
+                    entries = _json.loads(ej or "[]")
+                except Exception:
+                    entries = []
+                out.append({"window_utc": win_iso, "n_symbols": n_sym,
+                            "n_evaluable": n_ev, "entries": entries})
+            return out
+        finally:
+            conn.close()
+    except Exception:
+        return []
+
+
+def _backfill_eval_history_from_state(state):
+    """Seed the persistent history from payloads already held in session
+    state (each system's stored window + last-entry companion) when the
+    store has no row for them yet."""
+    try:
+        for _sysname, _panel in _SIGNAL_PANELS.items():
+            _p = state.get(_panel["state_key"])
+            if isinstance(_p, dict):
+                _record_eval_history(_sysname, _p, replace=False)
+            _le = state.get(_panel["state_key"] + ":last_entry")
+            if isinstance(_le, dict) and _le.get("window_utc") is not None:
+                _record_eval_history(_sysname, {
+                    "window_utc": _le.get("window_utc"),
+                    "window_mmt": _le.get("window_mmt"),
+                    "signals": _le.get("signals"),
+                    "n_evaluable": -1,
+                }, replace=False)
+    except Exception:
+        pass
+
+
+def _render_eval_history(st, state, sysname):
+    """Last-24-hour history table for one system panel: every check
+    window in the last 24 hours, how many symbols evaluated (x/20), and
+    the fired entries as Quick-look strings -- or an explicit 'no entry'.
+    Reads ONLY the persistent local store, so it survives app restarts
+    and costs no provider calls."""
+    import pandas as _pd
+    try:
+        _backfill_eval_history_from_state(state)
+        rows = _load_eval_history(sysname, hours=24)
+        st.markdown("### \U0001F559 Last 24 hours \u2014 every check")
+        if not rows:
+            st.caption("No checks recorded yet in the last 24 hours \u2014 "
+                       "history builds as each window evaluates and is "
+                       "kept across app restarts.")
+            return
+        _disp = []
+        for r in rows:
+            try:
+                _mmt = (_pd.Timestamp(r["window_utc"])
+                        + _pd.Timedelta(hours=6, minutes=30))
+                _check = _mmt.strftime("%b %d \u00b7 %H:%M")
+            except Exception:
+                _check = str(r["window_utc"])
+            _nev = r.get("n_evaluable")
+            _syms = (f"{int(_nev)}/20"
+                     if isinstance(_nev, int) and _nev >= 0 else "\u2014/20")
+            _ent = r.get("entries") or []
+            _res = (" \u00b7 ".join(str(e.get("quick", "")) for e in _ent)
+                    if _ent else "\u2014 no entry")
+            _disp.append({"Check (MMT)": _check, "Symbols": _syms,
+                          "Result": _res})
+        st.dataframe(_pd.DataFrame(_disp),
+                     use_container_width=True, hide_index=True)
+    except Exception:
+        pass
+
+
 def _latest_entry_window_utc(now_utc, hours=None):
     """Latest H:00 UTC entry window at/before now (weekdays only).
 
@@ -3300,7 +3584,7 @@ def _force_dashboard_refresh(st, state):
 
 
 def _render_check_time_reminders(st, state):
-    """Check-time reminders: ALL 12 months with each month's check times.
+    """Check-time reminders: CURRENT month only (Myanmar time).
 
     Times come from each cycle module's own CHECK_HOURS (the entry windows),
     shown in Myanmar time (UTC+6:30) as 'HH:MM-HH:MM'. Every month/time row
@@ -3311,7 +3595,17 @@ def _render_check_time_reminders(st, state):
     st.markdown("### \u23f0 Check-time reminders")
     st.caption("Tick the check times you want to remind yourself of. "
                "Ticks are saved in the app state and stay ticked.")
-    for _month_name, _sysname, _nn, _code in _MONTH_PANEL_ORDER:
+    # User order 2026-10-22 (round 2): show ONLY the current calendar
+    # month (Myanmar time) -- other months' ticks stay stored in state,
+    # just not displayed. The month follows the actual current date.
+    try:
+        import datetime as _dtr
+        _mmt_month = (_dtr.datetime.now(_dtr.timezone.utc)
+                      + _dtr.timedelta(hours=6, minutes=30)).month
+        _panel_order = [_MONTH_PANEL_ORDER[_mmt_month - 1]]
+    except Exception:
+        _panel_order = _MONTH_PANEL_ORDER
+    for _month_name, _sysname, _nn, _code in _panel_order:
         try:
             _mod = _il.import_module(f"core.cycle{_nn}_best")
             _hours = getattr(_mod, f"CYCLE{_nn}_CHECK_HOURS")
@@ -3777,6 +4071,11 @@ def _evaluate_c60_window(state, hour_utc, day=None):
             "signals": _c22_signals_to_display(entries),
         }
         try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle60", payload)
+        try:
             state[_C60_SIG_STATE_KEY] = payload
         except Exception:
             pass
@@ -3912,12 +4211,20 @@ def _render_cycle60_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 60 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C60_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -3932,6 +4239,9 @@ def _render_cycle60_signals_table(st, state):
                     st.info("No Cycle 60 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C60_SIG_STATE_KEY) if isinstance(state.get(_C60_SIG_STATE_KEY), dict) else None
@@ -4060,6 +4370,11 @@ def _evaluate_c67_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle67", payload)
         try:
             state[_C67_SIG_STATE_KEY] = payload
         except Exception:
@@ -4196,12 +4511,20 @@ def _render_cycle67_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 67 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C67_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -4216,6 +4539,9 @@ def _render_cycle67_signals_table(st, state):
                     st.info("No Cycle 67 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C67_SIG_STATE_KEY) if isinstance(state.get(_C67_SIG_STATE_KEY), dict) else None
@@ -4347,6 +4673,11 @@ def _evaluate_c78_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle78", payload)
         try:
             state[_C78_SIG_STATE_KEY] = payload
         except Exception:
@@ -4483,12 +4814,20 @@ def _render_cycle78_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 78 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C78_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -4503,6 +4842,9 @@ def _render_cycle78_signals_table(st, state):
                     st.info("No Cycle 78 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C78_SIG_STATE_KEY) if isinstance(state.get(_C78_SIG_STATE_KEY), dict) else None
@@ -4628,6 +4970,11 @@ def _evaluate_c85_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle85", payload)
         try:
             state[_C85_SIG_STATE_KEY] = payload
         except Exception:
@@ -4764,12 +5111,20 @@ def _render_cycle85_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 85 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C85_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -4784,6 +5139,9 @@ def _render_cycle85_signals_table(st, state):
                     st.info("No Cycle 85 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C85_SIG_STATE_KEY) if isinstance(state.get(_C85_SIG_STATE_KEY), dict) else None
@@ -4912,6 +5270,11 @@ def _evaluate_c86_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle86", payload)
         try:
             state[_C86_SIG_STATE_KEY] = payload
         except Exception:
@@ -5048,12 +5411,20 @@ def _render_cycle86_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 86 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C86_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -5068,6 +5439,9 @@ def _render_cycle86_signals_table(st, state):
                     st.info("No Cycle 86 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C86_SIG_STATE_KEY) if isinstance(state.get(_C86_SIG_STATE_KEY), dict) else None
@@ -5196,6 +5570,11 @@ def _evaluate_c87_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle87", payload)
         try:
             state[_C87_SIG_STATE_KEY] = payload
         except Exception:
@@ -5332,12 +5711,20 @@ def _render_cycle87_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 87 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C87_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -5352,6 +5739,9 @@ def _render_cycle87_signals_table(st, state):
                     st.info("No Cycle 87 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C87_SIG_STATE_KEY) if isinstance(state.get(_C87_SIG_STATE_KEY), dict) else None
@@ -5477,6 +5867,11 @@ def _evaluate_c88_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle88", payload)
         try:
             state[_C88_SIG_STATE_KEY] = payload
         except Exception:
@@ -5613,12 +6008,20 @@ def _render_cycle88_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 88 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C88_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -5633,6 +6036,9 @@ def _render_cycle88_signals_table(st, state):
                     st.info("No Cycle 88 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C88_SIG_STATE_KEY) if isinstance(state.get(_C88_SIG_STATE_KEY), dict) else None
@@ -5761,6 +6167,11 @@ def _evaluate_c89_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle89", payload)
         try:
             state[_C89_SIG_STATE_KEY] = payload
         except Exception:
@@ -5897,12 +6308,20 @@ def _render_cycle89_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 89 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C89_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -5917,6 +6336,9 @@ def _render_cycle89_signals_table(st, state):
                     st.info("No Cycle 89 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C89_SIG_STATE_KEY) if isinstance(state.get(_C89_SIG_STATE_KEY), dict) else None
@@ -6046,6 +6468,11 @@ def _evaluate_c91_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle91", payload)
         try:
             state[_C91_SIG_STATE_KEY] = payload
         except Exception:
@@ -6182,12 +6609,20 @@ def _render_cycle91_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 91 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C91_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -6202,6 +6637,9 @@ def _render_cycle91_signals_table(st, state):
                     st.info("No Cycle 91 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C91_SIG_STATE_KEY) if isinstance(state.get(_C91_SIG_STATE_KEY), dict) else None
@@ -6328,6 +6766,11 @@ def _evaluate_c92_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle92", payload)
         try:
             state[_C92_SIG_STATE_KEY] = payload
         except Exception:
@@ -6464,12 +6907,20 @@ def _render_cycle92_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 92 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C92_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -6484,6 +6935,9 @@ def _render_cycle92_signals_table(st, state):
                     st.info("No Cycle 92 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C92_SIG_STATE_KEY) if isinstance(state.get(_C92_SIG_STATE_KEY), dict) else None
@@ -6612,6 +7066,11 @@ def _evaluate_c93_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle93", payload)
         try:
             state[_C93_SIG_STATE_KEY] = payload
         except Exception:
@@ -6748,12 +7207,20 @@ def _render_cycle93_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 93 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C93_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -6768,6 +7235,9 @@ def _render_cycle93_signals_table(st, state):
                     st.info("No Cycle 93 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C93_SIG_STATE_KEY) if isinstance(state.get(_C93_SIG_STATE_KEY), dict) else None
@@ -6896,6 +7366,11 @@ def _evaluate_c94_window(state, hour_utc, day=None):
             "n_evaluable": n_evaluable,
             "signals": _c22_signals_to_display(entries),
         }
+        try:
+            payload["ranking"] = _c22_build_check_ranking(sig, entries, frames, need)
+        except Exception:
+            pass
+        _record_eval_history("cycle94", payload)
         try:
             state[_C94_SIG_STATE_KEY] = payload
         except Exception:
@@ -7032,12 +7507,20 @@ def _render_cycle94_signals_table(st, state):
                 }
             except Exception:
                 pass
+        _ranking = payload.get("ranking")
+        _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if n_eval < 10:
                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
                          f"had the needed candles. This is a data problem, not a signal. "
                          f"Refreshing automatically; if it persists, check the data connection.")
+            elif _has_ranking:
+                # User order 2026-10-22 (round 2): bare text must NEVER
+                # replace the table -- one status line, then the full
+                # ranking of every evaluated symbol below.
+                st.info("No Cycle 94 equations fired in this window \u2014 "
+                        "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C94_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
@@ -7052,6 +7535,9 @@ def _render_cycle94_signals_table(st, state):
                     st.info("No Cycle 94 equations fired in this window.")
         else:
             st.dataframe(disp, use_container_width=True, hide_index=True)
+        if _has_ranking:
+            st.markdown("**All evaluated symbols \u2014 latest check ranking**")
+            st.dataframe(_ranking, use_container_width=True, hide_index=True)
         return payload
     except Exception:
         return state.get(_C94_SIG_STATE_KEY) if isinstance(state.get(_C94_SIG_STATE_KEY), dict) else None
@@ -7227,8 +7713,8 @@ def render_multisymbol_regime_summary(
     signals are persisted in session state and stay visible until the next
     window arrives. The "Refresh the dashboard" button above the signals
     table forces a fresh H1 + M15 fetch and re-evaluation; the reminders
-    section below the table lists all 12 months' check times with
-    persistent checkbox toggles.
+    section below the table lists the current month's check
+    times with persistent checkbox toggles.
     """
     _auto_refresh_field3(st)
     from ui.monthly_equation_panel import render_monthly_panel
@@ -7279,6 +7765,8 @@ def render_multisymbol_regime_summary(
     if payload is not None:
         st.markdown("<div style='margin-top:4px;'></div>", unsafe_allow_html=True)
         _panel["download"](st, payload)
+
+    _render_eval_history(st, state, _active)
 
     _render_check_time_reminders(st, state)
 

@@ -224,6 +224,35 @@ net +487.7 vs +477.7. It REPLACES cycle66 as July's default.
 Cycle 66 remains selectable (and remains the frozen entry
 engine inside cycle78).
 
+2026-10-21 update (Program 4, retry round): the nine
+NO_IMPROVEMENT months of Program 3 were re-run under the
+user's priority order -- (1) paired LCT-middle PASS vs the
+incumbent first, (2) unseen leftover strictly up, hard
+minimums >=2 entries/day and win >=80%. Nine challengers
+passed and were PROMOTED under the standing rule (Muse
+decides; no per-promotion approval): Cycle 85 (C85-23,
+February: C56-15 minus 4 FB legs + FB TP x1.75), Cycle 86
+(C86-24, March: C62-10 minus FB_USDCAD_h16_1 + M08
+Reject15 rerank + FB TP x0.95, M15 exits), Cycle 87
+(C87-24, April: C63-04 with 3 FB legs banned + M18
+rerank), Cycle 88 (C88-03, May: C64-09 minus the whole
+FB layer), Cycle 89 (C89-21, June: C65-01 minus
+FB_AUDJPY_h18_0 + h18 bench FBGATE + REV TP x1.25),
+Cycle 91 (C91-15, September: C59-18 minus 3 hour-1 FB
+legs + X30B at-entry SL overlay), Cycle 92 (C92-24,
+October: C69-07 minus 4 FB legs + 7 screened fresh legs
+at fallback-tier scores; app default only -- the live
+R4A01 crons are untouched), Cycle 93 (C93-24, November:
+C70-07 minus 8 FB legs and the CYB EURNZD h9 leg + FBGATE
+on the surviving FB leg), Cycle 94 (C94-23, December:
+C71-04 verbatim + FB-pick vol/CLV gate). January (C84)
+and August (C90) had NO_IMPROVEMENT verdicts -- August's
+was proven mathematically impossible under the current
+LCT protocol -- so cycle60 and cycle67 stay the January
+and August defaults. Every replaced incumbent remains
+selectable and remains the frozen entry engine inside
+its winner.
+
 C18-A3 (core/cycle18_best.py) and FT-C01 (core/cycle12_best.py) are KEPT
 byte-identical and remain available as selectable modes via
 set_active_system('cycle18' / 'ft-c01').
@@ -385,15 +414,73 @@ SYSTEM_CYCLE78 = "cycle78"   # C78-34: C66-08 frozen (delegates to cycle66)
                              # 15/16, fails only check 8 which C66-08 itself
                              # fails; LCT middle PASS P 90.56% / p5 42.18%;
                              # replaces C66-08)
+SYSTEM_CYCLE85 = "cycle85"   # C85-23: C56-15 frozen (delegates to cycle56)
+                             # minus 4 FB legs + TP x1.75 on surviving FB
+                             # trades, hours (11,13,16) UTC, exactly 1
+                             # entry/check (February-only; Program 4,
+                             # LCT middle PASS P 90.42% / p5 40.14%;
+                             # replaces C56-15)
+SYSTEM_CYCLE86 = "cycle86"   # C86-24: C62-10 frozen (delegates to cycle62)
+                             # minus FB_USDCAD_h16_1 + M08 Reject15 rerank
+                             # in top-3 + TP x0.95 on FB trades, hours
+                             # (11,16,17) UTC, exactly 1 entry/check
+                             # (March-only; Program 4, LCT middle PASS
+                             # P 87.34% / p5 35.38%; replaces C62-10)
+SYSTEM_CYCLE87 = "cycle87"   # C87-24: C63-04 frozen (delegates to cycle63)
+                             # with 3 FB legs banned + M18 common-range
+                             # rerank in top-3, hours (16,17,18) UTC,
+                             # exactly 1 entry/check (April-only; Program 4,
+                             # LCT middle PASS P 92.44% / p5 65.55%;
+                             # replaces C63-04)
+SYSTEM_CYCLE88 = "cycle88"   # C88-03: C64-09 frozen (delegates to cycle64)
+                             # minus the entire FB layer (9 legs), hours
+                             # (10,16,18) UTC, exactly 1 entry/check
+                             # (May-only; Program 4, LCT middle+strict
+                             # PASS P 100.00% / p5 84.43%; replaces C64-09)
+SYSTEM_CYCLE89 = "cycle89"   # C89-21: C65-01 frozen (delegates to cycle65)
+                             # minus FB_AUDJPY_h18_0 + FBGATE veto on h18
+                             # bench picks + TP x1.25 on REV_lr2 legs,
+                             # hours (1,15,18) UTC, exactly 1 entry/check
+                             # (June-only; Program 4, LCT middle+strict
+                             # PASS P 99.91% / p5 52.13%; replaces C65-01)
+SYSTEM_CYCLE91 = "cycle91"   # C91-15: C59-18 frozen (delegates to cycle59)
+                             # minus 3 hour-1 FB legs + X30B at-entry
+                             # overlay (ER15(16) <= 0.25 & r1(1) >= 0 ->
+                             # SL x0.85), hours (1,10,11) UTC, exactly 1
+                             # entry/check (September-only; Program 4,
+                             # LCT middle PASS P 80.28% / p5 24.63%;
+                             # replaces C59-18)
+SYSTEM_CYCLE92 = "cycle92"   # C92-24: C69-07 frozen (delegates to cycle69)
+                             # minus 4 FB legs + 7 screened fresh legs at
+                             # fallback-tier scores 512-506, hours
+                             # (15,17,18) UTC, exactly 1 entry/check
+                             # (October-only; Program 4, LCT middle+strict
+                             # PASS P 100.00% / p5 70.20%; replaces C69-07
+                             # as the APP default only -- live R4A01
+                             # crons unchanged)
+SYSTEM_CYCLE93 = "cycle93"   # C93-24: C70-07 frozen (delegates to cycle70)
+                             # minus 8 FB legs + CYB EURNZD h9 leg +
+                             # FBGATE veto on the surviving FB leg, hours
+                             # (9,13,15) UTC, exactly 1 entry/check
+                             # (November-only; Program 4, LCT middle PASS
+                             # P 83.42% / p5 46.18%; replaces C70-07)
+SYSTEM_CYCLE94 = "cycle94"   # C94-23: C71-04 frozen verbatim (delegates to
+                             # cycle71) + FB-pick gate (ATR14 percentile
+                             # > 70 & M15 CLV < 0.45 -> veto), hours
+                             # (10,11,13) UTC, exactly 1 entry/check
+                             # (December-only; Program 4, LCT middle PASS
+                             # P 94.14% / p5 31.54%; replaces C71-04)
 
 # Verified position-sizing Best N per system (the WINNER's sizing run).
 # The app engines carry no sizing metadata; these are the verified
 # values from Report Book V3, each cross-checked against the winning
 # cycle's comparison table (work_cNN/results/comparison_table.csv).
-# Only the 12 final month-default systems have verified winner values;
-# any other system returns None from best_n_for_system() and the UI
-# shows "--" rather than an unverified number. NOTE: August's winner
-# C67-04 is N=121 -- 103 was the replaced incumbent C55-15's value.
+# Only the month systems with verified winner sizing runs have
+# values (the 12 LCT-fix-round winners plus the 9 Program 4
+# winners); any other system returns None from
+# best_n_for_system() and the UI shows "--" rather than an
+# unverified number. NOTE: August's winner C67-04 is N=121 --
+# 103 was the replaced incumbent C55-15's value.
 SYSTEM_BEST_N = {
     SYSTEM_CYCLE60: 83,    # C60-03 January
     SYSTEM_CYCLE56: 104,   # C56-15 February
@@ -408,6 +495,15 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE69: 83,    # C69-07 October
     SYSTEM_CYCLE70: 83,    # C70-07 November
     SYSTEM_CYCLE71: 105,   # C71-04 December
+    SYSTEM_CYCLE85: 104,   # C85-23 February (Program 4; own sizing run)
+    SYSTEM_CYCLE86: 86,    # C86-24 March (Program 4; own sizing run)
+    SYSTEM_CYCLE87: 104,   # C87-24 April (Program 4; own sizing run)
+    SYSTEM_CYCLE88: 66,    # C88-03 May (Program 4; own sizing run)
+    SYSTEM_CYCLE89: 84,    # C89-21 June (Program 4; own sizing run)
+    SYSTEM_CYCLE91: 83,    # C91-15 September (Program 4; own sizing run)
+    SYSTEM_CYCLE92: 83,    # C92-24 October (Program 4; own sizing run)
+    SYSTEM_CYCLE93: 83,    # C93-24 November (Program 4; own sizing run)
+    SYSTEM_CYCLE94: 105,   # C94-23 December (Program 4; own sizing run)
 }
 
 
@@ -425,7 +521,7 @@ def set_active_system(name: str) -> str:
     'cycle24', 'cycle26', 'cycle27', 'cycle28', 'cycle29', 'cycle30',
     'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35', 'cycle36',
     'cycle48', 'cycle42', 'cycle44', 'cycle52', 'cycle51', 'cycle53',
-    'cycle55', 'cycle56', 'cycle57', 'cycle59', 'cycle60', 'cycle62', 'cycle63', 'cycle64', 'cycle65', 'cycle66', 'cycle67', 'cycle69', 'cycle70', 'cycle71', 'cycle78'}.
+    'cycle55', 'cycle56', 'cycle57', 'cycle59', 'cycle60', 'cycle62', 'cycle63', 'cycle64', 'cycle65', 'cycle66', 'cycle67', 'cycle69', 'cycle70', 'cycle71', 'cycle78', 'cycle85', 'cycle86', 'cycle87', 'cycle88', 'cycle89', 'cycle91', 'cycle92', 'cycle93', 'cycle94'}.
     Returns the newly active system name."""
     global _ACTIVE
     n = str(name).strip().lower()
@@ -434,13 +530,13 @@ def set_active_system(name: str) -> str:
                  SYSTEM_CYCLE30, SYSTEM_CYCLE31, SYSTEM_CYCLE32, SYSTEM_CYCLE33,
                  SYSTEM_CYCLE34, SYSTEM_CYCLE35, SYSTEM_CYCLE36, SYSTEM_CYCLE48,
                  SYSTEM_CYCLE42, SYSTEM_CYCLE44, SYSTEM_CYCLE52, SYSTEM_CYCLE51,
-                 SYSTEM_CYCLE53, SYSTEM_CYCLE55, SYSTEM_CYCLE56, SYSTEM_CYCLE57, SYSTEM_CYCLE59, SYSTEM_CYCLE65, SYSTEM_CYCLE71, SYSTEM_CYCLE70, SYSTEM_CYCLE64, SYSTEM_CYCLE69, SYSTEM_CYCLE63, SYSTEM_CYCLE66, SYSTEM_CYCLE62, SYSTEM_CYCLE60, SYSTEM_CYCLE67, SYSTEM_CYCLE78):
+                 SYSTEM_CYCLE53, SYSTEM_CYCLE55, SYSTEM_CYCLE56, SYSTEM_CYCLE57, SYSTEM_CYCLE59, SYSTEM_CYCLE65, SYSTEM_CYCLE71, SYSTEM_CYCLE70, SYSTEM_CYCLE64, SYSTEM_CYCLE69, SYSTEM_CYCLE63, SYSTEM_CYCLE66, SYSTEM_CYCLE62, SYSTEM_CYCLE60, SYSTEM_CYCLE67, SYSTEM_CYCLE78, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94):
         raise ValueError(
             f"unknown system {name!r}; choose 'cycle22', 'cycle18', 'ft-c01', "
             f"'cycle24', 'cycle26', 'cycle27', 'cycle28', 'cycle29', 'cycle30', "
             f"'cycle31', 'cycle32', 'cycle33', 'cycle34', 'cycle35', 'cycle36', "
             f"'cycle48', 'cycle42', 'cycle44', 'cycle52', 'cycle51', 'cycle53', "
-            f"'cycle55', 'cycle56', 'cycle57', 'cycle59', 'cycle65', 'cycle71', 'cycle70', 'cycle64', 'cycle69', 'cycle63', 'cycle66', 'cycle62', 'cycle60', 'cycle67' or 'cycle78'")
+            f"'cycle55', 'cycle56', 'cycle57', 'cycle59', 'cycle65', 'cycle71', 'cycle70', 'cycle64', 'cycle69', 'cycle63', 'cycle66', 'cycle62', 'cycle60', 'cycle67', 'cycle78', 'cycle85', 'cycle86', 'cycle87', 'cycle88', 'cycle89', 'cycle91', 'cycle92', 'cycle93' or 'cycle94'")
     _ACTIVE = n
     return _ACTIVE
 
@@ -621,6 +717,87 @@ def describe_active() -> str:
                 "checks, fails only check 8 which C66-08 itself fails; "
                 "LCT middle PASS, Muse's-decision promotion, replaced "
                 "C66-08)")
+    if _ACTIVE == SYSTEM_CYCLE85:
+        return ("cycle85 (C85-23): C56-15 entry engine frozen (hours "
+                "11/13/16 delegate to cycle56) minus 4 FB legs "
+                "(FB_GBPUSD_h16_2, FB_USDCAD_h13_1, FB_EURGBP_h13_2, "
+                "FB_NZDUSD_h11_2) + TP x1.75 on surviving FB trades, "
+                "exactly 1 entry/check -- February @2.5-pip net +184.2 "
+                "pips / win 85.71% / leftover 29.35% / 2.45 entries/day "
+                "(LCT middle PASS P 90.42% / p5 40.14%, Program 4 "
+                "promotion, replaced C56-15)")
+    if _ACTIVE == SYSTEM_CYCLE86:
+        return ("cycle86 (C86-24): C62-10 entry engine frozen (hours "
+                "11/16/17 delegate to cycle62) minus FB_USDCAD_h16_1 "
+                "+ M08 Reject15 rerank within top-3 + TP x0.95 on FB "
+                "trades (exits simulated on M15 in research), exactly "
+                "1 entry/check -- March @2.5-pip net +350.3 pips / win "
+                "93.55% / leftover 69.30% / 2.95 entries/day (LCT "
+                "middle PASS P 87.34% / p5 35.38%, Program 4 "
+                "promotion, replaced C62-10)")
+    if _ACTIVE == SYSTEM_CYCLE87:
+        return ("cycle87 (C87-24): C63-04 entry engine frozen (hours "
+                "16/17/18 delegate to cycle63) with FB_EURGBP_h18_1, "
+                "FB_GBPUSD_h16_1 and FB_USDCHF_h18_2 banned + M18 "
+                "common-range rerank within top-3, exactly 1 "
+                "entry/check -- April @2.5-pip net +633.2 pips / win "
+                "92.42% / leftover 60.26% / 3.00 entries/day (LCT "
+                "middle PASS P 92.44% / p5 65.55%, Program 4 "
+                "promotion, replaced C63-04)")
+    if _ACTIVE == SYSTEM_CYCLE88:
+        return ("cycle88 (C88-03): C64-09 entry engine frozen (hours "
+                "10/16/18 delegate to cycle64) minus the entire FB "
+                "layer (all 9 FB legs), exactly 1 entry/check -- May "
+                "@2.5-pip net +377.0 pips / win 91.84% / leftover "
+                "58.69% / 2.23 entries/day (LCT middle+strict PASS "
+                "P 100.00% / p5 84.43%, Program 4 promotion, "
+                "replaced C64-09)")
+    if _ACTIVE == SYSTEM_CYCLE89:
+        return ("cycle89 (C89-21): C65-01 entry engine frozen (hours "
+                "1/15/18 delegate to cycle65) minus FB_AUDJPY_h18_0 "
+                "+ FBGATE veto on h18 bench picks (ATR-pct > 80 & "
+                "M15 CLV < 0.50) + TP x1.25 on the REV_lr2 legs, "
+                "exactly 1 entry/check -- June @2.5-pip net +364.0 "
+                "pips / win 95.24% / leftover 58.20% / 3.00 "
+                "entries/day (LCT middle+strict PASS P 99.91% / p5 "
+                "52.13%, Program 4 promotion, replaced C65-01)")
+    if _ACTIVE == SYSTEM_CYCLE91:
+        return ("cycle91 (C91-15): C59-18 entry engine frozen (hours "
+                "1/10/11 delegate to cycle59) minus 3 hour-1 FB legs "
+                "+ X30B at-entry overlay (ER15(16) <= 0.25 & r1(1) "
+                ">= 0 -> SL x0.85), exactly 1 entry/check -- "
+                "September @2.5-pip net +285.1 pips / win 94.83% / "
+                "leftover 65.26% / 2.64 entries/day (LCT middle PASS "
+                "P 80.28% / p5 24.63%, Program 4 promotion, "
+                "replaced C59-18)")
+    if _ACTIVE == SYSTEM_CYCLE92:
+        return ("cycle92 (C92-24): C69-07 entry engine frozen (hours "
+                "15/17/18 delegate to cycle69) minus 4 FB legs + 7 "
+                "screened fresh legs at fallback-tier scores "
+                "512-506, exactly 1 entry/check -- October @2.5-pip "
+                "net +296.7 pips / win 93.75% / leftover 62.78% / "
+                "2.09 entries/day (LCT middle+strict PASS P 100.00% "
+                "/ p5 70.20%, Program 4 promotion, replaced C69-07 "
+                "as the app default only -- live R4A01 crons "
+                "unchanged)")
+    if _ACTIVE == SYSTEM_CYCLE93:
+        return ("cycle93 (C93-24): C70-07 entry engine frozen (hours "
+                "9/13/15 delegate to cycle70) minus 8 of 9 FB legs "
+                "and the CYB EURNZD h9 leg + FBGATE veto on the "
+                "surviving FB_EURUSD_h9_0 (ATR-pct > 80 & M15 CLV "
+                "< 0.50), exactly 1 entry/check -- November "
+                "@2.5-pip net +318.2 pips / win 84.62% / leftover "
+                "40.11% / 2.60 entries/day (LCT middle PASS P 83.42% "
+                "/ p5 46.18%, Program 4 promotion, replaced C70-07)")
+    if _ACTIVE == SYSTEM_CYCLE94:
+        return ("cycle94 (C94-23): C71-04 entry engine frozen "
+                "verbatim (hours 10/11/13 delegate to cycle71) + "
+                "FB-pick gate (ATR14 percentile > 70 & M15 CLV "
+                "< 0.45 -> veto, walk continues), exactly 1 "
+                "entry/check -- December @2.5-pip net +490.6 pips / "
+                "win 95.45% / leftover 80.81% / 2.87 entries/day "
+                "(LCT middle PASS P 94.14% / p5 31.54%, Program 4 "
+                "promotion, replaced C71-04)")
     if _ACTIVE == SYSTEM_CYCLE28:
         return ("cycle28 (C28-30): 24 equations (15 mined + 9 TREND fallbacks, "
                 "per-symbol tuned), entries 11:00/13:00/17:00 UTC "
@@ -780,6 +957,51 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
         return evaluate_cycle78_signals(
             frames, check_time_utc,
             m15_frames=fetch_cycle78_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE85:
+        from core.cycle85_best import evaluate_cycle85_signals
+        return evaluate_cycle85_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE86:
+        from core.cycle86_best import (evaluate_cycle86_signals,
+                                       fetch_cycle86_m15_frames)
+        return evaluate_cycle86_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle86_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE87:
+        from core.cycle87_best import (evaluate_cycle87_signals,
+                                       fetch_cycle87_m15_frames)
+        return evaluate_cycle87_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle87_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE88:
+        from core.cycle88_best import evaluate_cycle88_signals
+        return evaluate_cycle88_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE89:
+        from core.cycle89_best import (evaluate_cycle89_signals,
+                                       fetch_cycle89_m15_frames)
+        return evaluate_cycle89_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle89_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE91:
+        from core.cycle91_best import (evaluate_cycle91_signals,
+                                       fetch_cycle91_m15_frames)
+        return evaluate_cycle91_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle91_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE92:
+        from core.cycle92_best import evaluate_cycle92_signals
+        return evaluate_cycle92_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE93:
+        from core.cycle93_best import (evaluate_cycle93_signals,
+                                       fetch_cycle93_m15_frames)
+        return evaluate_cycle93_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle93_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE94:
+        from core.cycle94_best import (evaluate_cycle94_signals,
+                                       fetch_cycle94_m15_frames)
+        return evaluate_cycle94_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle94_m15_frames())
     from core.cycle12_best import evaluate_cycle12_signals
     return evaluate_cycle12_signals(frames, check_time_utc)
 
@@ -896,6 +1118,33 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE78:
         from core.cycle78_best import select_cycle78_entries
         return select_cycle78_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE85:
+        from core.cycle85_best import select_cycle85_entries
+        return select_cycle85_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE86:
+        from core.cycle86_best import select_cycle86_entries
+        return select_cycle86_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE87:
+        from core.cycle87_best import select_cycle87_entries
+        return select_cycle87_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE88:
+        from core.cycle88_best import select_cycle88_entries
+        return select_cycle88_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE89:
+        from core.cycle89_best import select_cycle89_entries
+        return select_cycle89_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE91:
+        from core.cycle91_best import select_cycle91_entries
+        return select_cycle91_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE92:
+        from core.cycle92_best import select_cycle92_entries
+        return select_cycle92_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE93:
+        from core.cycle93_best import select_cycle93_entries
+        return select_cycle93_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE94:
+        from core.cycle94_best import select_cycle94_entries
+        return select_cycle94_entries(signals, open_symbols=open_symbols)
     from core.cycle12_best import select_cycle12_entries
     return select_cycle12_entries(signals, open_symbols=open_symbols, k=k)
 
@@ -974,6 +1223,24 @@ def active_check_hours():
         return (1, 6, 16, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE78:
         return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE85:
+        return (11, 13, 16)
+    if _ACTIVE == SYSTEM_CYCLE86:
+        return (11, 16, 17)
+    if _ACTIVE == SYSTEM_CYCLE87:
+        return (16, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE88:
+        return (10, 16, 18)
+    if _ACTIVE == SYSTEM_CYCLE89:
+        return (1, 15, 18)
+    if _ACTIVE == SYSTEM_CYCLE91:
+        return (1, 10, 11)
+    if _ACTIVE == SYSTEM_CYCLE92:
+        return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE93:
+        return (9, 13, 15)
+    if _ACTIVE == SYSTEM_CYCLE94:
+        return (10, 11, 13)
     # cycle22 (F1-P4) and cycle18 (C18-A3) share the 4-check schedule
     return (10, 11, 13, 18)
 

@@ -9,8 +9,12 @@ thing: an entry gate on TREND-fallback (FB_*) picks only.
   Veto an FB_* candidate when the H1 Wilder ATR14
   percentile rank (480-bar, signal bar, c83 convention:
   preceding values only, count-less + half ties, x100)
-  is > 70 AND the directional CLV of the last completed
-  M15 bar at entry is < 0.45. On a veto the walk
+  is > 70 AND the CLV of the last completed M15 bar at
+  entry, in the research frame's fixed d=-1 form
+  (h-c)/(h-l), is < 0.45. (The C94 research frame stamps
+  FB rows with the raw 'TREND' direction, so its
+  cand_feats never used the resolved trade direction.)
+  On a veto the walk
   continues to the next candidate at that check (the
   veto depends only on the candidate itself, so dropping
   the row from the signals frame is exactly the research
@@ -68,6 +72,61 @@ def _atrpct_at(atr: np.ndarray, pos: int) -> float:
                  / 480.0 * 100.0)
 
 
+_A1_MEMO: dict = {}
+
+
+def _wilder_atr14(o, h, l, c):
+    """Research H1 ATR14: Wilder smoothing of the true-range
+    series (seed = mean of first 14 TRs at index 13, then
+    y = (x + 13*prior)/14). The frozen gate percentile ranks
+    THIS series ('H1 Wilder ATR14 percentile', C94-23 spec);
+    the feature-frame 'atr14' column is a plain 14-bar mean
+    and is NOT the same series."""
+    o = np.asarray(o, dtype=float)
+    h = np.asarray(h, dtype=float)
+    l = np.asarray(l, dtype=float)
+    c = np.asarray(c, dtype=float)
+    pc = np.empty_like(c)
+    pc[0] = c[0]
+    pc[1:] = c[:-1]
+    tr = np.maximum(h - l, np.maximum(np.abs(h - pc),
+                                      np.abs(l - pc)))
+    y = np.full(len(tr), np.nan)
+    p = 14
+    if len(tr) <= p:
+        return y
+    seed = float(np.mean(tr[:p]))
+    y[p - 1] = seed
+    a = 1.0 / p
+    b = (p - 1.0) / p
+    try:
+        from scipy.signal import lfilter
+        y[p:] = lfilter([a], [1.0, -b], tr[p:], zi=[b * seed])[0]
+    except Exception:
+        prev = seed
+        for t in range(p, len(tr)):
+            prev = a * tr[t] + b * prev
+            y[t] = prev
+    return y
+
+
+def _frame_wilder(ff: pd.DataFrame):
+    """Wilder ATR14 array for a normalised H1 frame,
+    memoised across calls on a frame fingerprint."""
+    key = (len(ff), float(ff["Close"].sum()), float(ff["High"].sum()),
+           float(ff["Close"].iloc[0]), float(ff["Close"].iloc[-1]))
+    got = _A1_MEMO.get(key)
+    if got is None:
+        got = _wilder_atr14(ff["Open"].to_numpy(dtype=float),
+                            ff["High"].to_numpy(dtype=float),
+                            ff["Low"].to_numpy(dtype=float),
+                            ff["Close"].to_numpy(dtype=float))
+        if len(_A1_MEMO) > 64:
+            _A1_MEMO.clear()
+        _A1_MEMO[key] = got
+    return got
+
+
 def _clv15(m15a, entry_stamp, direction) -> float:
     """Directional CLV of the last completed M15 bar at
     entry; NaN when unavailable."""
@@ -120,8 +179,7 @@ def evaluate_cycle94_signals(frames: dict, check_time_utc,
                         pd.Timestamp(row["signal_candle"]))
                     if isinstance(pos, (int, np.integer)):
                         atrpct = _atrpct_at(
-                            feat["atr14"].to_numpy(dtype=float),
-                            int(pos))
+                            _frame_wilder(ff), int(pos))
             except Exception:
                 atrpct = float("nan")
             clv = float("nan")
@@ -130,8 +188,14 @@ def evaluate_cycle94_signals(frames: dict, check_time_utc,
                 if m15df is not None and len(m15df):
                     if sym not in m15_cache:
                         m15_cache[sym] = _m15_arrays(m15df)
+                    # Research-exact CLV side: in the C94
+                    # research frame every FB row carries the
+                    # equation's raw direction ('TREND'), so
+                    # cand_feats always used d=-1 and clv15 is
+                    # the (h-c)/rng form for ALL FB picks,
+                    # whatever the resolved trade direction.
                     clv = _clv15(m15_cache[sym], row["entry_candle"],
-                                 str(row["direction"]))
+                                 "SELL")
             if (np.isfinite(atrpct) and atrpct > GATE_ATRPCT_MIN
                     and np.isfinite(clv) and clv < GATE_CLV_MAX):
                 drop_idx.append(i)

@@ -99,6 +99,62 @@ def _m08_pass(m15a, entry_stamp, d: int, r1_6: float) -> bool:
         return False
 
 
+_A1_MEMO: dict = {}
+
+
+def _wilder_atr14(o, h, l, c):
+    """Research H1 ATR14 (c74_prep): Wilder smoothing of the
+    true-range series -- seed = mean of the first 14 TRs at
+    index 13, then y = (x + 13*prior)/14. This is the ATR the
+    frozen M08 definition divides by (Ctx.A1); the cycle12
+    'atr14' column is a plain 14-bar mean and is NOT the same
+    series."""
+    o = np.asarray(o, dtype=float)
+    h = np.asarray(h, dtype=float)
+    l = np.asarray(l, dtype=float)
+    c = np.asarray(c, dtype=float)
+    pc = np.empty_like(c)
+    pc[0] = c[0]
+    pc[1:] = c[:-1]
+    tr = np.maximum(h - l, np.maximum(np.abs(h - pc),
+                                      np.abs(l - pc)))
+    y = np.full(len(tr), np.nan)
+    p = 14
+    if len(tr) <= p:
+        return y
+    seed = float(np.mean(tr[:p]))
+    y[p - 1] = seed
+    a = 1.0 / p
+    b = (p - 1.0) / p
+    try:
+        from scipy.signal import lfilter
+        y[p:] = lfilter([a], [1.0, -b], tr[p:], zi=[b * seed])[0]
+    except Exception:
+        prev = seed
+        for t in range(p, len(tr)):
+            prev = a * tr[t] + b * prev
+            y[t] = prev
+    return y
+
+
+def _h1_a1(ff: pd.DataFrame):
+    """(closes, Wilder ATR14) for a normalised H1 frame,
+    memoised across calls on a frame fingerprint."""
+    key = (len(ff), float(ff["Close"].sum()), float(ff["High"].sum()),
+           float(ff["Close"].iloc[0]), float(ff["Close"].iloc[-1]))
+    got = _A1_MEMO.get(key)
+    if got is None:
+        got = (ff["Close"].to_numpy(dtype=float),
+               _wilder_atr14(ff["Open"].to_numpy(dtype=float),
+                             ff["High"].to_numpy(dtype=float),
+                             ff["Low"].to_numpy(dtype=float),
+                             ff["Close"].to_numpy(dtype=float)))
+        if len(_A1_MEMO) > 64:
+            _A1_MEMO.clear()
+        _A1_MEMO[key] = got
+    return got
+
+
 def evaluate_cycle86_signals(frames: dict, check_time_utc,
                              m15_frames: dict | None = None) -> pd.DataFrame:
     """C62-10 signals minus FB_USDCAD_h16_1, with TP x0.95
@@ -122,8 +178,9 @@ def evaluate_cycle86_signals(frames: dict, check_time_utc,
     for i, row in sig.iterrows():
         sym = str(row["symbol"])
         d = 1 if str(row["direction"]) == "BUY" else -1
-        # H1 r1(6) at the signal bar from the frozen cycle62
-        # feature frame (cache-shared recursion).
+        # H1 r1(6) at the signal bar: research definition
+        # (c74 Ctx.r1) -- close difference over the Wilder
+        # ATR14 series, NOT the cycle12 mean-TR 'atr14'.
         r1_6 = float("nan")
         try:
             if sym not in feat_cache:
@@ -136,18 +193,19 @@ def evaluate_cycle86_signals(frames: dict, check_time_utc,
                     if ff.index.tz is not None:
                         ff.index = ff.index.tz_convert(
                             "UTC").tz_localize(None)
+                    closes, a1s = _h1_a1(ff)
                     feat_cache[sym] = (
-                        _c62._symbol_feat(ff.reset_index(drop=True)),
+                        closes, a1s,
                         ff.index.get_indexer(
                             [pd.Timestamp(row["signal_candle"])])[0])
             got = feat_cache[sym]
             if got is not None:
-                feat, pos = got
+                closes, a1s, pos = got
                 if pos >= 6:
-                    a1 = float(feat["atr14"].iloc[pos])
+                    a1 = float(a1s[pos])
                     if np.isfinite(a1) and a1 > 0:
-                        r1_6 = float(d * (float(feat["Close"].iloc[pos])
-                                          - float(feat["Close"].iloc[pos - 6]))
+                        r1_6 = float(d * (float(closes[pos])
+                                          - float(closes[pos - 6]))
                                      / a1)
         except Exception:
             r1_6 = float("nan")

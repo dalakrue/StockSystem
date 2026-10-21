@@ -27,7 +27,10 @@ process -- exits are the incumbent's H1 exits):
              >= 0.15
        0.70 <= atrratio1 <= 1.20, where atrratio1 =
              ATR14_1[sig] / median of the preceding 720
-             H1 ATR14 values (finite-filtered)
+             H1 ATR14 values (finite-filtered); ATR14_1 is
+             the c75 ewm-Wilder series (alpha=1/14 ewm over
+             true ranges), NOT the engine's SMA 'atr14'
+             column
      A15 is the M15 Wilder ATR14 (pandas ewm alpha=1/14
      recursion, the c75 convention). NaN inputs fail.
 
@@ -69,6 +72,36 @@ M18_ATRR_HI = 1.20
 
 _DROP_IDS = ("FB_EURGBP_h18_1", "FB_GBPUSD_h16_1",
              "FB_USDCHF_h18_2")
+
+_A1_MEMO: dict = {}
+
+
+def _h1_atr1(ff) -> np.ndarray:
+    """H1 ATR14 in the c75 convention: pandas ewm
+    (alpha=1/14, min_periods=14, adjust=False) over true
+    ranges (prev close rolled; first TR = first bar's
+    range). This is NOT the frozen engine's 'atr14'
+    column (a plain SMA of TR): the M18 atrratio1 gate
+    was defined on this ewm-Wilder series, and the two
+    differ enough to flip borderline calls (EURCAD
+    2016-04-21: research 1.1756 passes <=1.20, the SMA
+    series fails it). Memoised on the frame fingerprint."""
+    key = (len(ff), str(ff.index[0]), str(ff.index[-1]),
+           float(ff["Close"].iloc[-1]))
+    got = _A1_MEMO.get(key)
+    if got is None:
+        if len(_A1_MEMO) > 64:
+            _A1_MEMO.clear()
+        h = ff["High"].to_numpy(dtype=float)
+        l = ff["Low"].to_numpy(dtype=float)
+        c = ff["Close"].to_numpy(dtype=float)
+        tr = np.maximum(h - l, np.maximum(
+            np.abs(h - np.roll(c, 1)), np.abs(l - np.roll(c, 1))))
+        tr[0] = h[0] - l[0]
+        got = pd.Series(tr).ewm(alpha=1.0 / 14, min_periods=14,
+                                adjust=False).mean().to_numpy()
+        _A1_MEMO[key] = got
+    return got
 
 C87_EQUATIONS = [e for e in _c63.CYCLE63_EQUATIONS
                  if e["id"] not in _DROP_IDS]
@@ -173,7 +206,7 @@ def evaluate_cycle87_signals(frames: dict, check_time_utc,
                 pos = ff.index.get_loc(
                     pd.Timestamp(row["signal_candle"]))
                 if isinstance(pos, (int, np.integer)) and pos >= 720:
-                    atr = feat["atr14"].to_numpy(dtype=float)
+                    atr = _h1_atr1(ff)
                     prev = atr[pos - 720:pos]
                     prev = prev[np.isfinite(prev)]
                     if len(prev):

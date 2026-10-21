@@ -76,6 +76,60 @@ def _atrpct_at(atr: np.ndarray, pos: int) -> float:
                  / 480.0 * 100.0)
 
 
+_A1_MEMO: dict = {}
+
+
+def _wilder_atr14(o, h, l, c):
+    """Research H1 ATR14: Wilder smoothing of the true-range
+    series (seed = mean of first 14 TRs at index 13, then
+    y = (x + 13*prior)/14). The frozen FBGATE percentile ranks
+    THIS series; the feature-frame 'atr14' column is a plain
+    14-bar mean and is NOT the same series."""
+    o = np.asarray(o, dtype=float)
+    h = np.asarray(h, dtype=float)
+    l = np.asarray(l, dtype=float)
+    c = np.asarray(c, dtype=float)
+    pc = np.empty_like(c)
+    pc[0] = c[0]
+    pc[1:] = c[:-1]
+    tr = np.maximum(h - l, np.maximum(np.abs(h - pc),
+                                      np.abs(l - pc)))
+    y = np.full(len(tr), np.nan)
+    p = 14
+    if len(tr) <= p:
+        return y
+    seed = float(np.mean(tr[:p]))
+    y[p - 1] = seed
+    a = 1.0 / p
+    b = (p - 1.0) / p
+    try:
+        from scipy.signal import lfilter
+        y[p:] = lfilter([a], [1.0, -b], tr[p:], zi=[b * seed])[0]
+    except Exception:
+        prev = seed
+        for t in range(p, len(tr)):
+            prev = a * tr[t] + b * prev
+            y[t] = prev
+    return y
+
+
+def _frame_wilder(ff: pd.DataFrame):
+    """Wilder ATR14 array for a normalised H1 frame,
+    memoised across calls on a frame fingerprint."""
+    key = (len(ff), float(ff["Close"].sum()), float(ff["High"].sum()),
+           float(ff["Close"].iloc[0]), float(ff["Close"].iloc[-1]))
+    got = _A1_MEMO.get(key)
+    if got is None:
+        got = _wilder_atr14(ff["Open"].to_numpy(dtype=float),
+                            ff["High"].to_numpy(dtype=float),
+                            ff["Low"].to_numpy(dtype=float),
+                            ff["Close"].to_numpy(dtype=float))
+        if len(_A1_MEMO) > 64:
+            _A1_MEMO.clear()
+        _A1_MEMO[key] = got
+    return got
+
+
 def _clv15(m15a, entry_stamp, direction) -> float:
     """Directional CLV of the last completed M15 bar at
     entry; NaN when unavailable."""
@@ -124,10 +178,8 @@ def evaluate_cycle93_signals(frames: dict, check_time_utc,
                         if ff.index.tz is not None:
                             ff.index = ff.index.tz_convert(
                                 "UTC").tz_localize(None)
-                        feat = _c70._symbol_feat(
-                            ff.reset_index(drop=True))
                         feat_cache[sym] = (
-                            feat["atr14"].to_numpy(dtype=float),
+                            _frame_wilder(ff),
                             ff.index.get_indexer(
                                 [pd.Timestamp(row["signal_candle"])])[0])
                 got = feat_cache[sym]

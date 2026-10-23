@@ -39,6 +39,33 @@ incumbent's +305.3 -- the promotion rests on the user's
 stated priorities (LCT first, leftover second). Best N
 83 (own sizing run: peak margin 48.03%, max DD 7.70%).
 C69-07 remains selectable as cycle69.
+
+Cycle 155 (2026-10-23, BRIEF14 round; user-accepted, then
+VALIDATED at the middle standard): select_cycle92_entries
+additionally returns the validated DUAL-PICK second entry --
+after the primary, the highest-ranked NON-FB candidate
+(equation id not starting 'FB_') on a free symbol, taken
+only while fewer than 3 positions are open counting the
+primary (gate 'nonfb', cap K=3, full-lot ladder: the second
+entry is a full entry row under the same Best N 83).
+Validation (work_c155): EC22-middle 17/18 vs control 15/18;
+corrected LCT-middle PASS (P 89.23%, own q05 78.80%);
+audit leftover 67.84% vs 62.78%, 2.478 entries/day; chain
+median final 123.89x control. Disclosed with the verdict:
+chain P(margin call) 36.24% vs control 8.76% -- the
+concurrency grows faster and runs hotter; the user
+accepted that trade explicitly. DEVIATION from the
+research walk: research prunes open positions by simulated
+exit times across checks; the app evaluates one check at a
+time, so the cap is enforced against the open state the
+caller supplies via open_symbols/open_count (panels supply
+none today -- the same limitation the frozen primary
+occupancy has always had in the panels); within a check it
+also always treats the primary's symbol as occupied, where
+the research walk re-frees it when the primary's simulated
+exit stamp is at/before the entry moment (20 of 95
+discovery second picks; audit none). See
+FIX_NOTES_20261023_CYCLE155_OCTOBER_DUALPICK.md.
 """
 
 from __future__ import annotations
@@ -145,10 +172,78 @@ def evaluate_cycle92_signals(frames: dict, check_time_utc,
     return sig
 
 
+CYCLE92_DUALPICK_CAP = 3  # Cycle 155: max open positions (incl. primary)
+
+
 def select_cycle92_entries(signals: pd.DataFrame,
-                           open_symbols=()) -> pd.DataFrame:
-    """Exactly 1 entry per check: the frozen C69-07 selection."""
-    return select_cycle69_entries(signals, open_symbols=open_symbols)
+                           open_symbols=(),
+                           open_count=None) -> pd.DataFrame:
+    """Primary entry (frozen C69-07 selection, unchanged) plus
+    the Cycle 155 dual-pick second entry when it fires.
+
+    Dual-pick (Cycle 152 mechanism, Cycle 155 VALIDATED): after
+    the primary, take the highest-ranked NON-FB candidate
+    (equation id not starting 'FB_' -- the research gate
+    'nonfb', is_fb == strategy.startswith('FB_')) whose symbol
+    is free (not in `open_symbols`, not the primary's symbol),
+    but only while fewer than CYCLE92_DUALPICK_CAP positions
+    are open counting the primary. `open_count` is the caller's
+    count of currently open positions; the default derives it
+    from `open_symbols` (exact for this system, which never
+    holds two positions on one symbol).
+
+    DEVIATION from the research walk (documented, deliberate):
+    the research walk (work_c152 walk_dual) prunes open
+    positions by SIMULATED exit times as it walks checks
+    sequentially, so its cap and occupancy see trades opened at
+    earlier checks until their simulated exit. The app
+    evaluates a single check at a time and keeps no exit state;
+    like every app selector (including the frozen primary
+    occupancy above), this one enforces the rule against the
+    open state the caller supplies. Callers that supply no
+    state (the panels today) get the within-check rule only:
+    primary = 1 open < 3, so a qualifying second pick is
+    returned. One level deeper, the same limitation applies
+    WITHIN the check: the research walk re-frees the primary's
+    symbol for the second pick whenever the primary's
+    simulated exit stamp is at/before the entry moment (fast
+    exits inside the entry bar -- the primary is already gone
+    when the second would enter). A live evaluation runs
+    inside the entry window, before that bar completes, so it
+    cannot know this; the app always treats the primary's
+    symbol as occupied. Measured impact on the research frame
+    (work_c155 replay): all 20 affected discovery second picks
+    are of this same-symbol form (audit: none) -- the app
+    takes the next different-symbol second at 8 of those
+    checks and none at 12; primaries are identical everywhere.
+    See FIX_NOTES_20261023_CYCLE155_OCTOBER_DUALPICK.md.
+    """
+    primary = select_cycle69_entries(signals, open_symbols=open_symbols)
+    if primary is None or len(primary) == 0:
+        return primary
+    if signals is None or len(signals) == 0:
+        return primary
+    held = {str(s).upper() for s in (open_symbols or ())}
+    n_open = len(held) if open_count is None else int(open_count)
+    prow = primary.iloc[0]
+    held.add(str(prow["symbol"]).upper())
+    if n_open + 1 >= CYCLE92_DUALPICK_CAP:
+        return primary
+    ranked = signals.sort_values("score", ascending=False,
+                                 kind="mergesort")
+    second = None
+    for _, row in ranked.iterrows():
+        if str(row["equation"]) == str(prow["equation"]):
+            continue  # the primary itself (one row per equation)
+        if str(row["equation"]).startswith("FB_"):
+            continue  # gate 'nonfb'
+        if str(row["symbol"]).upper() in held:
+            continue  # symbol not free
+        second = row
+        break
+    if second is None:
+        return primary
+    return pd.DataFrame([prow, second]).reset_index(drop=True)
 
 
 def is_cycle92_check_time(ts) -> bool:

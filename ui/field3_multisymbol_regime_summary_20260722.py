@@ -6701,6 +6701,10 @@ def render_cycle91_download_buttons(st, payload):
 # LCT middle+strict PASS P 100.00% / p5 70.20%). Mirrors the Cycle 92 renderer:
 # own session-state keys; the working earlier cycle
 # code is NOT refactored.
+# Cycle 155 (2026-10-23): the October selection also returns
+# the VALIDATED dual-pick second entry (non-FB, fewer than 3
+# open) when it fires -- see core/cycle92_best.py and
+# FIX_NOTES_20261023_CYCLE155_OCTOBER_DUALPICK.md.
 # ============================================================================
 _C92_SIG_STATE_KEY = "cycle92_signals_latest_v1"
 _C92_SIG_AGE_KEY = "cycle92_candle_age_txt"
@@ -6712,8 +6716,9 @@ def _evaluate_c92_window(state, hour_utc, day=None):
     """Evaluate the 36 Cycle 92 (C92-24) equations for one entry window.
 
     Calls core.cycle92_best directly (not the signal router) so the result
-    is always the C92 system regardless of the active mode. Exactly 1
-    entry per check (top-1 by score). Stores the result in session state
+    is always the C92 system regardless of the active mode. Primary entry
+    per check (top-1 by score) plus the Cycle 155 dual-pick second entry
+    when it fires. Stores the result in session state
     keyed by window; returns the payload dict or None.
     """
     import datetime as _dt
@@ -6815,7 +6820,8 @@ def _c92_mark_fail(window_utc, state):
 
 
 def _render_cycle92_signals_table(st, state):
-    """Cycle 92 signals table: backfilled + persisted, exactly 1 entry/check.
+    """Cycle 92 signals table: backfilled + persisted, primary entry/check
+    plus the Cycle 155 dual-pick second entry when it fires.
 
     Mirrors the C27 renderer: on EVERY render, computes the
     latest C92 entry window <= now (hours 15/17/18 UTC); if no signals

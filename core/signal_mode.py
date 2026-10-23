@@ -167,12 +167,16 @@ def describe_active() -> str:
         return ("cycle92 (C92-24): C69-07 entry engine frozen (hours "
                 "15/17/18 delegate to cycle69) minus 4 FB legs + 7 "
                 "screened fresh legs at fallback-tier scores "
-                "512-506, exactly 1 entry/check -- October @2.5-pip "
-                "net +296.7 pips / win 93.75% / leftover 62.78% / "
-                "2.09 entries/day (LCT middle+strict PASS P 100.00% "
-                "/ p5 70.20%, Program 4 promotion, replaced C69-07 "
-                "as the app default only -- live R4A01 crons "
-                "unchanged)")
+                "512-506, 1 primary entry/check + Cycle 155 "
+                "dual-pick second entry (non-FB, fewer than 3 "
+                "open) -- October @2.5-pip net +296.7 pips / "
+                "win 93.75% / leftover 62.78% / 2.09 entries/day "
+                "(LCT middle+strict PASS P 100.00% / p5 70.20%, "
+                "Program 4 promotion, replaced C69-07 as the app "
+                "default only -- live R4A01 crons unchanged; "
+                "dual-pick validated 2026-10-23 at the middle "
+                "standard: EC22 17/18, LCT P 89.23%, audit "
+                "leftover 67.84% / 2.48 entries/day)")
     if _ACTIVE == SYSTEM_CYCLE93:
         return ("cycle93 (C93-24): C70-07 entry engine frozen (hours "
                 "9/13/15 delegate to cycle70) minus 8 of 9 FB legs "

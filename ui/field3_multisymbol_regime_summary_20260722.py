@@ -2953,7 +2953,21 @@ _CYCLE22_PANEL_SYMBOLS = (
     "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD", "CHFJPY", "EURAUD",
     "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD", "GBPJPY",
     "GBPUSD", "NZDCAD", "NZDUSD", "USDCAD", "USDCHF", "USDJPY",
+    # 2026-10-27 (29-symbol build, user order): the 8 NEW8 FX crosses
+    # the installed layers trade, plus DXY (Twelve Data dollar index).
+    "CADCHF", "CADJPY", "GBPAUD", "GBPCAD", "GBPCHF",
+    "GBPNZD", "NZDCHF", "NZDJPY", "DXY",
 )
+
+# The 28 FX symbols a panel needs for a complete evaluation.  DXY is
+# fetched with the panel set (the xdx context columns and the user's
+# own later work read it) but is NOT required: if the connected
+# Twelve Data plan refuses DXY it simply stays unloaded and no panel
+# is marked incomplete for it (user order 2026-10-27).
+_CYCLE22_REQUIRED_SYMBOLS = tuple(
+    sym for sym in _CYCLE22_PANEL_SYMBOLS if sym != "DXY")
+_C22_N_FETCH = len(_CYCLE22_PANEL_SYMBOLS)
+_C22_N_REQ = len(_CYCLE22_REQUIRED_SYMBOLS)
 
 
 def _normalize_c22_frame(df):
@@ -3007,7 +3021,7 @@ def _fetch_c22_frames(state, need_candles=None):
 def _require_check_frames(frames, need):
     needed = set(pd.Timestamp(t) for t in need)
     if any(sym not in frames or not needed.issubset(frames[sym].index)
-           for sym in _CYCLE22_PANEL_SYMBOLS):
+           for sym in _CYCLE22_REQUIRED_SYMBOLS):
         raise ValueError("check_candles_incomplete")
 
 
@@ -3115,7 +3129,7 @@ def _c22_build_check_ranking(sig, entries, frames, need):
             except Exception:
                 pass
         evaluable, no_data = [], []
-        for sym in _CYCLE22_PANEL_SYMBOLS:
+        for sym in _CYCLE22_REQUIRED_SYMBOLS:
             f = frames.get(sym)
             ok = False
             try:
@@ -3211,7 +3225,7 @@ def _eval_history_db_path():
 
 
 def _record_eval_history(sysname, payload, replace=True):
-    """Persist one evaluation result (cycle, check window, x/20 evaluated,
+    """Persist one evaluation result (cycle, check window, x/28 evaluated,
     fired entries with Quick-look strings) into the local history store.
     Local sqlite only -- no provider calls. Never raises."""
     try:
@@ -3234,7 +3248,7 @@ def _record_eval_history(sysname, payload, replace=True):
                 return v
 
         entries = []
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             for _, r in disp.iterrows():
@@ -3344,7 +3358,7 @@ def _backfill_eval_history_from_state(state):
 
 def _render_eval_history(st, state, sysname):
     """Last-24-hour history table for one system panel: every check
-    window in the last 24 hours, how many symbols evaluated (x/20), and
+    window in the last 24 hours, how many symbols evaluated (x/28), and
     the fired entries as Quick-look strings -- or an explicit 'no entry'.
     Reads ONLY the persistent local store, so it survives app restarts
     and costs no provider calls."""
@@ -3367,8 +3381,8 @@ def _render_eval_history(st, state, sysname):
             except Exception:
                 _check = str(r["window_utc"])
             _nev = r.get("n_evaluable")
-            _syms = (f"{int(_nev)}/20"
-                     if isinstance(_nev, int) and _nev >= 0 else "\u2014/20")
+            _syms = (f"{int(_nev)}/{_C22_N_REQ}"
+                     if isinstance(_nev, int) and _nev >= 0 else f"\u2014/{_C22_N_REQ}")
             _ent = r.get("entries") or []
             _res = (" \u00b7 ".join(str(e.get("quick", "")) for e in _ent)
                     if _ent else ("Calculation incomplete" if isinstance(_nev, int) and 0 <= _nev < 20 else "\u2014 no entry"))
@@ -3410,7 +3424,7 @@ def _diag_notes(payload):
     for the data-failure message (fix 2026-10-26): the fetch already
     records WHY each live refresh failed (rate limit, key pool, empty
     response) -- surfacing it turns an invisible failure into a
-    readable one instead of a bare 0/20."""
+    readable one instead of a bare 0/28."""
     try:
         diag = (payload or {}).get("diag") or {}
         if diag.get("evaluation_error"):
@@ -3418,8 +3432,8 @@ def _diag_notes(payload):
         errs = diag.get("live_errors") or []
         if errs:
             return "Provider notes: " + "; ".join(str(e) for e in errs[:4])
-        return (f"Fetch sources: cache {diag.get('cache', 0)}/20, "
-                f"live {diag.get('live', 0)}/20.")
+        return (f"Fetch sources: cache {diag.get('cache', 0)}/{_C22_N_FETCH}, "
+                f"live {diag.get('live', 0)}/{_C22_N_FETCH}.")
     except Exception:
         return ""
 
@@ -3444,10 +3458,10 @@ def _payload_data_failed(payload):
     """True when a stored payload is a DATA failure (too few symbols had the
     needed candles), as opposed to a genuine no-signal window. Such payloads
     must not block re-evaluation of the same window once data recovers --
-    before this check, a 0/20 payload was stored and the panel never retried
+    before this check, a 0/28 payload was stored and the panel never retried
     that window (the 2026-10-22 00:30 MMT incident)."""
     try:
-        return isinstance(payload, dict) and (int(payload.get("n_evaluable", 0)) < len(_CYCLE22_PANEL_SYMBOLS)
+        return isinstance(payload, dict) and (int(payload.get("n_evaluable", 0)) < len(_CYCLE22_REQUIRED_SYMBOLS)
             or bool((payload.get("diag") or {}).get("evaluation_error")))
     except Exception:
         return False
@@ -3456,7 +3470,7 @@ def _payload_data_failed(payload):
 def _force_dashboard_refresh(st, state):
     """'Refresh the dashboard' button action: drop every stored panel
     payload + fail mark (all 12 systems), clear the M15 fetch memos, set the
-    force flag the H1 fetch path consumes (provider refresh for all 20
+    force flag the H1 fetch path consumes (provider refresh for all 29
     symbols), and rerun so the visible panel re-evaluates on fresh data."""
     import importlib as _il
     for _sysname, _panel in _SIGNAL_PANELS.items():
@@ -3981,7 +3995,7 @@ def _evaluate_c60_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -4107,7 +4121,7 @@ def _render_cycle60_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 60 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -4125,7 +4139,7 @@ def _render_cycle60_signals_table(st, state):
                                 "cycle60", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -4152,7 +4166,7 @@ def _render_cycle60_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -4306,7 +4320,7 @@ def _evaluate_c60b_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -4432,7 +4446,7 @@ def _render_cycle60b_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 60B evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -4450,7 +4464,7 @@ def _render_cycle60b_signals_table(st, state):
                                 "cycle60b", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -4477,7 +4491,7 @@ def _render_cycle60b_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -4630,7 +4644,7 @@ def _evaluate_c67_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -4756,7 +4770,7 @@ def _render_cycle67_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 67 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -4774,7 +4788,7 @@ def _render_cycle67_signals_table(st, state):
                                 "cycle67", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -4801,7 +4815,7 @@ def _render_cycle67_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -4958,7 +4972,7 @@ def _evaluate_c78_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -5084,7 +5098,7 @@ def _render_cycle78_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 78 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -5102,7 +5116,7 @@ def _render_cycle78_signals_table(st, state):
                                 "cycle78", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -5129,7 +5143,7 @@ def _render_cycle78_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -5280,7 +5294,7 @@ def _evaluate_c85_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -5406,7 +5420,7 @@ def _render_cycle85_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 85 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -5424,7 +5438,7 @@ def _render_cycle85_signals_table(st, state):
                                 "cycle85", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -5451,7 +5465,7 @@ def _render_cycle85_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -5605,7 +5619,7 @@ def _evaluate_c86_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -5731,7 +5745,7 @@ def _render_cycle86_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 86 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -5749,7 +5763,7 @@ def _render_cycle86_signals_table(st, state):
                                 "cycle86", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -5776,7 +5790,7 @@ def _render_cycle86_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -5930,7 +5944,7 @@ def _evaluate_c87_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -6056,7 +6070,7 @@ def _render_cycle87_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 87 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -6074,7 +6088,7 @@ def _render_cycle87_signals_table(st, state):
                                 "cycle87", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -6101,7 +6115,7 @@ def _render_cycle87_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -6257,7 +6271,7 @@ def _evaluate_c87b_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -6383,7 +6397,7 @@ def _render_cycle87b_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 87B evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -6401,7 +6415,7 @@ def _render_cycle87b_signals_table(st, state):
                                 "cycle87b", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -6428,7 +6442,7 @@ def _render_cycle87b_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -6579,7 +6593,7 @@ def _evaluate_c88_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -6705,7 +6719,7 @@ def _render_cycle88_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 88 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -6723,7 +6737,7 @@ def _render_cycle88_signals_table(st, state):
                                 "cycle88", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -6750,7 +6764,7 @@ def _render_cycle88_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -6904,7 +6918,7 @@ def _evaluate_c89_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -7030,7 +7044,7 @@ def _render_cycle89_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 89 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -7048,7 +7062,7 @@ def _render_cycle89_signals_table(st, state):
                                 "cycle89", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -7075,7 +7089,7 @@ def _render_cycle89_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -7230,7 +7244,7 @@ def _evaluate_c91_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -7356,7 +7370,7 @@ def _render_cycle91_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 91 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -7374,7 +7388,7 @@ def _render_cycle91_signals_table(st, state):
                                 "cycle91", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -7401,7 +7415,7 @@ def _render_cycle91_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -7557,7 +7571,7 @@ def _evaluate_c287_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -7683,7 +7697,7 @@ def _render_cycle287_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 287 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -7701,7 +7715,7 @@ def _render_cycle287_signals_table(st, state):
                                 "cycle287", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -7728,7 +7742,7 @@ def _render_cycle287_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -7885,7 +7899,7 @@ def _evaluate_c92_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -8012,7 +8026,7 @@ def _render_cycle92_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 155 dual-pick evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -8030,7 +8044,7 @@ def _render_cycle92_signals_table(st, state):
                                 "cycle92", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -8057,7 +8071,7 @@ def _render_cycle92_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -8211,7 +8225,7 @@ def _evaluate_c93_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -8337,7 +8351,7 @@ def _render_cycle93_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 93 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -8355,7 +8369,7 @@ def _render_cycle93_signals_table(st, state):
                                 "cycle93", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -8382,7 +8396,7 @@ def _render_cycle93_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -8538,7 +8552,7 @@ def _evaluate_c93b_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -8664,7 +8678,7 @@ def _render_cycle93b_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 93B evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -8682,7 +8696,7 @@ def _render_cycle93b_signals_table(st, state):
                                 "cycle93b", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -8709,7 +8723,7 @@ def _render_cycle93b_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -8863,7 +8877,7 @@ def _evaluate_c94_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -8989,7 +9003,7 @@ def _render_cycle94_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 94 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -9007,7 +9021,7 @@ def _render_cycle94_signals_table(st, state):
                                 "cycle94", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -9034,7 +9048,7 @@ def _render_cycle94_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -9188,7 +9202,7 @@ def _evaluate_c274_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -9314,7 +9328,7 @@ def _render_cycle274_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 274 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -9332,7 +9346,7 @@ def _render_cycle274_signals_table(st, state):
                                 "cycle274", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -9359,7 +9373,7 @@ def _render_cycle274_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -9515,7 +9529,7 @@ def _evaluate_c94b_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -9641,7 +9655,7 @@ def _render_cycle94b_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 94B evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -9659,7 +9673,7 @@ def _render_cycle94b_signals_table(st, state):
                                 "cycle94b", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -9686,7 +9700,7 @@ def _render_cycle94b_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -9840,7 +9854,7 @@ def _evaluate_c274_window(state, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -9966,7 +9980,7 @@ def _render_cycle274_signals_table(st, state):
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
                     f"\u26a0\ufe0f Last Cycle 274 evaluation built 0 price frames "
-                    f"(local cache {diag.get('cache', 0)}/20, live {diag.get('live', 0)}/20)."
+                    f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
         age_min = int((now_utc - win_ts).total_seconds() // 60)
@@ -9984,7 +9998,7 @@ def _render_cycle274_signals_table(st, state):
                                 "cycle274", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -10011,7 +10025,7 @@ def _render_cycle274_signals_table(st, state):
         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             elif _has_ranking:
@@ -10132,32 +10146,35 @@ def _auto_refresh_field3(st: Any, interval_ms: int = 30_000) -> None:
 # ============================================================================
 
 COMBINED_RULE_TEXT = (
-    "12-system rebuild (2026-10-27): exactly 12 month systems, one "
-    "per month, in month order. At every check time, each month's "
-    "BEST cycle runs first and has priority; the SECOND-BEST cycle "
-    "is evaluated and shown ONLY when the Best cycle has NO entry "
-    "at that check time. Map: January -- 1st Cycle 60B (BRIEF23 "
-    "C20_STACK), 2nd old Cycle 60 (C60-03). February -- Cycle 85 "
-    "(C85-23) best-only. March -- Cycle 86 (C86-24) best-only. "
-    "April -- 1st Cycle 87B (BRIEF21 C20a), 2nd old Cycle 87 "
-    "(C87-24). May -- Cycle 88 (C88-03) best-only. June -- Cycle "
-    "89 (C89-21) best-only. July -- Cycle 78 (C78-34) best-only. "
-    "August -- Cycle 67 (C67-04) best-only. September -- 1st Cycle "
-    "91 (C91-15), 2nd Cycle 287. October -- Cycle 92 with the C155 "
-    "dual-pick, best-only. November -- 1st Cycle 93B (BRIEF21 "
-    "C20a), 2nd old Cycle 93 (C93-24). December -- 1st Cycle 94B "
-    "(BRIEF21 C20a), 2nd Cycle 274 (C274 stack). The NEW8 research "
-    "improvements (Feb/Jun/Sep/Apr/May/Nov new bests, Aug/Oct new "
-    "second bests) were NOT installed: their recorded picks sit on "
-    "symbols this app does not carry (GBPAUD/GBPCAD/GBPNZD/"
-    "DOLLARIDX), so they cannot be replayed exactly in-app -- "
-    "blocked with proof in the 2026-10-27 build record; March's "
-    "NEW8 second-best layer merged to zero trades in research "
-    "itself. February H485 and July C407 remain research-only "
-    "(blocked with proof 2026-10-25). Position sizing: Best N "
-    "divided by 3 stays active for every month."
+    "29-symbol build (2026-10-27): exactly 12 month systems, one "
+    "per month, in month order, over a 29-symbol universe (the 20 "
+    "original pairs + CADCHF, CADJPY, GBPAUD, GBPCAD, GBPCHF, "
+    "GBPNZD, NZDCHF, NZDJPY + DXY). At every check time, each "
+    "month's BEST cycle runs first and has priority; the "
+    "SECOND-BEST cycle is evaluated and shown ONLY when the Best "
+    "cycle has NO entry at that check time. Map: January -- 1st "
+    "Cycle 60B (BRIEF23 C20_STACK), 2nd old Cycle 60 (C60-03). "
+    "February -- Cycle 85 (C85-23) best-only (NEW8 layer HELD BY "
+    "USER ORDER -- it uses the Dukascopy dollar index; DXY is "
+    "loaded as the 29th symbol for the user's own fix). March -- "
+    "Cycle 86 (C86-24) best-only. April -- 1st Cycle 87B (BRIEF21 "
+    "C20a), 2nd old Cycle 87 (C87-24) (NEW8 layer likewise HELD "
+    "BY USER ORDER). May -- 1st Cycle 88N (C88-03 + NEW8 E07), "
+    "2nd old Cycle 88 (C88-03). June -- 1st Cycle 89N (C89-21 + "
+    "NEW8 P07), 2nd old Cycle 89 (C89-21). July -- Cycle 78 "
+    "(C78-34) best-only. August -- 1st Cycle 67 (C67-04), 2nd "
+    "Cycle 67P (NEW8 P07). September -- 1st Cycle 91N (C91-15 + "
+    "NEW8 D26 + P07), 2nd Cycle 287. October -- 1st Cycle 92 "
+    "with the C155 dual-pick, 2nd Cycle 92E (NEW8 E07). "
+    "November -- 1st Cycle 93N (Cycle 93B + NEW8 Plan B-4 "
+    "partner C16), 2nd Cycle 93B (BRIEF21 C20a). December -- 1st "
+    "Cycle 94B (BRIEF21 C20a), 2nd Cycle 274 (C274 stack). Every "
+    "NEW8 layer above passed exact replay against its research "
+    "ledger before install (build record 2026-10-27). February "
+    "H485 and July C407 remain research-only (blocked with proof "
+    "2026-10-25). Position sizing: Best N divided by 3 stays "
+    "active for every month."
 )
-
 _COMBINED_CFG = {
     1: {
         "sysid": "cycle60bcombined",
@@ -10194,12 +10211,12 @@ _COMBINED_CFG = {
     9: {
         "sysid": "cycle91combined",
         "month_name": "September",
-        "best_id": "cycle91",
-        "best_label": "Cycle 91 (C91-15)",
+        "best_id": "cycle91n",
+        "best_label": "Cycle 91N (C91-15 + NEW8 D26 + P07 IMPROVED)",
         "second_id": "cycle287",
         "second_label": "Cycle 287 (C287)",
-        "hours_mod": "core.cycle91_best",
-        "hours_attr": "CYCLE91_CHECK_HOURS",
+        "hours_mod": "core.cycle91n_best",
+        "hours_attr": "CYCLE91N_CHECK_HOURS",
         "state_key": "combined_sep_signals_latest_v1",
         "age_key": "combined_sep_candle_age_txt",
         "diag_key": "combined_sep_signals_diag_v1",
@@ -10208,14 +10225,14 @@ _COMBINED_CFG = {
         "sheet": "SepCombined",
     },
     11: {
-        "sysid": "cycle93bcombined",
+        "sysid": "cycle93ncombined",
         "month_name": "November",
-        "best_id": "cycle93b",
-        "best_label": "Cycle 93B (BRIEF21 C20a IMPROVED)",
-        "second_id": "cycle93",
-        "second_label": "Cycle 93 (C93-24, old system)",
-        "hours_mod": "core.cycle93b_best",
-        "hours_attr": "CYCLE93B_CHECK_HOURS",
+        "best_id": "cycle93n",
+        "best_label": "Cycle 93N (93B + NEW8 B-4 partner IMPROVED)",
+        "second_id": "cycle93b",
+        "second_label": "Cycle 93B (BRIEF21 C20a IMPROVED)",
+        "hours_mod": "core.cycle93n_best",
+        "hours_attr": "CYCLE93N_CHECK_HOURS",
         "state_key": "combined_nov_signals_latest_v1",
         "age_key": "combined_nov_candle_age_txt",
         "diag_key": "combined_nov_signals_diag_v1",
@@ -10238,6 +10255,70 @@ _COMBINED_CFG = {
         "fail_key": "combined_dec_signals_fail_v1",
         "dl_base": "december_combined_signals",
         "sheet": "DecCombined",
+    },
+    5: {
+        "sysid": "cycle88ncombined",
+        "month_name": "May",
+        "best_id": "cycle88n",
+        "best_label": "Cycle 88N (C88-03 + NEW8 E07 IMPROVED)",
+        "second_id": "cycle88",
+        "second_label": "Cycle 88 (C88-03, old system)",
+        "hours_mod": "core.cycle88n_best",
+        "hours_attr": "CYCLE88N_CHECK_HOURS",
+        "state_key": "combined_may_signals_latest_v1",
+        "age_key": "combined_may_candle_age_txt",
+        "diag_key": "combined_may_signals_diag_v1",
+        "fail_key": "combined_may_signals_fail_v1",
+        "dl_base": "may_combined_signals",
+        "sheet": "MayCombined",
+    },
+    6: {
+        "sysid": "cycle89ncombined",
+        "month_name": "June",
+        "best_id": "cycle89n",
+        "best_label": "Cycle 89N (C89-21 + NEW8 P07 IMPROVED)",
+        "second_id": "cycle89",
+        "second_label": "Cycle 89 (C89-21, old system)",
+        "hours_mod": "core.cycle89n_best",
+        "hours_attr": "CYCLE89N_CHECK_HOURS",
+        "state_key": "combined_jun_signals_latest_v1",
+        "age_key": "combined_jun_candle_age_txt",
+        "diag_key": "combined_jun_signals_diag_v1",
+        "fail_key": "combined_jun_signals_fail_v1",
+        "dl_base": "june_combined_signals",
+        "sheet": "JunCombined",
+    },
+    8: {
+        "sysid": "cycle67combined",
+        "month_name": "August",
+        "best_id": "cycle67",
+        "best_label": "Cycle 67 (C67-04)",
+        "second_id": "cycle67p",
+        "second_label": "Cycle 67P (NEW8 P07 second best)",
+        "hours_mod": "core.cycle67_best",
+        "hours_attr": "CYCLE67_CHECK_HOURS",
+        "state_key": "combined_aug_signals_latest_v1",
+        "age_key": "combined_aug_candle_age_txt",
+        "diag_key": "combined_aug_signals_diag_v1",
+        "fail_key": "combined_aug_signals_fail_v1",
+        "dl_base": "august_combined_signals",
+        "sheet": "AugCombined",
+    },
+    10: {
+        "sysid": "cycle92combined",
+        "month_name": "October",
+        "best_id": "cycle92",
+        "best_label": "Cycle 92 (C92-24 + C155 dual-pick)",
+        "second_id": "cycle92e",
+        "second_label": "Cycle 92E (NEW8 E07 second best)",
+        "hours_mod": "core.cycle92_best",
+        "hours_attr": "CYCLE92_CHECK_HOURS",
+        "state_key": "combined_oct_signals_latest_v1",
+        "age_key": "combined_oct_candle_age_txt",
+        "diag_key": "combined_oct_signals_diag_v1",
+        "fail_key": "combined_oct_signals_fail_v1",
+        "dl_base": "october_combined_signals",
+        "sheet": "OctCombined",
     },
 }
 
@@ -10318,7 +10399,7 @@ def _evaluate_combined_window(state, month, hour_utc, day=None):
                               if f is not None and _need_set.issubset(set(f.index)))
         except Exception:
             n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -10479,7 +10560,7 @@ def _render_combined_signals_table(st, state, month):
         else:
             n_eval = payload.get("n_evaluable", 20)
             if _payload_data_failed(payload):
-                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+                st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/{_C22_N_REQ} symbols "
                          f"are ready. Check calculation is incomplete. "
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             else:
@@ -10511,6 +10592,22 @@ def _render_jan_combined_signals_table(st, state):
 
 def _render_apr_combined_signals_table(st, state):
     return _render_combined_signals_table(st, state, 4)
+
+
+def _render_may_combined_signals_table(st, state):
+    return _render_combined_signals_table(st, state, 5)
+
+
+def _render_jun_combined_signals_table(st, state):
+    return _render_combined_signals_table(st, state, 6)
+
+
+def _render_aug_combined_signals_table(st, state):
+    return _render_combined_signals_table(st, state, 8)
+
+
+def _render_oct_combined_signals_table(st, state):
+    return _render_combined_signals_table(st, state, 10)
 
 
 def _render_combined_download_buttons(st, payload, month):
@@ -10584,6 +10681,22 @@ def render_apr_combined_download_buttons(st, payload):
     return _render_combined_download_buttons(st, payload, 4)
 
 
+def render_may_combined_download_buttons(st, payload):
+    return _render_combined_download_buttons(st, payload, 5)
+
+
+def render_jun_combined_download_buttons(st, payload):
+    return _render_combined_download_buttons(st, payload, 6)
+
+
+def render_aug_combined_download_buttons(st, payload):
+    return _render_combined_download_buttons(st, payload, 8)
+
+
+def render_oct_combined_download_buttons(st, payload):
+    return _render_combined_download_buttons(st, payload, 10)
+
+
 # ============================================================================
 # The 12 standing monthly systems (2026-10-22 purge): panel wiring table.
 # Month order Jan..Dec. The renderers/download buttons/state keys for every
@@ -10593,7 +10706,10 @@ def render_apr_combined_download_buttons(st, payload):
 _MONTH_PANEL_ORDER = [
     # 12-system rebuild (2026-10-27): exactly ONE panel per month,
     # in month order -- the month's combined system where a second
-    # best exists (Jan/Apr/Sep/Nov/Dec), else the best-only panel.
+    # best exists, else the best-only panel. 29-symbol build
+    # (2026-10-27): combined months are now Jan/Apr/May/Jun/Aug/
+    # Sep/Oct/Nov/Dec; Feb/Mar/Jul stay best-only (Feb NEW8 layer
+    # HELD BY USER ORDER).
     # The third element names the BEST cycle module
     # (core.cycle<nn>_best / CYCLE<NN>_CHECK_HOURS) used by the
     # check-time reminders.
@@ -10601,13 +10717,13 @@ _MONTH_PANEL_ORDER = [
     ("February", "cycle85", 85, "C85-23"),
     ("March", "cycle86", 86, "C86-24"),
     ("April", "cycle87bcombined", "87b", "C87B+C87-24"),
-    ("May", "cycle88", 88, "C88-03"),
-    ("June", "cycle89", 89, "C89-21"),
+    ("May", "cycle88ncombined", "88n", "C88N+C88-03"),
+    ("June", "cycle89ncombined", "89n", "C89N+C89-21"),
     ("July", "cycle78", 78, "C78-34"),
-    ("August", "cycle67", 67, "C67-04"),
-    ("September", "cycle91combined", 91, "C91-15+C287"),
-    ("October", "cycle92", 92, "C92-24 + C155 dual-pick"),
-    ("November", "cycle93bcombined", "93b", "C93B+C93-24"),
+    ("August", "cycle67combined", 67, "C67-04+C67P"),
+    ("September", "cycle91combined", "91n", "C91N+C287"),
+    ("October", "cycle92combined", 92, "C92-24+C92E"),
+    ("November", "cycle93ncombined", "93n", "C93N+C93B"),
     ("December", "cycle94combined", "94b", "C94B+C274"),
 ]
 
@@ -10622,31 +10738,31 @@ _SIGNAL_PANELS = {
                 "state_key": _C86_SIG_STATE_KEY, "age_key": _C86_SIG_AGE_KEY,
                 "diag_key": _C86_SIG_DIAG_KEY, "fail_key": _C86_SIG_FAIL_KEY,
                 "label": "Cycle 86 (C86-24) \u2014 March system"},
-    "cycle88": {"render": _render_cycle88_signals_table,
-                "download": render_cycle88_download_buttons,
-                "state_key": _C88_SIG_STATE_KEY, "age_key": _C88_SIG_AGE_KEY,
-                "diag_key": _C88_SIG_DIAG_KEY, "fail_key": _C88_SIG_FAIL_KEY,
-                "label": "Cycle 88 (C88-03) \u2014 May system"},
-    "cycle89": {"render": _render_cycle89_signals_table,
-                "download": render_cycle89_download_buttons,
-                "state_key": _C89_SIG_STATE_KEY, "age_key": _C89_SIG_AGE_KEY,
-                "diag_key": _C89_SIG_DIAG_KEY, "fail_key": _C89_SIG_FAIL_KEY,
-                "label": "Cycle 89 (C89-21) \u2014 June system"},
+    "cycle88ncombined": {"render": _render_may_combined_signals_table,
+                "download": render_may_combined_download_buttons,
+                "state_key": _COMBINED_CFG[5]["state_key"], "age_key": _COMBINED_CFG[5]["age_key"],
+                "diag_key": _COMBINED_CFG[5]["diag_key"], "fail_key": _COMBINED_CFG[5]["fail_key"],
+                "label": "May COMBINED (Best first, Second-Best only when Best is silent)"},
+    "cycle89ncombined": {"render": _render_jun_combined_signals_table,
+                "download": render_jun_combined_download_buttons,
+                "state_key": _COMBINED_CFG[6]["state_key"], "age_key": _COMBINED_CFG[6]["age_key"],
+                "diag_key": _COMBINED_CFG[6]["diag_key"], "fail_key": _COMBINED_CFG[6]["fail_key"],
+                "label": "June COMBINED (Best first, Second-Best only when Best is silent)"},
     "cycle78": {"render": _render_cycle78_signals_table,
                 "download": render_cycle78_download_buttons,
                 "state_key": _C78_SIG_STATE_KEY, "age_key": _C78_SIG_AGE_KEY,
                 "diag_key": _C78_SIG_DIAG_KEY, "fail_key": _C78_SIG_FAIL_KEY,
                 "label": "Cycle 78 (C78-34) \u2014 July system"},
-    "cycle67": {"render": _render_cycle67_signals_table,
-                "download": render_cycle67_download_buttons,
-                "state_key": _C67_SIG_STATE_KEY, "age_key": _C67_SIG_AGE_KEY,
-                "diag_key": _C67_SIG_DIAG_KEY, "fail_key": _C67_SIG_FAIL_KEY,
-                "label": "Cycle 67 (C67-04) \u2014 August system"},
-    "cycle92": {"render": _render_cycle92_signals_table,
-                "download": render_cycle92_download_buttons,
-                "state_key": _C92_SIG_STATE_KEY, "age_key": _C92_SIG_AGE_KEY,
-                "diag_key": _C92_SIG_DIAG_KEY, "fail_key": _C92_SIG_FAIL_KEY,
-                "label": "Cycle 155 dual-pick (on C92-24) \u2014 October BEST"},
+    "cycle67combined": {"render": _render_aug_combined_signals_table,
+                "download": render_aug_combined_download_buttons,
+                "state_key": _COMBINED_CFG[8]["state_key"], "age_key": _COMBINED_CFG[8]["age_key"],
+                "diag_key": _COMBINED_CFG[8]["diag_key"], "fail_key": _COMBINED_CFG[8]["fail_key"],
+                "label": "August COMBINED (Best first, Second-Best only when Best is silent)"},
+    "cycle92combined": {"render": _render_oct_combined_signals_table,
+                "download": render_oct_combined_download_buttons,
+                "state_key": _COMBINED_CFG[10]["state_key"], "age_key": _COMBINED_CFG[10]["age_key"],
+                "diag_key": _COMBINED_CFG[10]["diag_key"], "fail_key": _COMBINED_CFG[10]["fail_key"],
+                "label": "October COMBINED (Best first, Second-Best only when Best is silent)"},
     "cycle91combined": {"render": _render_sep_combined_signals_table,
                 "download": render_sep_combined_download_buttons,
                 "state_key": _COMBINED_CFG[9]["state_key"], "age_key": _COMBINED_CFG[9]["age_key"],
@@ -10657,7 +10773,7 @@ _SIGNAL_PANELS = {
                 "state_key": _COMBINED_CFG[12]["state_key"], "age_key": _COMBINED_CFG[12]["age_key"],
                 "diag_key": _COMBINED_CFG[12]["diag_key"], "fail_key": _COMBINED_CFG[12]["fail_key"],
                 "label": "December COMBINED (Best first, Second-Best only when Best is silent)"},
-    "cycle93bcombined": {"render": _render_nov_combined_signals_table,
+    "cycle93ncombined": {"render": _render_nov_combined_signals_table,
                 "download": render_nov_combined_download_buttons,
                 "state_key": _COMBINED_CFG[11]["state_key"], "age_key": _COMBINED_CFG[11]["age_key"],
                 "diag_key": _COMBINED_CFG[11]["diag_key"], "fail_key": _COMBINED_CFG[11]["fail_key"],

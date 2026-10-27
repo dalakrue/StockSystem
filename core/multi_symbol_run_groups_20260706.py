@@ -7,7 +7,7 @@ previously published symbol results.
 """
 from __future__ import annotations
 from core.global_symbol_compat import set_legacy_calculation_symbol, set_legacy_configured_symbols
-from core.fixed_fx_universe_20260918 import FIRST_TARGET_10, SECOND_TARGET_10, filter_target_symbols
+from core.fixed_fx_universe_20260918 import FIRST_TARGET_10, SECOND_TARGET_10, THIRD_TARGET_9, filter_target_symbols
 
 from collections.abc import Mapping, MutableMapping, Sequence
 from datetime import datetime, timezone
@@ -50,7 +50,10 @@ GROUP_KEYS = {
 DEFAULT_GROUPS = {
     "FIRST": list(FIRST_TARGET_10),
     "SECOND": list(SECOND_TARGET_10),
-    "THIRD": [],
+    # 2026-10-27 (29-symbol build): the third selector defaults to
+    # the 9 new symbols (8 NEW8 crosses + DXY) so Load All covers
+    # the full 29-symbol universe.
+    "THIRD": list(THIRD_TARGET_9),
 }
 SCOPE_TO_GROUP = {
     "LUNCH_CORE": "FIRST",
@@ -64,7 +67,7 @@ def normalize_symbol(value: Any) -> str:
 
 
 def normalize_symbols(values: Any, *, limit: int | None = None) -> list[str]:
-    """Normalize and hard-filter to the fixed 20-symbol FX universe."""
+    """Normalize and hard-filter to the fixed 29-symbol universe."""
     normalized = [normalize_symbol(v) for v in ([values] if isinstance(values, str) else (values or []))]
     return filter_target_symbols(normalized, limit=limit)
 
@@ -98,7 +101,7 @@ def configured_groups(state: Mapping[str, Any]) -> dict[str, list[str]]:
 
 
 def initialize_groups(state: MutableMapping[str, Any], fallback_symbols: Any = None, persisted: Mapping[str, Any] | None = None) -> dict[str, list[str]]:
-    """Publish the fixed 20-symbol universe on every app start/rerun.
+    """Publish the fixed 29-symbol universe on every app start/rerun.
 
     Persisted legacy selector values are intentionally ignored so old symbols
     such as XAUUSD can never re-enter the current loading universe.

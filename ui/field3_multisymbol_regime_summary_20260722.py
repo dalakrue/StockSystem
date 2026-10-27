@@ -10668,6 +10668,233 @@ def render_oct_combined_download_buttons(st, payload):
 
 
 # ============================================================================
+# POSSIBLE (pre-check) -- additive display only (user order 2026-10-28).
+#
+# Mirrors the chat prep reads (live_trader/prep_check.py) inside the app:
+# for the visible panel's NEXT upcoming check, evaluate the panel's own
+# combined system (core.signal_mode.evaluate_combined_entries -- the
+# exact path the combined panels use; best-only months run best-only)
+# with the still-forming signal candle treated as final plus a
+# synthetic entry bar (open = current price). Stress-test: shift the
+# signal candle close by +/-25% and +/-50% of that candle's range
+# (expanding high/low to include the shifted close), re-evaluate, and
+# count how many of the 4 stress versions keep the same top pick.
+# This block NEVER feeds the panels' own signal output; every failure
+# inside it is swallowed so the panel renders exactly as before.
+# ============================================================================
+
+_PRECHECK_STATE_KEY = "precheck_possible_v1"
+_PRECHECK_PCT = {4: (85, "high"), 3: (70, "medium-high"),
+                 2: (55, "medium"), 1: (45, "low-medium"),
+                 0: (35, "low")}
+
+
+def _precheck_next_check(check_hours, now_utc):
+    """Next pre-check label (day + hour:30, naive UTC).
+
+    The first check whose ENTRY candle (label - 30m) has not opened
+    yet: once the entry candle opens, that check is the panel's own
+    live window, so the pre-check targets the following one. Scans
+    8 days ahead, skipping weekends -- the app's entry windows are
+    weekday-only (see check_refresh_interval_ms)."""
+    import pandas as _pd
+    horizon = now_utc + _pd.Timedelta(minutes=30)
+    for offset in range(8):
+        day = now_utc.normalize() + _pd.Timedelta(days=offset)
+        if day.weekday() >= 5:
+            continue
+        for hour in sorted(int(h) for h in check_hours):
+            label = day + _pd.Timedelta(hours=int(hour), minutes=30)
+            if label > horizon:
+                return label
+    return None
+
+
+def _precheck_build_frames(frames, sig_stamp, ent_stamp, delta_frac):
+    """Copies of frames prepared for one pre-check evaluation.
+
+    For every symbol whose frame holds the signal candle: the signal
+    close is shifted by delta_frac of the candle's own range (0.0 for
+    the base read) with high/low expanded to include it, and the entry
+    bar is set to a synthetic bar at that close (created when the real
+    entry candle has not opened yet). Symbols without the signal
+    candle pass through as plain copies (their equations cannot fire,
+    exactly as in the panel's own evaluation)."""
+    import pandas as _pd
+    out = {}
+    for sym, frame in (frames or {}).items():
+        if frame is None:
+            out[sym] = frame
+            continue
+        g = frame.copy()
+        try:
+            if sig_stamp in g.index:
+                rng = (float(g.loc[sig_stamp, "High"])
+                       - float(g.loc[sig_stamp, "Low"]))
+                close = float(g.loc[sig_stamp, "Close"]) + float(delta_frac) * rng
+                g.loc[sig_stamp, "Close"] = close
+                g.loc[sig_stamp, "High"] = max(
+                    float(g.loc[sig_stamp, "High"]), close)
+                g.loc[sig_stamp, "Low"] = min(
+                    float(g.loc[sig_stamp, "Low"]), close)
+                if ent_stamp in g.index:
+                    g.loc[ent_stamp, ["Open", "High", "Low", "Close"]] = close
+                else:
+                    row = g.iloc[[-1]].copy()
+                    row.index = _pd.DatetimeIndex([ent_stamp])
+                    for _col in ("Open", "High", "Low", "Close"):
+                        row[_col] = close
+                    g = _pd.concat([g, row]).sort_index(kind="stable")
+        except Exception:
+            pass
+        out[sym] = g
+    return out
+
+
+def _precheck_top(entries):
+    """(symbol, direction, entry_px, tp_pips, sl_pips, is_second) of
+    the first selected entry, or None when nothing was selected (or
+    the evaluator flagged incomplete feature data)."""
+    import pandas as _pd
+    if entries is None or not isinstance(entries, _pd.DataFrame) or entries.empty:
+        return None
+    try:
+        if entries.attrs.get("status"):
+            return None
+        r = entries.iloc[0]
+        second = False
+        try:
+            second = bool(r.get("is_second_best"))
+        except Exception:
+            second = False
+        return (str(r["symbol"]).upper(), str(r["direction"]).upper(),
+                float(r["entry_px"]), float(r["tp_pips"]),
+                float(r["sl_pips"]), second)
+    except Exception:
+        return None
+
+
+def _compute_precheck_possible(month, state):
+    """POSSIBLE (pre-check) result dict for one month panel, or None.
+
+    Keys: status ('pick' | 'none' | 'no_data'), check_label, and for
+    'pick' also symbol/direction/entry/sl/tp/pct/grade/second.
+    Cached in session state against a fingerprint of the loaded
+    candles, so re-renders recompute only when the data moved.
+    Never raises."""
+    import datetime as _dt
+    import importlib as _il
+    import pandas as _pd
+    try:
+        from core.signal_mode import evaluate_combined_entries
+        _mname, _sysid, _nn, _code = _MONTH_PANEL_ORDER[int(month) - 1]
+        _mod = _il.import_module(f"core.cycle{_nn}_best")
+        check_hours = getattr(_mod, f"CYCLE{str(_nn).upper()}_CHECK_HOURS")
+        now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
+        check_label = _precheck_next_check(check_hours, _pd.Timestamp(now_utc))
+        if check_label is None:
+            return None
+        sig_stamp = check_label - _pd.Timedelta(hours=1, minutes=30)
+        ent_stamp = check_label - _pd.Timedelta(minutes=30)
+        frames, _latest_ts, _diag = _fetch_c22_frames(
+            state, need_candles=[sig_stamp])
+        if not frames:
+            return {"status": "no_data", "check_label": check_label}
+        try:
+            fp = (int(month), str(check_label), tuple(
+                (sym, str(frames[sym].index.max()),
+                 round(float(frames[sym]["Close"].iloc[-1]), 6))
+                for sym in sorted(frames)
+                if frames[sym] is not None and len(frames[sym])))
+            cache = state.get(_PRECHECK_STATE_KEY)
+            if isinstance(cache, dict):
+                hit = cache.get(int(month))
+                if isinstance(hit, dict) and hit.get("fp") == fp:
+                    return hit.get("result")
+        except Exception:
+            fp = None
+        entries, _source = evaluate_combined_entries(
+            int(month),
+            _precheck_build_frames(frames, sig_stamp, ent_stamp, 0.0),
+            check_label, open_symbols=())
+        top = _precheck_top(entries)
+        if top is None:
+            result = {"status": "none", "check_label": check_label}
+        else:
+            same = 0
+            for _d in (-0.5, -0.25, 0.25, 0.5):
+                _e2, _s2 = evaluate_combined_entries(
+                    int(month),
+                    _precheck_build_frames(frames, sig_stamp, ent_stamp, _d),
+                    check_label, open_symbols=())
+                _t2 = _precheck_top(_e2)
+                if _t2 is not None and _t2[0] == top[0] and _t2[1] == top[1]:
+                    same += 1
+            pct, grade = _PRECHECK_PCT[same]
+            from core.cycle12_best import pip_size as _pip_size
+            _pip = _pip_size(top[0])
+            if top[1] == "BUY":
+                _tp_x, _sl_x = top[2] + top[3] * _pip, top[2] - top[4] * _pip
+            else:
+                _tp_x, _sl_x = top[2] - top[3] * _pip, top[2] + top[4] * _pip
+            result = {"status": "pick", "check_label": check_label,
+                      "symbol": top[0], "direction": top[1],
+                      "entry": top[2], "tp": _tp_x, "sl": _sl_x,
+                      "dec": 3 if _pip >= 0.01 else 5,
+                      "pct": pct, "grade": grade, "second": top[5]}
+        if fp is not None:
+            try:
+                cache = state.get(_PRECHECK_STATE_KEY)
+                if not isinstance(cache, dict):
+                    cache = {}
+                cache[int(month)] = {"fp": fp, "result": result}
+                state[_PRECHECK_STATE_KEY] = cache
+            except Exception:
+                pass
+        return result
+    except Exception:
+        return None
+
+
+def _render_precheck_possible(st, state, month):
+    """POSSIBLE (pre-check) display block for the visible panel.
+
+    Display only -- labelled as a pre-check, never the final signal.
+    Never raises."""
+    import pandas as _pd
+    try:
+        result = _compute_precheck_possible(month, state)
+        if result is None:
+            return
+        _check = _pd.Timestamp(result["check_label"])
+        _mmt = (_check + _pd.Timedelta(hours=6, minutes=30)).strftime("%H:%M")
+        if result["status"] == "pick":
+            _d = int(result.get("dec", 5))
+            _src = " \u00b7 second-best system" if result.get("second") else ""
+            st.markdown(
+                f"**\U0001f50e POSSIBLE (pre-check \u2014 not the final signal): "
+                f"{result['direction']} {result['symbol']}** \u2014 entry "
+                f"~{result['entry']:.{_d}f} | SL {result['sl']:.{_d}f} | "
+                f"TP {result['tp']:.{_d}f} \u2014 chance ~{result['pct']}% "
+                f"({result['grade']}){_src}")
+            st.caption(f"Pre-check for the {_mmt} MMT check, read from the "
+                       "still-forming signal candle. The final signal is "
+                       "computed at the check time and can differ.")
+        elif result["status"] == "none":
+            st.markdown("**\U0001f50e POSSIBLE (pre-check \u2014 not the "
+                        "final signal): none yet**")
+            st.caption(f"No equation fires yet for the {_mmt} MMT check on "
+                       "the still-forming signal candle.")
+        else:
+            st.markdown("**\U0001f50e POSSIBLE (pre-check): no data "
+                        "loaded yet**")
+            st.caption(f"The pre-check for the {_mmt} MMT check appears "
+                       "once candle data is loaded.")
+    except Exception:
+        return
+
+
+# ============================================================================
 # The 12 standing monthly systems (2026-10-22 purge): panel wiring table.
 # Month order Jan..Dec. The renderers/download buttons/state keys for every
 # other cycle were deleted; only these 12 panels exist.
@@ -10845,6 +11072,17 @@ def render_multisymbol_regime_summary(
         pass
 
     payload = _panel["render"](st, state)
+
+    # POSSIBLE (pre-check) block for this panel's next check
+    # (additive display only, user order 2026-10-28).
+    try:
+        _precheck_month = next(
+            (i + 1 for i, _row in enumerate(_MONTH_PANEL_ORDER)
+             if _row[1] == _active), None)
+        if _precheck_month is not None:
+            _render_precheck_possible(st, state, _precheck_month)
+    except Exception:
+        pass
 
     # Downloads sit BELOW the signals table (full-width, mobile-friendly).
     if payload is not None:

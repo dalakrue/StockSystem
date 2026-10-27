@@ -1,0 +1,3152 @@
+--- original/core/auto_load_startup_20261019.py
++++ repaired/core/auto_load_startup_20261019.py
+@@ -20,34 +20,10 @@
+ 
+ 
+ def _resolve_twelve_key(state: MutableMapping[str, Any]) -> tuple[str, str]:
+-    """Return (key, source). Source is one of secrets/vault/session/''."""
+-    # 1. Streamlit Secrets (root-level TWELVE_DATA_API_KEY) — reboot-proof.
+-    try:
+-        import streamlit as st
+-
+-        key = str(st.secrets.get("TWELVE_DATA_API_KEY") or "").strip()
+-        if key:
+-            return key, "streamlit_secrets"
+-    except Exception:
+-        pass
+-    # 2. Credential vault (persisted from a previous Settings paste).
+-    try:
+-        from core.connectors.credential_vault import load_credential
+-
+-        for provider in ("TWELVE_DATA", "TWELVE_DATA_API_KEY", "SECOND_API"):
+-            key = str(load_credential(provider) or "").strip()
+-            if key:
+-                return key, "credential_vault"
+-    except Exception:
+-        pass
+-    # 3. Current session state (pasted this session via Settings).
+-    try:
+-        key = str(state.get("twelve_api_key") or "").strip()
+-        if key:
+-            return key, "session_state"
+-    except Exception:
+-        pass
+-    return "", ""
++    """Use the same aliases and temporary-key priority as every live fetch."""
++    from core.twelve_data_key_pool import resolve_twelve_key
++    key = resolve_twelve_key(state, "TWELVE_KEY_1")
++    return key, "configured_provider" if key else ""
+ 
+ 
+ def _has_completed_generation(state: MutableMapping[str, Any]) -> bool:
+@@ -67,9 +43,6 @@
+         if state.get(AUTO_LOAD_FLAG):
+             outcome["reason"] = "already_attempted_this_session"
+             return outcome
+-        state[AUTO_LOAD_FLAG] = True
+-        outcome["attempted"] = True
+-
+         if _has_completed_generation(state):
+             outcome["reason"] = "generation_already_present"
+             return outcome
+@@ -78,6 +51,9 @@
+         if not key:
+             outcome["reason"] = "no_twelve_key_found"
+             return outcome
++
++        state[AUTO_LOAD_FLAG] = True
++        outcome["attempted"] = True
+ 
+         # Make the key visible to the existing pool machinery exactly like a
+         # Settings paste does.
+--- original/core/connectors/data_parts/fetchers.py
++++ repaired/core/connectors/data_parts/fetchers.py
+@@ -210,22 +210,30 @@
+     return _read_twelve_cache(symbol, api_key, interval, bars, fresh_only=True)
+ 
+ 
+-def fetch_twelve(symbol="XAUUSD",api_key="",interval="1min",bars=500):
++def fetch_twelve(symbol="XAUUSD",api_key="",interval="1min",bars=500, *,
++                 force_live=False, timeout_seconds=None):
+     # Coalesce identical in-flight fetches without sharing a requests.Session
+     # between threads. Different symbols still load concurrently.
+     identity=f"{_twelve_symbol(symbol)}|{interval}|{min(max(1, int(bars or 500)), 5000)}|{api_key}"
+     lock=_TWELVE_FETCH_LOCKS[int(hashlib.sha256(identity.encode()).hexdigest()[:8],16)%len(_TWELVE_FETCH_LOCKS)]
+-    with lock:
+-        return _fetch_twelve_once(symbol,api_key,interval,bars)
+-
+-
+-def _fetch_twelve_once(symbol="XAUUSD", api_key="", interval="1min", bars=500):
++    wait_seconds = 20.0 if timeout_seconds is None else max(0.1, float(timeout_seconds))
++    if not lock.acquire(timeout=wait_seconds):
++        return None, False, "Twelve Data request is already in progress; retry next refresh"
++    try:
++        return _fetch_twelve_once(symbol,api_key,interval,bars,
++                                  force_live=force_live, timeout_seconds=timeout_seconds)
++    finally:
++        lock.release()
++
++
++def _fetch_twelve_once(symbol="XAUUSD", api_key="", interval="1min", bars=500, *,
++                       force_live=False, timeout_seconds=None):
+     """Fetch and normalize Twelve Data candles with actionable safe errors."""
+     try:
+         key=str(api_key or "").strip()
+         if not key:
+             return None,False,"Twelve Data API key is not configured"
+-        cached=peek_twelve_cache(symbol,key,interval,bars)
++        cached=None if force_live else peek_twelve_cache(symbol,key,interval,bars)
+         if cached is not None:
+             return cached,True,"Twelve Data local OHLC cache"
+         cache_file=_twelve_cache_file(symbol,interval,bars,key)
+@@ -251,7 +259,8 @@
+             "timezone": "UTC",
+         }
+ 
+-        timeout_seconds = max(3.0, min(float(os.environ.get("TWELVE_DATA_TIMEOUT_SECONDS", "8")), 20.0))
++        timeout_seconds = max(0.1, min(float(timeout_seconds if timeout_seconds is not None
++            else os.environ.get("TWELVE_DATA_TIMEOUT_SECONDS", "8")), 20.0))
+         response = _twelve_http_session().get(
+             "https://api.twelvedata.com/time_series",
+             params=params,
+--- original/core/cycle274_best.py
++++ repaired/core/cycle274_best.py
+@@ -345,16 +345,5 @@
+ 
+ 
+ def fetch_cycle274_m15_frames(state=None):
+-    """Live M15 frames for the stack + FB gate: the cycle78
+-    data path (local repository first, provider chain for
+-    misses), memoised 10 minutes, over the C94 symbol set."""
+-    import time
+-    now = time.monotonic()
+-    if _M15_FETCH_MEMO["ts"] is not None \
+-            and now - _M15_FETCH_MEMO["ts"] < _M15_FETCH_TTL_S:
+-        return _M15_FETCH_MEMO["frames"]
+-    frames = fetch_cycle78_m15_frames(state=state,
+-                                      symbols=C274_SYMBOLS)
+-    _M15_FETCH_MEMO["ts"] = now
+-    _M15_FETCH_MEMO["frames"] = frames
+-    return frames
++    """Use the shared current M15 data; do not retain a stale private memo."""
++    return fetch_cycle78_m15_frames(state=state, symbols=C274_SYMBOLS)
+--- original/core/cycle287_best.py
++++ repaired/core/cycle287_best.py
+@@ -128,17 +128,5 @@
+ 
+ 
+ def fetch_cycle287_m15_frames(state=None):
+-    """Live M15 frames for the stack + X30B layer: the
+-    cycle78 data path (local repository first, provider chain
+-    for misses), memoised 10 minutes, over the C91 symbol
+-    set."""
+-    import time
+-    now = time.monotonic()
+-    if _M15_FETCH_MEMO["ts"] is not None \
+-            and now - _M15_FETCH_MEMO["ts"] < _M15_FETCH_TTL_S:
+-        return _M15_FETCH_MEMO["frames"]
+-    frames = fetch_cycle78_m15_frames(state=state,
+-                                      symbols=C287_SYMBOLS)
+-    _M15_FETCH_MEMO["ts"] = now
+-    _M15_FETCH_MEMO["frames"] = frames
+-    return frames
++    """Use the shared current M15 data; do not retain a stale private memo."""
++    return fetch_cycle78_m15_frames(state=state, symbols=C287_SYMBOLS)
+--- original/core/cycle78_best.py
++++ repaired/core/cycle78_best.py
+@@ -281,95 +281,27 @@
+     reads recent M15 bars. Callers use this to decide whether a
+     memo may be served at all."""
+     try:
+-        newest = None
+-        for f in (frames or {}).values():
+-            if f is not None and len(f):
+-                ts = f.index.max()
+-                if newest is None or ts > newest:
+-                    newest = ts
+-        if newest is None:
++        if not frames:
+             return False
+         now_utc = pd.Timestamp.now(tz="UTC").tz_localize(None)
+         last_completed_open = (now_utc.floor("15min")
+                                - pd.Timedelta(minutes=15))
+-        return bool(newest >= last_completed_open)
++        return all(f is not None and len(f) and f.index.max() >= last_completed_open
++                   for f in frames.values())
+     except Exception:
+-        return True
++        return False
+ 
+ 
+ def fetch_cycle78_m15_frames(state=None, symbols=None):
+-    """Live M15 frames for the X30 layer: local candle
+-    repository first (zero API calls), provider chain only for
+-    symbols the cache cannot serve. Returns {symbol: frame};
+-    symbols that cannot be served are simply absent (the layer
+-    stays inactive for them). Results are memoised for 10
+-    minutes so repeated evaluations never loop provider calls;
+-    stale memo bars simply fail the entry-time lookup and leave
+-    trades unmodified."""
+-    import time
+-    now = time.monotonic()
+-    default_symbols = symbols is None
+-    if default_symbols and _M15_FETCH_MEMO['ts'] is not None \
+-            and now - _M15_FETCH_MEMO['ts'] < _M15_FETCH_TTL_S \
+-            and m15_frames_current(_M15_FETCH_MEMO['frames']):
+-        return _M15_FETCH_MEMO['frames']
++    """Current, deep M15 through the shared direct Twelve Data route."""
++    from core.check_candle_runtime import fetch_m15_frames
++    if state is None:
++        try:
++            import streamlit as st
++            state = st.session_state
++        except Exception:
++            state = {}
+     if symbols is None:
+         from core.cycle66_best import CYCLE66_EQUATIONS
+         symbols = sorted({e['symbol'] for e in CYCLE66_EQUATIONS})
+-    set_key = tuple(sorted(str(s) for s in symbols))
+-    if not default_symbols:
+-        hit = _M15_FETCH_MEMO_BY_SET.get(set_key)
+-        if hit is not None and now - hit[0] < _M15_FETCH_TTL_S \
+-                and m15_frames_current(hit[1]):
+-            return hit[1]
+-    frames = {}
+-    repo = None
+-    try:
+-        from core.data.candle_repository import CandleRepository
+-        repo = CandleRepository()
+-    except Exception:
+-        repo = None
+-    missing = []
+-    for sym in symbols:
+-        df = None
+-        if repo is not None:
+-            try:
+-                cached = repo.load(sym, 'M15', limit=_M15_BARS,
+-                                   completed_only=True)
+-                df = _normalize_m15_frame(cached)
+-            except Exception:
+-                df = None
+-        if df is None:
+-            missing.append(sym)
+-        else:
+-            frames[sym] = df
+-    if missing:
+-        try:
+-            from core.data.market_data_orchestrator import (
+-                fetch_forex_candles_provider_chain)
+-        except Exception:
+-            fetch_forex_candles_provider_chain = None
+-        if fetch_forex_candles_provider_chain is not None:
+-            # Deadline-bounded (fix 2026-10-26): a cold repository plus a
+-            # slow provider must never hang a page render. Serve what
+-            # could be fetched inside the budget; the memo currency
+-            # guard re-fetches on a later render once data lands.
+-            _deadline = time.monotonic() + 120.0
+-            for sym in missing:
+-                if time.monotonic() > _deadline:
+-                    break
+-                try:
+-                    live_df, _status, _trace = \
+-                        fetch_forex_candles_provider_chain(
+-                            sym, 'M15', outputsize=_M15_BARS, state=state)
+-                    df = _normalize_m15_frame(live_df)
+-                    if df is not None:
+-                        frames[sym] = df
+-                except Exception:
+-                    continue
+-    if default_symbols:
+-        _M15_FETCH_MEMO['ts'] = now
+-        _M15_FETCH_MEMO['frames'] = frames
+-    else:
+-        _M15_FETCH_MEMO_BY_SET[set_key] = (now, frames)
+-    return frames
++    return fetch_m15_frames(state, symbols)
+--- original/core/cycle86_best.py
++++ repaired/core/cycle86_best.py
+@@ -256,16 +256,5 @@
+ 
+ 
+ def fetch_cycle86_m15_frames(state=None):
+-    """Live M15 frames for the M08 rerank: the cycle78
+-    data path (local repository first, provider chain for
+-    misses), memoised 10 minutes, over the C86 symbol set."""
+-    import time
+-    now = time.monotonic()
+-    if _M15_FETCH_MEMO["ts"] is not None \
+-            and now - _M15_FETCH_MEMO["ts"] < _M15_FETCH_TTL_S:
+-        return _M15_FETCH_MEMO["frames"]
+-    frames = fetch_cycle78_m15_frames(state=state,
+-                                       symbols=C86_SYMBOLS)
+-    _M15_FETCH_MEMO["ts"] = now
+-    _M15_FETCH_MEMO["frames"] = frames
+-    return frames
++    """Use the shared current M15 data; do not retain a stale private memo."""
++    return fetch_cycle78_m15_frames(state=state, symbols=C86_SYMBOLS)
+--- original/core/cycle87_best.py
++++ repaired/core/cycle87_best.py
+@@ -265,16 +265,5 @@
+ 
+ 
+ def fetch_cycle87_m15_frames(state=None):
+-    """Live M15 frames for the M18 rerank: the cycle78
+-    data path (local repository first, provider chain for
+-    misses), memoised 10 minutes, over the C87 symbol set."""
+-    import time
+-    now = time.monotonic()
+-    if _M15_FETCH_MEMO["ts"] is not None \
+-            and now - _M15_FETCH_MEMO["ts"] < _M15_FETCH_TTL_S:
+-        return _M15_FETCH_MEMO["frames"]
+-    frames = fetch_cycle78_m15_frames(state=state,
+-                                       symbols=C87_SYMBOLS)
+-    _M15_FETCH_MEMO["ts"] = now
+-    _M15_FETCH_MEMO["frames"] = frames
+-    return frames
++    """Use the shared current M15 data; do not retain a stale private memo."""
++    return fetch_cycle78_m15_frames(state=state, symbols=C87_SYMBOLS)
+--- original/core/cycle89_best.py
++++ repaired/core/cycle89_best.py
+@@ -226,16 +226,5 @@
+ 
+ 
+ def fetch_cycle89_m15_frames(state=None):
+-    """Live M15 frames for the bench gate: the cycle78 data
+-    path (local repository first, provider chain for misses),
+-    memoised 10 minutes, over the C89 symbol set."""
+-    import time
+-    now = time.monotonic()
+-    if _M15_FETCH_MEMO["ts"] is not None \
+-            and now - _M15_FETCH_MEMO["ts"] < _M15_FETCH_TTL_S:
+-        return _M15_FETCH_MEMO["frames"]
+-    frames = fetch_cycle78_m15_frames(state=state,
+-                                       symbols=C89_SYMBOLS)
+-    _M15_FETCH_MEMO["ts"] = now
+-    _M15_FETCH_MEMO["frames"] = frames
+-    return frames
++    """Use the shared current M15 data; do not retain a stale private memo."""
++    return fetch_cycle78_m15_frames(state=state, symbols=C89_SYMBOLS)
+--- original/core/cycle91_best.py
++++ repaired/core/cycle91_best.py
+@@ -126,16 +126,5 @@
+ 
+ 
+ def fetch_cycle91_m15_frames(state=None):
+-    """Live M15 frames for the X30B layer: the cycle78 data
+-    path (local repository first, provider chain for
+-    misses), memoised 10 minutes, over the C91 symbol set."""
+-    import time
+-    now = time.monotonic()
+-    if _M15_FETCH_MEMO["ts"] is not None \
+-            and now - _M15_FETCH_MEMO["ts"] < _M15_FETCH_TTL_S:
+-        return _M15_FETCH_MEMO["frames"]
+-    frames = fetch_cycle78_m15_frames(state=state,
+-                                       symbols=C91_SYMBOLS)
+-    _M15_FETCH_MEMO["ts"] = now
+-    _M15_FETCH_MEMO["frames"] = frames
+-    return frames
++    """Use the shared current M15 data; do not retain a stale private memo."""
++    return fetch_cycle78_m15_frames(state=state, symbols=C91_SYMBOLS)
+--- original/core/cycle93_best.py
++++ repaired/core/cycle93_best.py
+@@ -218,16 +218,5 @@
+ 
+ 
+ def fetch_cycle93_m15_frames(state=None):
+-    """Live M15 frames for the FB gate: the cycle78 data
+-    path (local repository first, provider chain for
+-    misses), memoised 10 minutes, over the C93 symbol set."""
+-    import time
+-    now = time.monotonic()
+-    if _M15_FETCH_MEMO["ts"] is not None \
+-            and now - _M15_FETCH_MEMO["ts"] < _M15_FETCH_TTL_S:
+-        return _M15_FETCH_MEMO["frames"]
+-    frames = fetch_cycle78_m15_frames(state=state,
+-                                       symbols=C93_SYMBOLS)
+-    _M15_FETCH_MEMO["ts"] = now
+-    _M15_FETCH_MEMO["frames"] = frames
+-    return frames
++    """Use the shared current M15 data; do not retain a stale private memo."""
++    return fetch_cycle78_m15_frames(state=state, symbols=C93_SYMBOLS)
+--- original/core/cycle94_best.py
++++ repaired/core/cycle94_best.py
+@@ -219,16 +219,5 @@
+ 
+ 
+ def fetch_cycle94_m15_frames(state=None):
+-    """Live M15 frames for the FB gate: the cycle78 data
+-    path (local repository first, provider chain for
+-    misses), memoised 10 minutes, over the C94 symbol set."""
+-    import time
+-    now = time.monotonic()
+-    if _M15_FETCH_MEMO["ts"] is not None \
+-            and now - _M15_FETCH_MEMO["ts"] < _M15_FETCH_TTL_S:
+-        return _M15_FETCH_MEMO["frames"]
+-    frames = fetch_cycle78_m15_frames(state=state,
+-                                       symbols=C94_SYMBOLS)
+-    _M15_FETCH_MEMO["ts"] = now
+-    _M15_FETCH_MEMO["frames"] = frames
+-    return frames
++    """Use the shared current M15 data; do not retain a stale private memo."""
++    return fetch_cycle78_m15_frames(state=state, symbols=C94_SYMBOLS)
+--- original/core/multi_symbol_load_manager_20260707.py
++++ repaired/core/multi_symbol_load_manager_20260707.py
+@@ -1353,6 +1353,9 @@
+     label: str = "",
+ ) -> bool:
+     """Bounded wait until the Twelve Data key pool has a usable credit."""
++    from core.twelve_data_key_pool import TwelveDataKeyPool
++    if not TwelveDataKeyPool.from_state(state).has_available_key():
++        return False  # An absent credential cannot become ready by sleeping.
+     waited = 0.0
+     step = 5.0
+     while waited < max_wait_seconds:
+@@ -1407,10 +1410,14 @@
+             ("THIRD", normalize_symbols(groups.get("THIRD") or [], limit=group_symbol_limit("THIRD"))),
+         )
+         failed_set = set(failed)
+-        _wait_for_pool_capacity(
++        capacity_ready = _wait_for_pool_capacity(
+             state, progress_callback=progress_callback,
+             label=f"completion round {round_no}/{max_rounds}",
+         )
++        if not capacity_ready:
++            trace.append({"round": round_no, "action": "waiting_for_key_or_credits",
++                          "loaded": len(loaded), "failed": len(failed)})
++            break
+         round_detail: dict[str, Any] = {
+             "round": round_no, "failed_before": list(failed), "groups": [],
+         }
+--- original/core/secure_api_startup_20260619.py
++++ repaired/core/secure_api_startup_20260619.py
+@@ -73,6 +73,9 @@
+             ),
+             "env": ("TWELVE_DATA_API_KEY_1", "TWELVE_API_KEY_1", "TWELVE_DATA_API_KEY", "TWELVE_API_KEY"),
+             "secret_paths": (
++                ("twelve_data", "key_1"), ("twelve_data", "api_key_1"),
++                ("twelve", "key_1"), ("twelve", "api_key_1"),
++                ("TWELVE_DATA_API_KEY_1",), ("TWELVE_API_KEY_1",),
+                 ("api_keys", "twelve_data_key_1"), ("api_keys", "twelve_api_key_1"),
+                 ("api_keys", "second_api_1"), ("api_keys", "second_api"), ("api_keys", "second_api_key"),
+                 ("api_keys", "twelve_data"), ("api_keys", "twelve"),
+@@ -92,6 +95,7 @@
+                 ("api_keys", "twelve_data_key_2"), ("api_keys", "twelve_api_key_2"),
+                 ("api_keys", "second_api_2"), ("TWELVE_DATA_API_KEY_2",),
+                 ("twelve_data", "api_key_2"), ("twelve", "api_key_2"),
++                ("twelve_data", "key_2"), ("twelve", "key_2"),
+             ),
+         }
+     if name in {"alpha_vantage", "alphavantage", "alpha"}:
+--- original/core/signal_mode.py
++++ repaired/core/signal_mode.py
+@@ -573,6 +573,8 @@
+         signals = evaluate_signals(frames, check_time_utc)
+         if signals is None or not isinstance(signals, pd.DataFrame):
+             signals = pd.DataFrame()
++        if signals.attrs.get("status"):
++            return signals
+         entries = select_entries(signals, open_symbols=open_symbols)
+         if entries is None or not isinstance(entries, pd.DataFrame):
+             entries = pd.DataFrame()
+@@ -609,6 +611,10 @@
+     best = MONTH_SYSTEMS[month]
+     best_entries = _evaluate_and_select_for(
+         best, frames, check_time_utc, open_symbols=open_symbols)
++    # Missing feature data is not a true silent BEST check. Do not choose the
++    # second system when the first could not finish its own calculation.
++    if best_entries.attrs.get("status"):
++        return _tag_combined(best_entries, best, False), "BEST"
+     if len(best_entries) > 0:
+         return _tag_combined(best_entries, best, False), "BEST"
+     second = MONTH_SECOND_BEST.get(month)
+--- original/core/twelve_data_key_pool.py
++++ repaired/core/twelve_data_key_pool.py
+@@ -81,12 +81,16 @@
+ 
+ 
+ def _first_value(state: Mapping[str, Any] | Any, names: tuple[str, ...], secret_paths: tuple[tuple[str, ...], ...], env_names: tuple[str, ...], vault_names: tuple[str, ...]) -> str:
++    deferred_state_values = []
+     for name in names:
+         try:
+             value = str(state.get(name) or "").strip() if _state_getter_compatible(state) else ""
+         except Exception:
+             value = ""
+         if value:
++            if str(state.get(f"{name}_source") or "").lower() == "vault":
++                deferred_state_values.append(value)
++                continue
+             return value
+     for path in secret_paths:
+         value = _secret_path(*path)
+@@ -96,6 +100,8 @@
+         value = os.getenv(name, "").strip()
+         if value:
+             return value
++    if deferred_state_values:
++        return deferred_state_values[0]
+     try:
+         from core.connectors.credential_vault import load_credential
+         for provider in vault_names:
+@@ -121,8 +127,13 @@
+     secret_paths = [("twelve_data", f"api_key_{index}"), ("twelve_data", f"key_{index}"), ("twelve", f"api_key_{index}"), ("twelve", f"key_{index}"), ("api_keys", f"twelve_data_key_{index}"), ("api_keys", f"twelve_api_key_{index}")]
+     if index == 1:
+         secret_paths += [("api_keys", "second_api"), ("api_keys", "twelve_data"), ("api_keys", "twelve"), ("twelve_data", "api_key"), ("twelve", "api_key")]
++    secret_paths += [(name,) for name in names]
+     env_names = (f"TWELVE_DATA_API_KEY_{index}", f"TWELVE_API_KEY_{index}")
+-    vault_names = (f"TWELVE_DATA_KEY_{index}", f"TWELVE_KEY_{index}", "TWELVE_DATA_API_KEY")
++    if index == 1:
++        env_names += ("TWELVE_DATA_API_KEY", "TWELVE_API_KEY")
++    vault_names = (f"TWELVE_DATA_KEY_{index}", f"TWELVE_KEY_{index}")
++    if index == 1:
++        vault_names += ("TWELVE_DATA_API_KEY", "TWELVE_DATA")
+     return _first_value(state_map, names, tuple(secret_paths), env_names, vault_names)
+ 
+ 
+@@ -135,7 +146,14 @@
+         # visible 7/12 loaded, 5/12 failed pattern even when Key 2 was configured.
+         self.state = state if _state_mutable_compatible(state) else {}
+         self.read_state = state if _state_getter_compatible(state) else {}
+-        self.minute_limit = max(1, int(minute_limit or self.read_state.get("twelve_data_per_key_minute_limit") or _DEFAULT_MINUTE_LIMIT))
++        configured_limit = (minute_limit or self.read_state.get("twelve_data_per_key_minute_limit")
++                            or _secret_path("twelve_data", "per_key_minute_limit")
++                            or _secret_path("TWELVE_DATA_PER_KEY_MINUTE_LIMIT")
++                            or _DEFAULT_MINUTE_LIMIT)
++        try:
++            self.minute_limit = max(1, int(configured_limit))
++        except (TypeError, ValueError):
++            self.minute_limit = max(1, _DEFAULT_MINUTE_LIMIT)
+         self.enable_multi = bool(self.read_state.get("enable_twelve_multi_key_loading", True))
+         self.rotation_cursor = int(self.read_state.get("twelve_data_rotation_cursor", 0) or 0)
+ 
+@@ -164,13 +182,15 @@
+ 
+     def keys(self) -> list[dict[str, Any]]:
+         configured: list[dict[str, Any]] = []
++        seen = set()
+         for alias in TWELVE_KEY_ALIASES:
+             # Multi-key loading disabled means key 1 only (data layer still
+             # works, just without parallel fan-out across keys).
+             if alias != "TWELVE_KEY_1" and not self.enable_multi:
+                 continue
+             key = resolve_twelve_key(self.read_state, alias)
+-            if key:
++            if key and key not in seen:
++                seen.add(key)
+                 configured.append({
+                     "alias": alias,
+                     "api_key": key,
+--- original/ui/field3_multisymbol_regime_summary_20260722.py
++++ repaired/ui/field3_multisymbol_regime_summary_20260722.py
+@@ -2957,38 +2957,8 @@
+ 
+ 
+ def _normalize_c22_frame(df):
+-    """Cached/provider H1 frame -> naive-UTC datetime-indexed OHLC (Open/High/Low/Close).
+-
+-    Accepts the local candle-repository format (``open_time`` column) as
+-    well as provider-chain formats (``time``/``datetime``/``timestamp``).
+-    """
+-    try:
+-        import pandas as _pd
+-        if df is None or not isinstance(df, _pd.DataFrame) or df.empty:
+-            return None
+-        out = df.copy()
+-        tcol = next((c for c in ("time", "open_time", "Datetime", "datetime",
+-                                 "timestamp", "date")
+-                     if c in out.columns), None)
+-        if tcol is None:
+-            return None
+-        ts = _pd.to_datetime(out[tcol], errors="coerce")
+-        try:
+-            ts = ts.dt.tz_localize("UTC") if ts.dt.tz is None else ts.dt.tz_convert("UTC")
+-        except Exception:
+-            return None
+-        idx = _pd.DatetimeIndex(ts).tz_localize(None)
+-        out = out.drop(columns=[tcol])
+-        ren = {c: c.title() for c in ("open", "high", "low", "close") if c in out.columns}
+-        out = out.rename(columns=ren)
+-        if not all(c in out.columns for c in ("Open", "High", "Low", "Close")):
+-            return None
+-        out.index = idx
+-        out = out[~out.index.isna()].sort_index()
+-        out = out[~out.index.duplicated(keep="last")]
+-        return out if len(out) >= 50 else None
+-    except Exception:
+-        return None
++    from core.check_candle_runtime import normalize_ohlc
++    return normalize_ohlc(df, min_bars=50)
+ 
+ 
+ def _render_symbols_loaded_box(st, context):
+@@ -3000,9 +2970,9 @@
+             getattr(context, "failed_symbols", None), dict) else {}
+         n_ok, n_cfg, n_fail = len(loaded), len(configured), len(failed)
+         if n_cfg:
+-            txt = f"📊 <b>{n_ok}/{n_cfg}</b> symbols loaded"
++            txt = f"📊 <b>{n_ok}/{n_cfg}</b> symbols with loaded history"
+         else:
+-            txt = f"📊 <b>{n_ok}</b> symbols loaded"
++            txt = f"📊 <b>{n_ok}</b> symbols with loaded history"
+         if n_fail:
+             txt += f" <span style='color:#b91c1c;'>({n_fail} failed)</span>"
+         st.markdown(
+@@ -3030,328 +3000,20 @@
+ 
+ 
+ def _fetch_c22_frames(state, need_candles=None):
+-    """H1 frames for the 20 Cycle 22 symbols — LOCAL SQLITE CACHE FIRST.
+-
+-    The app already loaded 20/20 symbols through the main pipeline; those
+-    candles sit in the local candle repository (same DB the provider chain
+-    itself uses). Reading them directly costs zero API calls, so it can
+-    never hit Twelve Data rate limits or burn the daily quota — the reason
+-    the old provider-chain loop silently produced zero frames in
+-    production. The provider chain remains a per-symbol fallback for the
+-    rare case the cache holds < 50 bars.
+-
+-    need_candles: optional iterable of naive-UTC candle stamps that MUST be
+-    present (a check window's signal+entry stamps). The startup data load is
+-    one-time; without this, the cache goes stale ~1h later and every window
+-    evaluation silently returns empty ("no equations fired"). When needed
+-    candles are missing from most frames, fresh candles are fetched via the
+-    provider chain (only on window evaluations — never on plain rerenders —
+-    so API quota stays safe: ~20 credits/window, ~6 windows/day).
+-
+-    Returns (frames dict, latest_candle_naive_utc or None, diag dict).
+-    """
+-    import pandas as _pd
+-    frames = {}
+-    latest_ts = None
+-    n_cache = 0
+-    n_live = 0
+-    live_errors = []
+-    repo = None
+-    try:
+-        from core.data.candle_repository import CandleRepository
+-        repo = CandleRepository()
+-    except Exception:
+-        repo = None
+-    for sym in _CYCLE22_PANEL_SYMBOLS:
+-        df = None
+-        if repo is not None:
+-            try:
+-                # completed_only=False: the engine needs the FORMING H:00 entry
+-                # candle (its open is fixed at candle start = backtest entry).
+-                # Signal features come from the earlier completed (H-1):00
+-                # candle, so the forming candle cannot contaminate them.
+-                # With completed_only=True the app could never evaluate a
+-                # window inside its 5-min entry (the H:00 candle completes at
+-                # H+1:00) and silently reported "no equations fired".
+-                cached = repo.load(sym, "H1", limit=400, completed_only=False)
+-                if cached is not None and len(cached) >= 50:
+-                    df = cached
+-                    n_cache += 1
+-            except Exception:
+-                df = None
+-        if df is None:
+-            try:
+-                from core.data.market_data_orchestrator import fetch_forex_candles_provider_chain
+-                live_df, _status, _trace = fetch_forex_candles_provider_chain(
+-                    sym, "H1", outputsize=300, state=state, include_forming=True)
+-                if live_df is not None and not live_df.empty:
+-                    df = live_df
+-                    n_live += 1
+-                else:
+-                    live_errors.append(f"{sym}: {(_status or 'empty')}")
+-            except Exception as exc:
+-                live_errors.append(f"{sym}: {type(exc).__name__}")
+-        try:
+-            norm = _normalize_c22_frame(df)
+-        except Exception:
+-            norm = None
+-        if norm is not None:
+-            frames[sym] = norm
+-            try:
+-                ts = norm.index.max()
+-                if latest_ts is None or ts > latest_ts:
+-                    latest_ts = ts
+-            except Exception:
+-                pass
+-    # Freshness-gated refresh: if the caller needs specific candles (a check
+-    # window's stamps) and they're missing from most frames, the one-time
+-    # startup cache has gone stale — fetch fresh via the provider chain.
+-    # This runs only on window evaluations (need_candles is None on plain
+-    # rerenders), so it cannot burn API quota in a refresh loop.
+-    if need_candles:
+-        try:
+-            need_set = set(_pd.Timestamp(c).tz_localize(None)
+-                           if _pd.Timestamp(c).tzinfo is None
+-                           else _pd.Timestamp(c).tz_convert("UTC").tz_localize(None)
+-                           for c in need_candles)
+-        except Exception:
+-            need_set = set()
+-        if need_set:
+-            # "Refresh the dashboard" button sets force_signal_refresh: then
+-            # EVERY symbol is re-fetched live (not just the missing ones) and
+-            # the orchestrator bypasses its cache early-return. The flag is
+-            # consumed here so plain rerenders stay quota-safe.
+-            _force_refresh = False
+-            try:
+-                _force_refresh = bool(state.get("force_signal_refresh"))
+-            except Exception:
+-                _force_refresh = False
+-            missing_syms = []
+-            for sym in _CYCLE22_PANEL_SYMBOLS:
+-                norm = frames.get(sym)
+-                try:
+-                    if norm is None or not need_set.issubset(set(norm.index)):
+-                        missing_syms.append(sym)
+-                except Exception:
+-                    missing_syms.append(sym)
+-            # Check-time freshness fix (2026-10-26): refresh when
+-            # ANY symbol is missing a needed candle (previously >= 4
+-            # symbols had to be missing, so a check whose pick symbol
+-            # was among 1-3 stale frames silently produced nothing
+-            # until the cache expired ~5 minutes later).
+-            # Page-level refresh guard (fix 2026-10-26, evening): every
+-            # month panel on this page calls this fetch. If each one ran
+-            # its own multi-pass live refresh, a single page render could
+-            # stack 20 panels x 3 passes x 20 provider calls and hang on
+-            # the spinner for many minutes. The FIRST panel that needs
+-            # candles does the refresh (deadline-bounded below); its
+-            # fetches persist to the shared repository, so panels that
+-            # render within the next 60 seconds just read the warmed
+-            # repository instead of fetching again.
+-            _skip_refresh = False
+-            if not _force_refresh:
+-                try:
+-                    import time as _tmod_g
+-                    _last_r = float(state.get("_c22_refresh_mono") or 0.0)
+-                    if _tmod_g.monotonic() - _last_r < 60.0:
+-                        _skip_refresh = True
+-                except Exception:
+-                    _skip_refresh = False
+-            if (missing_syms or _force_refresh) and not _skip_refresh:
+-                try:
+-                    import time as _tmod_g2
+-                    state["_c22_refresh_mono"] = _tmod_g2.monotonic()
+-                except Exception:
+-                    pass
+-                if _force_refresh:
+-                    try:
+-                        state.pop("force_signal_refresh", None)
+-                    except Exception:
+-                        pass
+-                try:
+-                    from core.data.market_data_orchestrator import fetch_forex_candles_provider_chain
+-                except Exception:
+-                    fetch_forex_candles_provider_chain = None
+-                if fetch_forex_candles_provider_chain is not None:
+-                    # Check-time retry passes (fix 2026-10-26, user order):
+-                    # at the exact check minute the forming entry candle can
+-                    # be seconds away on the provider, and a whole app of
+-                    # panels evaluating at once can burst the per-minute key
+-                    # limit -- both are transient. One shot is not enough:
+-                    # re-check what is still missing and fetch again after a
+-                    # short wait (20s, then 35s), so the window evaluates
+-                    # inside the same render instead of failing 0/20 and
+-                    # sitting in the fail cooldown while the data is already
+-                    # there. Only still-missing symbols are re-fetched, and a
+-                    # successful fetch persists the candle to the shared
+-                    # repository, so later panels read it from cache.
+-                    import time as _time_mod
+-                    _refresh_deadline = _time_mod.monotonic() + 75.0
+-                    for _pass in range(3):
+-                        if _pass > 0 and _time_mod.monotonic() > _refresh_deadline:
+-                            break
+-                        if _pass > 0:
+-                            _still = []
+-                            for _s2 in _CYCLE22_PANEL_SYMBOLS:
+-                                _n2 = frames.get(_s2)
+-                                try:
+-                                    if _n2 is None or not need_set.issubset(set(_n2.index)):
+-                                        _still.append(_s2)
+-                                except Exception:
+-                                    _still.append(_s2)
+-                            missing_syms = _still
+-                            if not missing_syms:
+-                                break
+-                            _wait = 10 if _pass == 1 else 15
+-                            if _time_mod.monotonic() + _wait > _refresh_deadline:
+-                                break
+-                            _time_mod.sleep(_wait)
+-                        targets = (_CYCLE22_PANEL_SYMBOLS
+-                                   if (_force_refresh and _pass == 0) or len(missing_syms) > 10
+-                                   else missing_syms)
+-                        for sym in targets:
+-                            if _time_mod.monotonic() > _refresh_deadline:
+-                                break
+-                            try:
+-                                live_df, _st2, _tr2 = fetch_forex_candles_provider_chain(
+-                                    sym, "H1", outputsize=300, state=state,
+-                                    include_forming=True,
+-                                    # Missing-candle refresh bypasses every
+-                                    # cache layer (2026-10-26 freshness fix):
+-                                    # the needed entry candle must come from
+-                                    # a live fetch, never from a cache that
+-                                    # provably does not contain it.
+-                                    force_live=True)
+-                                if live_df is not None and not live_df.empty:
+-                                    norm2 = _normalize_c22_frame(live_df)
+-                                    if norm2 is not None and len(norm2) >= 50:
+-                                        frames[sym] = norm2
+-                                        n_live += 1
+-                                        try:
+-                                            ts2 = norm2.index.max()
+-                                            if latest_ts is None or ts2 > latest_ts:
+-                                                latest_ts = ts2
+-                                        except Exception:
+-                                            pass
+-                                    else:
+-                                        live_errors.append(f"{sym} refresh: normalized_empty")
+-                                else:
+-                                    live_errors.append(f"{sym} refresh: {(_st2 or 'empty')}")
+-                            except Exception as exc:
+-                                live_errors.append(f"{sym} refresh: {type(exc).__name__}")
+-    # Forming-candle synthesis (fix 2026-10-26 late evening, user order
+-    # after the 23:30 check failed 0/20 LIVE): at the exact check minute
+-    # Twelve Data's H1 series can lag a few minutes behind the bar
+-    # boundary, so the provider-chain refresh returns frames whose
+-    # newest candle is the COMPLETED one and the entry candle (the
+-    # forming H:00 bar) is missing -- the window then fails 0/20 even
+-    # though the data is seconds away. The M15 series publishes the
+-    # new bar at the boundary, and the M15 bar opening at H:00 has the
+-    # SAME open as the H1 entry candle. When a frame has every needed
+-    # candle except the entry candle itself, build that candle from
+-    # the entry hour's M15 bars (open = first M15 open, high/low/close
+-    # from the partial hour) and append it. Entry semantics stay
+-    # backtest-exact: entries price off the entry candle's open.
+-    if need_candles:
+-        try:
+-            _entry_stamp = max(need_set)
+-            _earlier = sorted(need_set - {_entry_stamp})
+-            _synth_targets = []
+-            for _sym in _CYCLE22_PANEL_SYMBOLS:
+-                _fr = frames.get(_sym)
+-                if _fr is None or len(_fr) < 50:
+-                    continue
+-                try:
+-                    _idx = set(_fr.index)
+-                except Exception:
+-                    continue
+-                if _entry_stamp in _idx:
+-                    continue
+-                if _earlier and not set(_earlier).issubset(_idx):
+-                    continue
+-                _synth_targets.append(_sym)
+-            if _synth_targets:
+-                # v2 (2026-10-27): v1 fetched the M15 bars through the
+-                # orchestrator provider chain, which raised for M15 in
+-                # production (23:51 live test) and returned empty at
+-                # the 00:30 check. Fetch them through the direct
+-                # Twelve key-pool call instead: the same path the
+-                # sidebar loaders use to load 20/20 every day.
+-                try:
+-                    from core.twelve_data_key_pool import (
+-                        TwelveDataKeyPool as _KeyPool)
+-                    from core.connectors.data_parts.fetchers import (
+-                        fetch_twelve as _fetch12)
+-                    _pool = _KeyPool.from_state(state)
+-                except Exception:
+-                    _pool = None
+-                    _fetch12 = None
+-                if _pool is not None and _fetch12 is not None:
+-                    for _sym in _synth_targets:
+-                        try:
+-                            _lease = _pool.reserve_key(
+-                                symbol=_sym, timeframe="M15")
+-                            if _lease is None:
+-                                live_errors.append(
+-                                    f"{_sym} synth: no key available")
+-                                continue
+-                            _raw = _fetch12(_sym, _lease.api_key,
+-                                            interval="15min", bars=120)
+-                            _m15_df, _ok12, _msg12 = _raw
+-                            if (not _ok12 or _m15_df is None
+-                                    or _m15_df.empty):
+-                                _pool.mark_failure(
+-                                    _lease.alias, str(_msg12))
+-                                live_errors.append(
+-                                    f"{_sym} synth fetch: "
+-                                    f"{str(_msg12)[:80]}")
+-                                continue
+-                            _pool.mark_success(_lease.alias)
+-                            _m15 = _normalize_c22_frame(_m15_df)
+-                            if _m15 is None or _m15.empty:
+-                                continue
+-                            _hour = _m15[(_m15.index >= _entry_stamp)
+-                                         & (_m15.index < _entry_stamp
+-                                            + _pd.Timedelta(hours=1))]
+-                            if _hour.empty:
+-                                continue
+-                            if _hour.index.min() != _entry_stamp:
+-                                continue
+-                            _row = _pd.DataFrame(
+-                                [{"Open": float(_hour["Open"].iloc[0]),
+-                                  "High": float(_hour["High"].max()),
+-                                  "Low": float(_hour["Low"].min()),
+-                                  "Close": float(_hour["Close"].iloc[-1])}],
+-                                index=_pd.DatetimeIndex([_entry_stamp]))
+-                            _fr2 = _pd.concat([frames[_sym], _row])
+-                            _fr2 = _fr2[~_fr2.index.duplicated(
+-                                keep="last")].sort_index()
+-                            frames[_sym] = _fr2
+-                            n_live += 1
+-                            if latest_ts is None or _entry_stamp > latest_ts:
+-                                latest_ts = _entry_stamp
+-                        except Exception as _sexc:
+-                            try:
+-                                import traceback as _tbmod
+-                                _tbl = [ln for ln in
+-                                        _tbmod.format_exc().splitlines()
+-                                        if "field3_multisymbol" in ln
+-                                        or "market_data" in ln
+-                                        or "candle_repository" in ln
+-                                        or "data_parts" in ln
+-                                        or "connectors" in ln]
+-                                _where = (_tbl[-1].strip()[:110]
+-                                          if _tbl else "unknown")
+-                            except Exception:
+-                                _where = "unknown"
+-                            live_errors.append(
+-                                f"{_sym} synth: {type(_sexc).__name__}: "
+-                                f"{str(_sexc)[:60]} @ {_where}")
+-        except Exception:
+-            pass
+-    diag = {"cache": n_cache, "live": n_live, "frames": len(frames),
+-            "live_errors": live_errors[:6]}
+-    return frames, latest_ts, diag
++    from core.check_candle_runtime import fetch_check_frames
++    return fetch_check_frames(state, _CYCLE22_PANEL_SYMBOLS, need_candles)
++
++
++def _require_check_frames(frames, need):
++    needed = set(pd.Timestamp(t) for t in need)
++    if any(sym not in frames or not needed.issubset(frames[sym].index)
++           for sym in _CYCLE22_PANEL_SYMBOLS):
++        raise ValueError("check_candles_incomplete")
++
++
++def _require_evaluator_status(frame):
++    if isinstance(frame, pd.DataFrame) and frame.attrs.get("status"):
++        raise ValueError("feature_data_incomplete")
+ 
+ 
+ def _c22_signals_to_display(entries):
+@@ -3427,7 +3089,7 @@
+ 
+ 
+ _RANKING_COLUMNS = ["Quick look", "Rank", "Symbol", "Status", "Direction",
+-                    "Entry", "TP", "SL", "Score", "Equation"]
++                    "Entry", "Signal close", "TP", "SL", "Score", "Equation"]
+ 
+ 
+ def _c22_build_check_ranking(sig, entries, frames, need):
+@@ -3453,7 +3115,8 @@
+             except Exception:
+                 pass
+         evaluable, no_data = [], []
+-        for sym, f in frames.items():
++        for sym in _CYCLE22_PANEL_SYMBOLS:
++            f = frames.get(sym)
+             ok = False
+             try:
+                 ok = f is not None and need_set.issubset(
+@@ -3497,16 +3160,22 @@
+             rank[0] += 1
+             dr = cand_rows.get(sym)
+             r = best.get(sym)
++            f = frames.get(sym)
++            entry_price = signal_close = "—"
++            if f is not None and need_set and need_set.issubset(f.index):
++                entry_price = float(f.loc[max(need_set), "Open"])
++                signal_close = float(f.loc[min(need_set), "Close"])
+             rows.append({
+                 "Rank": rank[0],
+                 "Symbol": sym,
+                 "Status": status,
+                 "Quick look": (str(dr.get("Quick look")) if dr is not None else "\u2014"),
+                 "Direction": (str(dr.get("Direction")) if dr is not None else "\u2014"),
+-                "Entry": (dr.get("Entry") if dr is not None else "\u2014"),
++                "Entry": (dr.get("Entry") if dr is not None else entry_price),
++                "Signal close": signal_close,
+                 "TP": (dr.get("TP") if dr is not None else "\u2014"),
+                 "SL": (dr.get("SL") if dr is not None else "\u2014"),
+-                "Score": (dr.get("Score") if dr is not None else "\u2014"),
++                "Score": (dr.get("Score") if dr is not None else (0.0 if isinstance(entry_price, float) else "—")),
+                 "Equation": (str(r.get("equation")) if r is not None else "\u2014"),
+             })
+ 
+@@ -3565,6 +3234,7 @@
+                 return v
+ 
+         entries = []
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             for _, r in disp.iterrows():
+@@ -3701,7 +3371,7 @@
+                      if isinstance(_nev, int) and _nev >= 0 else "\u2014/20")
+             _ent = r.get("entries") or []
+             _res = (" \u00b7 ".join(str(e.get("quick", "")) for e in _ent)
+-                    if _ent else "\u2014 no entry")
++                    if _ent else ("Calculation incomplete" if isinstance(_nev, int) and 0 <= _nev < 20 else "\u2014 no entry"))
+             _disp.append({"Check (MMT)": _check, "Symbols": _syms,
+                           "Result": _res})
+         st.dataframe(_pd.DataFrame(_disp),
+@@ -3743,6 +3413,8 @@
+     readable one instead of a bare 0/20."""
+     try:
+         diag = (payload or {}).get("diag") or {}
++        if diag.get("evaluation_error"):
++            return "Calculation error: " + str(diag["evaluation_error"]) + ". Retrying automatically."
+         errs = diag.get("live_errors") or []
+         if errs:
+             return "Provider notes: " + "; ".join(str(e) for e in errs[:4])
+@@ -3759,6 +3431,9 @@
+     loaded there is nothing to evaluate.
+     """
+     try:
++        from core.twelve_data_key_pool import TwelveDataKeyPool
++        if TwelveDataKeyPool.from_state(state).has_available_key():
++            return True
+         ctx = get_global_symbol_context(state)
+         return len(list(ctx.completed_symbols or ctx.loaded_symbols or [])) > 0
+     except Exception:
+@@ -3772,7 +3447,8 @@
+     before this check, a 0/20 payload was stored and the panel never retried
+     that window (the 2026-10-22 00:30 MMT incident)."""
+     try:
+-        return isinstance(payload, dict) and int(payload.get("n_evaluable", 20)) < 10
++        return isinstance(payload, dict) and (int(payload.get("n_evaluable", 0)) < len(_CYCLE22_PANEL_SYMBOLS)
++            or bool((payload.get("diag") or {}).get("evaluation_error")))
+     except Exception:
+         return False
+ 
+@@ -3800,6 +3476,14 @@
+                 _memo["frames"] = None
+         except Exception:
+             pass
++    from core.check_candle_runtime import H1_MEMO_KEY, M15_MEMO_KEY
++    state.pop(H1_MEMO_KEY, None)
++    state.pop(M15_MEMO_KEY, None)
++    try:
++        from core.cycle78_best import _M15_FETCH_MEMO_BY_SET
++        _M15_FETCH_MEMO_BY_SET.clear()
++    except Exception:
++        pass
+     try:
+         state["force_signal_refresh"] = True
+     except Exception:
+@@ -4274,13 +3958,21 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle60_signals(frames, check_label)
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle60_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -4289,6 +3981,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -4312,7 +4008,7 @@
+         return None
+ 
+ 
+-def _c60_recent_fail(window_utc, state, cool_minutes=1):
++def _c60_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C60 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -4429,6 +4125,7 @@
+                                 "cycle60", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -4454,9 +4151,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -4584,15 +4281,23 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle60b_signals(
+                 frames, check_label,
+                 m15_frames=fetch_cycle60b_m15_frames())
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle60b_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -4601,6 +4306,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -4624,7 +4333,7 @@
+         return None
+ 
+ 
+-def _c60b_recent_fail(window_utc, state, cool_minutes=1):
++def _c60b_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C60B window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -4741,6 +4450,7 @@
+                                 "cycle60b", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -4766,9 +4476,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -4897,13 +4607,21 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle67_signals(frames, check_label)
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle67_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -4912,6 +4630,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -4935,7 +4657,7 @@
+         return None
+ 
+ 
+-def _c67_recent_fail(window_utc, state, cool_minutes=1):
++def _c67_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C67 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -5052,6 +4774,7 @@
+                                 "cycle67", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -5077,9 +4800,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -5211,14 +4934,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle78_signals(frames, check_label,
+                                            m15_frames=_fetch_c78_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle78_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -5227,6 +4958,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -5250,7 +4985,7 @@
+         return None
+ 
+ 
+-def _c78_recent_fail(window_utc, state, cool_minutes=1):
++def _c78_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C78 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -5367,6 +5102,7 @@
+                                 "cycle78", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -5392,9 +5128,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -5521,13 +5257,21 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle85_signals(frames, check_label)
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle85_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -5536,6 +5280,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -5559,7 +5307,7 @@
+         return None
+ 
+ 
+-def _c85_recent_fail(window_utc, state, cool_minutes=1):
++def _c85_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C85 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -5676,6 +5424,7 @@
+                                 "cycle85", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -5701,9 +5450,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -5832,14 +5581,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle86_signals(frames, check_label,
+                                            m15_frames=_fetch_c86_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle86_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -5848,6 +5605,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -5871,7 +5632,7 @@
+         return None
+ 
+ 
+-def _c86_recent_fail(window_utc, state, cool_minutes=1):
++def _c86_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C86 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -5988,6 +5749,7 @@
+                                 "cycle86", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -6013,9 +5775,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -6144,14 +5906,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle87_signals(frames, check_label,
+                                            m15_frames=_fetch_c87_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle87_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -6160,6 +5930,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -6183,7 +5957,7 @@
+         return None
+ 
+ 
+-def _c87_recent_fail(window_utc, state, cool_minutes=1):
++def _c87_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C87 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -6300,6 +6074,7 @@
+                                 "cycle87", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -6325,9 +6100,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -6456,15 +6231,23 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle87b_signals(frames, check_label,
+                                            m15_frames=_fetch_c87b_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = panel_entries(frames, check_label,
+                                     m15_frames=_fetch_c87b_m15(state),
+                                     open_symbols=())
+-        except Exception:
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+@@ -6474,6 +6257,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -6497,7 +6284,7 @@
+         return None
+ 
+ 
+-def _c87b_recent_fail(window_utc, state, cool_minutes=1):
++def _c87b_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C87B window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -6614,6 +6401,7 @@
+                                 "cycle87b", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -6639,9 +6427,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -6768,13 +6556,21 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle88_signals(frames, check_label)
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle88_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -6783,6 +6579,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -6806,7 +6606,7 @@
+         return None
+ 
+ 
+-def _c88_recent_fail(window_utc, state, cool_minutes=1):
++def _c88_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C88 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -6923,6 +6723,7 @@
+                                 "cycle88", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -6948,9 +6749,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -7079,14 +6880,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle89_signals(frames, check_label,
+                                            m15_frames=_fetch_c89_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle89_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -7095,6 +6904,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -7118,7 +6931,7 @@
+         return None
+ 
+ 
+-def _c89_recent_fail(window_utc, state, cool_minutes=1):
++def _c89_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C89 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -7235,6 +7048,7 @@
+                                 "cycle89", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -7260,9 +7074,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -7392,14 +7206,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle91_signals(frames, check_label,
+                                            m15_frames=_fetch_c91_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle91_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -7408,6 +7230,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -7431,7 +7257,7 @@
+         return None
+ 
+ 
+-def _c91_recent_fail(window_utc, state, cool_minutes=1):
++def _c91_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C91 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -7548,6 +7374,7 @@
+                                 "cycle91", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -7573,9 +7400,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -7706,14 +7533,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle287_signals(frames, check_label,
+                                            m15_frames=_fetch_c287_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle287_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -7722,6 +7557,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -7745,7 +7584,7 @@
+         return None
+ 
+ 
+-def _c287_recent_fail(window_utc, state, cool_minutes=1):
++def _c287_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C287 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -7862,6 +7701,7 @@
+                                 "cycle287", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -7887,9 +7727,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -8022,13 +7862,21 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle92_signals(frames, check_label)
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle92_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -8037,6 +7885,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -8060,7 +7912,7 @@
+         return None
+ 
+ 
+-def _c92_recent_fail(window_utc, state, cool_minutes=1):
++def _c92_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C92 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -8178,6 +8030,7 @@
+                                 "cycle92", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -8203,9 +8056,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -8334,14 +8187,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle93_signals(frames, check_label,
+                                            m15_frames=_fetch_c93_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle93_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -8350,6 +8211,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -8373,7 +8238,7 @@
+         return None
+ 
+ 
+-def _c93_recent_fail(window_utc, state, cool_minutes=1):
++def _c93_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C93 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -8490,6 +8355,7 @@
+                                 "cycle93", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -8515,9 +8381,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -8646,15 +8512,23 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle93b_signals(frames, check_label,
+                                            m15_frames=_fetch_c93b_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = panel_entries(frames, check_label,
+                                     m15_frames=_fetch_c93b_m15(state),
+                                     open_symbols=())
+-        except Exception:
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+@@ -8664,6 +8538,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -8687,7 +8565,7 @@
+         return None
+ 
+ 
+-def _c93b_recent_fail(window_utc, state, cool_minutes=1):
++def _c93b_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C93B window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -8804,6 +8682,7 @@
+                                 "cycle93b", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -8829,9 +8708,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -8960,14 +8839,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle94_signals(frames, check_label,
+                                            m15_frames=_fetch_c94_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle94_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -8976,6 +8863,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -8999,7 +8890,7 @@
+         return None
+ 
+ 
+-def _c94_recent_fail(window_utc, state, cool_minutes=1):
++def _c94_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C94 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -9116,6 +9007,7 @@
+                                 "cycle94", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -9141,9 +9033,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -9272,14 +9164,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle274_signals(frames, check_label,
+                                            m15_frames=_fetch_c274_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle274_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -9288,6 +9188,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -9311,7 +9215,7 @@
+         return None
+ 
+ 
+-def _c274_recent_fail(window_utc, state, cool_minutes=1):
++def _c274_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C274 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -9428,6 +9332,7 @@
+                                 "cycle274", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -9453,9 +9358,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -9584,15 +9489,23 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle94b_signals(frames, check_label,
+                                            m15_frames=_fetch_c94b_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = panel_entries(frames, check_label,
+                                     m15_frames=_fetch_c94b_m15(state),
+                                     open_symbols=())
+-        except Exception:
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+@@ -9602,6 +9515,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -9625,7 +9542,7 @@
+         return None
+ 
+ 
+-def _c94b_recent_fail(window_utc, state, cool_minutes=1):
++def _c94b_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C94B window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -9742,6 +9659,7 @@
+                                 "cycle94b", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -9767,9 +9685,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -9898,14 +9816,22 @@
+                 pass
+             return None
+         try:
++            _require_check_frames(frames, need)
+             sig = evaluate_cycle274_signals(frames, check_label,
+                                            m15_frames=_fetch_c274_m15(state))
+-        except Exception:
++            _require_evaluator_status(sig)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
+             sig = _pd.DataFrame()
+         try:
++            if diag.get("evaluation_error"):
++                raise ValueError("evaluation_incomplete")
+             entries = select_cycle274_entries(sig, open_symbols=())
+-        except Exception:
+-            entries = sig if isinstance(sig, _pd.DataFrame) else _pd.DataFrame()
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries = _pd.DataFrame()
+         if not isinstance(entries, _pd.DataFrame):
+             entries = _pd.DataFrame()
+         try:
+@@ -9914,6 +9840,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -9937,7 +9867,7 @@
+         return None
+ 
+ 
+-def _c274_recent_fail(window_utc, state, cool_minutes=1):
++def _c274_recent_fail(window_utc, state, cool_minutes=0.25):
+     """True if this C274 window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -10054,6 +9984,7 @@
+                                 "cycle274", live_tag),
+             unsafe_allow_html=True,
+         )
++        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/20")
+         disp = payload.get("signals")
+         if isinstance(disp, _pd.DataFrame) and not disp.empty:
+             try:
+@@ -10079,9 +10010,9 @@
+         _has_ranking = isinstance(_ranking, _pd.DataFrame) and not _ranking.empty
+         if disp is None or not isinstance(disp, _pd.DataFrame) or disp.empty:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             elif _has_ranking:
+                 # User order 2026-10-22 (round 2): bare text must NEVER
+@@ -10171,9 +10102,11 @@
+     evaluation is memoized by window key, so extra reruns are cheap.
+     """
+     try:
++        from core.check_candle_runtime import check_refresh_interval_ms
+         from streamlit_autorefresh import st_autorefresh
+ 
+-        st_autorefresh(interval=interval_ms, limit=None, key="field3_c22_refresh")
++        st_autorefresh(interval=min(interval_ms, check_refresh_interval_ms()),
++                       limit=None, key="field3_c22_refresh")
+     except Exception:
+         st.markdown(
+             '<meta http-equiv="refresh" content="30">',
+@@ -10355,8 +10288,15 @@
+             except Exception:
+                 pass
+             return None
+-        entries, source = evaluate_combined_entries(
+-            month, frames, check_label, open_symbols=())
++        try:
++            _require_check_frames(frames, need)
++            entries, source = evaluate_combined_entries(
++                month, frames, check_label, open_symbols=())
++            _require_evaluator_status(entries)
++        except Exception as exc:
++            diag = dict(diag or {})
++            diag["evaluation_error"] = type(exc).__name__
++            entries, source = _pd.DataFrame(), "BEST"
+         source_label = "SECOND BEST" if source == "SECOND_BEST" else "BEST"
+         source_system = cfg["second_id"] if source == "SECOND_BEST" else cfg["best_id"]
+         try:
+@@ -10378,6 +10318,10 @@
+                               if f is not None and _need_set.issubset(set(f.index)))
+         except Exception:
+             n_evaluable = 0
++        if n_evaluable < len(_CYCLE22_PANEL_SYMBOLS) or diag.get("evaluation_error"):
++            entries = _pd.DataFrame()
++            if "disp" in locals():
++                disp = _pd.DataFrame()
+         payload = {
+             "window_utc": day + _pd.Timedelta(hours=int(hour_utc)),
+             "window_mmt": _c22_window_mmt_label(hour_utc),
+@@ -10390,6 +10334,7 @@
+             "source_label": source_label,
+             "source_system": source_system,
+         }
++        payload["ranking"] = _c22_build_check_ranking(entries, entries, frames, need)
+         _record_eval_history(cfg["sysid"], payload)
+         try:
+             state[cfg["state_key"]] = payload
+@@ -10400,7 +10345,7 @@
+         return None
+ 
+ 
+-def _combined_recent_fail(window_utc, state, month, cool_minutes=1):
++def _combined_recent_fail(window_utc, state, month, cool_minutes=0.25):
+     """True if this combined window's evaluation failed within the cooldown."""
+     import datetime as _dt
+     import pandas as _pd
+@@ -10533,9 +10478,9 @@
+             st.table(_entry_row_colors(disp))
+         else:
+             n_eval = payload.get("n_evaluable", 20)
+-            if n_eval < 10:
++            if _payload_data_failed(payload):
+                 st.error(f"\u26a0\ufe0f Price data incomplete for this window -- only {n_eval}/20 symbols "
+-                         f"had the needed candles. This is a data problem, not a signal. "
++                         f"are ready. Check calculation is incomplete. "
+                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
+             else:
+                 st.info(f"No entry at this check -- the Best system "
+--- original/ui/multi_symbol_settings_20260701.py
++++ repaired/ui/multi_symbol_settings_20260701.py
+@@ -504,7 +504,9 @@
+         # load already exists. This removes the need to manually click the button.
+         auto_super_quick_start = bool(state.get("auto_super_quick_after_open_20260917", False))
+         if not auto_super_quick_start and not load_s1_clicked and not load_s2_clicked and not load_s3_clicked and not load_all_clicked:
+-            if state.get("canonical_loaded_symbols_20260701") or state.get("completed_symbols"):
++            # A stale list of symbol names is not a validated load. Triggering
++            # provider completion here could block the signal page for minutes.
++            if bool(canonical_status.get("ready")):
+                 state["auto_super_quick_after_open_20260917"] = True
+                 load_all_clicked = True
+ 
+--- original/core/check_candle_runtime.py
++++ repaired/core/check_candle_runtime.py
+@@ -0,0 +1,300 @@
++"""Shared, bounded data acquisition for monthly check panels.
++
++Only actual provider bars are stored in SQLite. A partial H1 assembled from M15
++is kept in session memory, never as completed H1 history. Its opening price is
++used only when the exact hour-start M15 bar exists; there is no quote/ffill path.
++"""
++from __future__ import annotations
++
++from concurrent.futures import ThreadPoolExecutor, wait
++import time
++
++import numpy as np
++import pandas as pd
++
++H1_MEMO_KEY = "check_h1_memo_20261027"
++M15_MEMO_KEY = "check_m15_memo_20261027"
++RETRY_SECONDS = 15.0
++SUCCESS_SECONDS = 60.0
++FETCH_BUDGET_SECONDS = 20.0
++
++
++def utc_naive(value):
++    ts = pd.Timestamp(value)
++    return ts.tz_convert("UTC").tz_localize(None) if ts.tzinfo else ts
++
++
++def normalize_ohlc(frame, min_bars=1):
++    """Accept repository, direct-provider, and already-indexed frames."""
++    if not isinstance(frame, pd.DataFrame) or frame.empty:
++        return None
++    out = frame.copy()
++    out = out.loc[:, ~out.columns.duplicated(keep="last")]
++    names = {str(c).lower(): c for c in out.columns}
++    tc = next((names[c] for c in ("time", "open_time", "datetime", "timestamp", "date")
++               if c in names), None)
++    if tc is not None:
++        idx = pd.to_datetime(out.pop(tc), utc=True, errors="coerce")
++    elif isinstance(out.index, pd.DatetimeIndex):
++        idx = pd.to_datetime(out.index, utc=True, errors="coerce")
++    else:
++        return None
++    out.index = pd.DatetimeIndex(idx).tz_localize(None)
++    out = out.rename(columns={c: str(c).title() for c in out.columns
++                              if str(c).lower() in ("open", "high", "low", "close", "volume")})
++    required = ["Open", "High", "Low", "Close"]
++    if not set(required).issubset(out.columns):
++        return None
++    out[required] = out[required].apply(pd.to_numeric, errors="coerce")
++    values = out[required].to_numpy(dtype=float)
++    valid = np.isfinite(values).all(axis=1) & (values > 0).all(axis=1)
++    valid &= (out.High >= out[["Open", "Close"]].max(axis=1)).to_numpy()
++    valid &= (out.Low <= out[["Open", "Close"]].min(axis=1)).to_numpy()
++    out = out.loc[valid & ~out.index.isna()].sort_index(kind="stable")
++    out = out.loc[~out.index.duplicated(keep="last")]
++    return out if len(out) >= min_bars else None
++
++
++def entry_candle_from_m15(frame, entry, *, asof=None):
++    """Exact M15 hour-open; no later-hour or missing-first-bar substitution.
++
++    A historical completed hour requires all four quarter-hours. For a forming
++    hour only contiguous, available quarters are used. Signal features always
++    come from the preceding completed H1, as required by the monthly engines.
++    """
++    entry = utc_naive(entry)
++    now = utc_naive(asof if asof is not None else pd.Timestamp.now(tz="UTC"))
++    if entry != entry.floor("h") or entry > now:
++        return None
++    data = normalize_ohlc(frame)
++    if data is None:
++        return None
++    end = min(entry + pd.Timedelta(minutes=45), now.floor("15min"))
++    required = pd.date_range(entry, end, freq="15min")
++    if now < entry + pd.Timedelta(hours=1):
++        # The entry OPEN is already exact when only the first quarter has
++        # published. Keep the available contiguous prefix of this forming
++        # hour; do not wait for later quarters to obtain an unchanged open.
++        available = []
++        for stamp in required:
++            if stamp not in data.index:
++                break
++            available.append(stamp)
++        required = pd.DatetimeIndex(available)
++    if len(required) == 0 or not set(required).issubset(data.index):
++        return None
++    part = data.loc[required]
++    row = pd.DataFrame([dict(Open=float(part.Open.iloc[0]), High=float(part.High.max()),
++                             Low=float(part.Low.min()), Close=float(part.Close.iloc[-1]))],
++                       index=pd.DatetimeIndex([entry]))
++    row.attrs["entry_source"] = "TWELVE_DATA_M15_HOUR_OPEN"
++    row.attrs["is_partial_hour"] = now < entry + pd.Timedelta(hours=1)
++    return row
++
++
++def _repository():
++    try:
++        from core.data.candle_repository import CandleRepository
++        return CandleRepository()
++    except Exception:
++        return None
++
++
++def _persist_real(repo, raw, sym, tf, errors):
++    if repo is None:
++        return
++    try:
++        from core.data.candle_repository import normalize_frame
++        normalized = normalize_frame(raw, symbol=sym, timeframe=tf, provider="TWELVE_DATA")
++        # Only complete real candles; partial H1 fallback never enters this path.
++        normalized = normalized.loc[normalized.is_complete]
++        repo.upsert(normalized, require_complete=True)
++    except Exception as exc:
++        errors.append(f"{sym} {tf}: cache write {type(exc).__name__}")
++
++
++def _direct_fetch(state, symbols, tf, *, deadline, force=False):
++    """Reserve credits on the UI thread; workers never touch session state.
++
++    No sleeps or inner retry loop. Return at the page budget even if a provider
++    request hangs. Late workers can only update their connector cache; they
++    cannot mutate panel frames, the repository, or session state.
++    """
++    from core.twelve_data_key_pool import TwelveDataKeyPool
++    from core.connectors.data_parts.fetchers import fetch_twelve
++    pool = TwelveDataKeyPool.from_state(state)
++    errors, jobs, frames = [], {}, {}
++    if not symbols:
++        return frames, errors
++    executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="check-candles")
++    try:
++        for sym in symbols:
++            remaining = deadline - time.monotonic()
++            if remaining <= 0:
++                errors.append(f"{sym} {tf}: refresh budget reached")
++                break
++            lease = pool.reserve_key(symbol=sym, timeframe=tf)
++            if lease is None:
++                errors.append(f"{sym} {tf}: no API credit available; retry next refresh")
++                continue
++            future = executor.submit(fetch_twelve, sym, lease.api_key,
++                                     interval="1h" if tf == "H1" else "15min", bars=2000,
++                                     force_live=force, timeout_seconds=min(4.0, remaining))
++            jobs[future] = (sym, lease.alias)
++        done, pending = wait(jobs, timeout=max(0.0, deadline - time.monotonic()))
++        for future in pending:
++            future.cancel()
++            errors.append(f"{jobs[future][0]} {tf}: provider deadline reached")
++        for future in done:
++            sym, alias = jobs[future]
++            try:
++                raw, ok, message = future.result()
++                if ok and isinstance(raw, pd.DataFrame) and not raw.empty:
++                    pool.mark_success(alias)
++                    frames[sym] = raw
++                else:
++                    pool.mark_failure(alias, str(message))
++                    # Provider bodies/exceptions may contain a URL with credentials.
++                    errors.append(f"{sym} {tf}: provider returned no usable candles")
++            except Exception as exc:
++                errors.append(f"{sym} {tf}: {type(exc).__name__}")
++    finally:
++        executor.shutdown(wait=False, cancel_futures=True)
++    return frames, errors
++
++
++def _merge(old, new, limit=400):
++    if old is None:
++        return new.tail(limit) if new is not None else None
++    if new is None:
++        return old
++    out = pd.concat([old, new])
++    return out.loc[~out.index.duplicated(keep="last")].sort_index().tail(limit)
++
++
++def fetch_check_frames(state, symbols, need_candles=None):
++    """Return normalized H1, latest timestamp, and honest per-window readiness."""
++    symbols = tuple(symbols)
++    need = {utc_naive(c) for c in (() if need_candles is None else need_candles)}
++    key = (symbols, tuple(sorted(need)))
++    now_mono = time.monotonic()
++    force = bool(state.pop("force_signal_refresh", False))
++    memo = state.get(H1_MEMO_KEY)
++    if not force and isinstance(memo, dict) and memo.get("key") == key:
++        ttl = SUCCESS_SECONDS if memo["result"][2]["ready"] == len(symbols) else RETRY_SECONDS
++        if now_mono - memo["at"] < ttl:
++            return memo["result"]
++    if force:
++        state.pop(M15_MEMO_KEY, None)
++    frames, errors, sources = {}, [], {}
++    repo = _repository()
++    for sym in symbols:
++        try:
++            frame = normalize_ohlc(repo.load(sym, "H1", limit=400, completed_only=False), 50) if repo else None
++        except Exception as exc:
++            frame = None
++            errors.append(f"{sym} H1: cache read {type(exc).__name__}")
++        if frame is not None:
++            frames[sym] = frame
++            sources[sym] = "H1 cache"
++    deadline = time.monotonic() + FETCH_BUDGET_SECONDS
++    entry = max(need) if need else None
++    previous = need - {entry}
++    # The common boundary case: completed H1 history exists, only the new
++    # entry bar is absent. Go DIRECTLY to M15; do not exhaust keys on late H1.
++    only_entry = [s for s in symbols if need and s in frames
++                  and entry not in frames[s].index and previous.issubset(frames[s].index)]
++    h1_targets = [s for s in symbols if (force and s not in only_entry) or s not in frames
++                  or (need and not need.issubset(frames[s].index) and s not in only_entry)]
++    if h1_targets:
++        raw_frames, notes = _direct_fetch(state, h1_targets, "H1", deadline=deadline, force=force)
++        errors.extend(notes)
++        for sym, raw in raw_frames.items():
++            norm = normalize_ohlc(raw, 1)
++            merged = _merge(frames.get(sym), norm)
++            if merged is not None and len(merged) >= 50:
++                frames[sym] = merged
++                sources[sym] = "H1 direct"
++            _persist_real(repo, raw, sym, "H1", errors)
++    synth_targets = [s for s in symbols if need and s in frames
++                     and entry not in frames[s].index and previous.issubset(frames[s].index)]
++    if synth_targets:
++        m15 = fetch_m15_frames(state, synth_targets, deadline=deadline, need_entry=entry, force=force)
++        errors.extend(state.get("check_m15_last_errors", []))
++        for sym in synth_targets:
++            row = entry_candle_from_m15(m15.get(sym), entry)
++            if row is not None:
++                frames[sym] = _merge(frames[sym], row)
++                sources[sym] = "M15 exact hour-open"
++            else:
++                errors.append(f"{sym}: exact M15 hour-start candle unavailable")
++    ready_symbols = [s for s in symbols if s in frames
++                     and (not need or need.issubset(frames[s].index))]
++    latest = max((f.index.max() for f in frames.values()), default=None)
++    diag = dict(cache=sum(v == "H1 cache" for v in sources.values()),
++                live=sum(v != "H1 cache" for v in sources.values()), frames=len(frames),
++                ready=len(ready_symbols), required=len(symbols),
++                missing_symbols=[s for s in symbols if s not in ready_symbols],
++                entry_sources=sources, live_errors=errors[:8])
++    result = frames, latest, diag
++    state[H1_MEMO_KEY] = dict(key=key, at=time.monotonic(), result=result)
++    return result
++
++
++def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=False):
++    """Deep, current M15 shared by the entry fallback and all M15 B systems."""
++    symbols = tuple(symbols)
++    now = pd.Timestamp.now(tz="UTC").tz_localize(None)
++    required = utc_naive(need_entry) if need_entry is not None else now.floor("15min") - pd.Timedelta(minutes=15)
++    memo = state.setdefault(M15_MEMO_KEY, {})
++    frames, missing, errors = {}, [], []
++    repo = _repository()
++    for sym in symbols:
++        cached = memo.get(sym)
++        frame = cached.get("frame") if isinstance(cached, dict) else None
++        sufficient = frame is not None and required in frame.index and (need_entry is not None or len(frame) >= 1600)
++        if force or not sufficient:
++            try:
++                raw = repo.load(sym, "M15", limit=2000, completed_only=False) if repo else None
++                frame = _merge(frame, normalize_ohlc(raw), 5000)
++            except Exception:
++                pass
++        sufficient = frame is not None and required in frame.index and (need_entry is not None or len(frame) >= 1600)
++        if frame is not None:
++            frames[sym] = frame
++        failed_recently = (isinstance(cached, dict) and cached.get("required") == required
++                           and time.monotonic() - cached.get("attempt", 0) < RETRY_SECONDS)
++        if force or (not sufficient and not failed_recently):
++            missing.append(sym)
++    if missing:
++        deadline = deadline if deadline is not None else time.monotonic() + FETCH_BUDGET_SECONDS
++        raw_frames, errors = _direct_fetch(state, missing, "M15", deadline=deadline, force=force)
++        for sym in missing:
++            norm = normalize_ohlc(raw_frames.get(sym))
++            frame = _merge(frames.get(sym), norm, 5000)
++            if frame is not None:
++                frames[sym] = frame
++            memo[sym] = dict(frame=frame, attempt=time.monotonic(), required=required)
++            if sym in raw_frames:
++                _persist_real(repo, raw_frames[sym], sym, "M15", errors)
++    state["check_m15_last_errors"] = errors
++    return frames
++
++
++def check_refresh_interval_ms(now=None):
++    """Align a foreground tab refresh to the next actual UTC check boundary."""
++    from core.signal_mode import active_check_hours
++    now = utc_naive(now if now is not None else pd.Timestamp.now(tz="UTC"))
++    next_checks = []
++    for offset in range(8):
++        day = now.normalize() + pd.Timedelta(days=offset)
++        if day.weekday() >= 5:
++            continue
++        for hour in active_check_hours():
++            check = day + pd.Timedelta(hours=int(hour))
++            age = (now-check).total_seconds()
++            if 0 <= age < 60:
++                return 5000
++            if age < 0:
++                next_checks.append(-age)
++    return max(1000, min(30000, int(min(next_checks)*1000))) if next_checks else 30000
+--- original/tests/test_check_candle_runtime_20261027.py
++++ repaired/tests/test_check_candle_runtime_20261027.py
+@@ -0,0 +1,394 @@
++"""Check-minute data -> actual evaluator -> visible table regression tests.
++
++Provider responses here are deterministic fixtures, not live market evidence.
++"""
++from contextlib import nullcontext
++from pathlib import Path
++import time
++
++import numpy as np
++import pandas as pd
++import pytest
++
++from core import check_candle_runtime as runtime
++from core import twelve_data_key_pool as keys
++
++SYMBOLS = ("AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD", "CHFJPY", "EURAUD",
++           "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD", "GBPJPY",
++           "GBPUSD", "NZDCAD", "NZDUSD", "USDCAD", "USDCHF", "USDJPY")
++ENTRY = pd.Timestamp.now(tz="UTC").tz_localize(None).floor("h")
++
++
++def candles(index, price=1.1):
++    return pd.DataFrame(dict(Open=price, High=price + .0003, Low=price - .0003,
++                             Close=price + .0001, Volume=100.0), index=pd.DatetimeIndex(index))
++
++
++class Repo:
++    def __init__(self, frames):
++        self.frames, self.writes = frames, []
++
++    def load(self, sym, tf, **kwargs):
++        return self.frames.get((sym, tf))
++
++    def upsert(self, raw, **kwargs):
++        self.writes.append(raw.copy())
++        return {"inserted": len(raw), "rejected": 0}
++
++
++@pytest.fixture(autouse=True)
++def isolated_keys(monkeypatch):
++    keys._GLOBAL_POOL_RUNTIME.clear()
++    keys._GLOBAL_POOL_RUNTIME["keys"] = {}
++    monkeypatch.setattr(keys, "_secret_path", lambda *args: "")
++    from core.connectors import credential_vault
++    monkeypatch.setattr(credential_vault, "load_credential", lambda *args: "")
++
++
++def state_keys():
++    return {f"twelve_api_key_{i}": f"FIXTURE-KEY-{i}" for i in range(1, 4)}
++
++
++def install_provider(monkeypatch, *, missing_entry=False, h1_complete=False):
++    history = candles(pd.date_range(end=ENTRY if h1_complete else ENTRY-pd.Timedelta(hours=1),
++                                    periods=400, freq="h"))
++    repo = Repo({(s, "H1"): history.copy() for s in SYMBOLS})
++    monkeypatch.setattr(runtime, "_repository", lambda: repo)
++    import core.connectors.data_parts.fetchers as fetchers
++    calls = []
++
++    def provider(sym, key, interval, bars, **kwargs):
++        calls.append((sym, interval, bars, kwargs))
++        if interval == "1h":
++            return history, True, "fixture"
++        end = ENTRY - pd.Timedelta(minutes=15) if missing_entry else ENTRY
++        raw = candles(pd.date_range(end=end, periods=2000, freq="15min"))
++        return raw, True, "fixture"
++
++    monkeypatch.setattr(fetchers, "fetch_twelve", provider)
++    return repo, calls
++
++
++def test_exact_hour_open_accepts_single_m15_bar():
++    row = runtime.entry_candle_from_m15(candles([ENTRY], 210.233), ENTRY, asof=ENTRY)
++    assert row.loc[ENTRY, "Open"] == 210.233
++    assert row.attrs["is_partial_hour"]
++
++
++def test_missing_first_bar_never_uses_later_bar():
++    assert runtime.entry_candle_from_m15(candles([ENTRY+pd.Timedelta(minutes=15)]),
++                                          ENTRY, asof=ENTRY+pd.Timedelta(minutes=20)) is None
++
++
++def test_completed_hour_requires_all_quarters():
++    raw = candles(pd.date_range(ENTRY, periods=4, freq="15min"))
++    assert runtime.entry_candle_from_m15(raw, ENTRY, asof=ENTRY+pd.Timedelta(hours=2)) is not None
++    assert runtime.entry_candle_from_m15(raw.iloc[[0, 1, 3]], ENTRY,
++                                          asof=ENTRY+pd.Timedelta(hours=2)) is None
++
++
++def test_future_bars_do_not_change_forming_hour():
++    raw = candles(pd.date_range(ENTRY, periods=8, freq="15min"))
++    before = runtime.entry_candle_from_m15(raw, ENTRY, asof=ENTRY)
++    raw.iloc[1:, :4] *= 5
++    pd.testing.assert_frame_equal(before, runtime.entry_candle_from_m15(raw, ENTRY, asof=ENTRY))
++    assert runtime.entry_candle_from_m15(raw, ENTRY, asof=ENTRY-pd.Timedelta(seconds=1)) is None
++
++
++@pytest.mark.parametrize("value", [np.nan, np.inf, -1.0, 0.0])
++def test_invalid_entry_open_rejected(value):
++    raw = candles([ENTRY]); raw.loc[ENTRY, "Open"] = value
++    assert runtime.entry_candle_from_m15(raw, ENTRY, asof=ENTRY) is None
++
++
++def test_timezone_and_lowercase_index_normalization():
++    raw = candles([ENTRY]).rename(columns=str.lower)
++    raw.index = raw.index.tz_localize("UTC").tz_convert("Asia/Rangoon")
++    norm = runtime.normalize_ohlc(raw)
++    assert norm.index[0] == ENTRY and norm.index.tz is None
++    assert norm.Open.iloc[0] == 1.1
++
++
++def test_20_symbol_boundary_direct_m15_then_shared_memo(monkeypatch):
++    repo, calls = install_provider(monkeypatch)
++    state = state_keys(); need = [ENTRY-pd.Timedelta(hours=1), ENTRY]
++    frames, latest, diag = runtime.fetch_check_frames(state, SYMBOLS, need)
++    assert diag["ready"] == 20 and latest == ENTRY
++    assert len(calls) == 20 and {c[1] for c in calls} == {"15min"}
++    assert all(f.loc[ENTRY, "Open"] == 1.1 for f in frames.values())
++    again = runtime.fetch_check_frames(state, SYMBOLS, need)
++    assert again is state[runtime.H1_MEMO_KEY]["result"] and len(calls) == 20
++    # Only complete, real M15 goes to durable history. Never a partial H1.
++    assert repo.writes and all((f.timeframe == "M15").all() and f.is_complete.all() for f in repo.writes)
++
++
++def test_native_h1_uses_zero_provider_calls(monkeypatch):
++    _, calls = install_provider(monkeypatch, h1_complete=True)
++    _, _, diag = runtime.fetch_check_frames(state_keys(), SYMBOLS, [ENTRY-pd.Timedelta(hours=1), ENTRY])
++    assert diag["ready"] == 20 and not calls
++
++
++def test_force_refresh_does_not_exhaust_credits_on_late_h1(monkeypatch):
++    _, calls = install_provider(monkeypatch)
++    state = state_keys(); state["force_signal_refresh"] = True
++    _, _, diag = runtime.fetch_check_frames(state, SYMBOLS, [ENTRY-pd.Timedelta(hours=1), ENTRY])
++    assert diag["ready"] == 20 and {c[1] for c in calls} == {"15min"}
++    assert all(c[3]["force_live"] for c in calls)
++
++
++def test_refresh_timer_aligns_before_and_during_check(monkeypatch):
++    from core import signal_mode
++    monkeypatch.setattr(signal_mode, "active_check_hours", lambda: (15, 17, 18))
++    assert runtime.check_refresh_interval_ms("2026-10-26 17:59:57") == 3000
++    assert runtime.check_refresh_interval_ms("2026-10-26 18:00:02") == 5000
++    assert runtime.check_refresh_interval_ms("2026-10-26 18:02") == 30000
++
++
++def test_missing_m15_is_incomplete_and_retries_same_window(monkeypatch):
++    _, calls = install_provider(monkeypatch, missing_entry=True)
++    state = state_keys(); need = [ENTRY-pd.Timedelta(hours=1), ENTRY]
++    _, _, diag = runtime.fetch_check_frames(state, SYMBOLS, need)
++    assert diag["ready"] == 0 and len(diag["missing_symbols"]) == 20
++    assert len(calls) == 20
++    runtime.fetch_check_frames(state, SYMBOLS, need)
++    assert len(calls) == 20
++    state[runtime.H1_MEMO_KEY]["at"] -= runtime.RETRY_SECONDS+1
++    for item in state[runtime.M15_MEMO_KEY].values():
++        item["attempt"] -= runtime.RETRY_SECONDS+1
++    import core.connectors.data_parts.fetchers as f
++    monkeypatch.setattr(f, "fetch_twelve", lambda *a, **k: (candles(pd.date_range(end=ENTRY, periods=2000, freq="15min")), True, "fixture"))
++    # Reset test credits for next-minute recovery.
++    state.pop(keys._POOL_STATE_KEY, None)
++    keys._GLOBAL_POOL_RUNTIME["keys"] = {}
++    _, _, diag = runtime.fetch_check_frames(state, SYMBOLS, need)
++    assert diag["ready"] == 20
++
++
++def test_new_m15_boundary_bypasses_old_failure_cooldown(monkeypatch):
++    monkeypatch.setattr(runtime, "_repository", lambda: None)
++    state = state_keys()
++    old = ENTRY-pd.Timedelta(minutes=15)
++    state[runtime.M15_MEMO_KEY] = {"EURUSD": dict(frame=candles([old]), attempt=time.monotonic(), required=old)}
++    calls = []
++    monkeypatch.setattr(runtime, "_direct_fetch", lambda *a, **k: (calls.append(a) or {"EURUSD": candles([ENTRY])}, []))
++    frames = runtime.fetch_m15_frames(state, ["EURUSD"], need_entry=ENTRY)
++    assert calls and ENTRY in frames["EURUSD"].index
++
++
++def test_deep_m15_refreshes_stale_repository_and_preserves_volume(monkeypatch):
++    repo = Repo({("EURUSD", "M15"): candles(pd.date_range(end=ENTRY-pd.Timedelta(hours=3), periods=2000, freq="15min"))})
++    monkeypatch.setattr(runtime, "_repository", lambda: repo)
++    fresh = candles(pd.date_range(end=ENTRY, periods=2000, freq="15min"))
++    monkeypatch.setattr(runtime, "_direct_fetch", lambda *a, **k: ({"EURUSD": fresh}, []))
++    frames = runtime.fetch_m15_frames(state_keys(), ["EURUSD"])
++    assert len(frames["EURUSD"]) >= 2000
++    assert frames["EURUSD"].index.max() == ENTRY
++    assert frames["EURUSD"].Volume.iloc[-1] == 100
++
++
++def test_provider_deadline_does_not_wait_for_worker(monkeypatch):
++    import core.connectors.data_parts.fetchers as f
++    def slow(*args, **kwargs):
++        time.sleep(.4)
++        return candles([ENTRY]), True, "fixture"
++    monkeypatch.setattr(f, "fetch_twelve", slow)
++    start = time.monotonic()
++    frames, errors = runtime._direct_fetch(state_keys(), ["EURUSD"], "M15", deadline=start+.04)
++    assert time.monotonic()-start < .3
++    assert not frames and any("deadline" in e for e in errors)
++
++
++def test_root_secrets_and_env_work_after_restart(monkeypatch):
++    monkeypatch.setattr(keys, "_secret_path", lambda *p: "SECRET-FIXTURE" if p == ("TWELVE_DATA_API_KEY",) else "")
++    assert keys.resolve_twelve_key({}, "TWELVE_KEY_1") == "SECRET-FIXTURE"
++    monkeypatch.setattr(keys, "_secret_path", lambda *p: "")
++    monkeypatch.setenv("TWELVE_DATA_API_KEY", "ENV-FIXTURE")
++    assert keys.resolve_twelve_key({}, "TWELVE_KEY_1") == "ENV-FIXTURE"
++    assert keys.resolve_twelve_key({}, "TWELVE_KEY_2") == ""
++
++
++def test_duplicate_api_key_does_not_multiply_quota():
++    pool = keys.TwelveDataKeyPool({"twelve_api_key_1": "same", "twelve_api_key_2": "same"})
++    assert pool.active_key_count() == 1
++    assert sum(pool.reserve_key() is not None for _ in range(20)) == 8
++
++
++def test_temporary_key_overrides_secret(monkeypatch):
++    monkeypatch.setattr(keys, "_secret_path", lambda *p: "old-secret")
++    assert keys.resolve_twelve_key({"twelve_api_key": "replacement"}, "TWELVE_KEY_1") == "replacement"
++
++
++def test_saved_vault_key_cannot_shadow_new_deployment_secret(monkeypatch):
++    monkeypatch.setattr(keys, "_secret_path", lambda *p: "new-secret" if p == ("TWELVE_DATA_API_KEY",) else "")
++    state = {"twelve_api_key": "old-key", "twelve_api_key_source": "vault"}
++    assert keys.resolve_twelve_key(state, "TWELVE_KEY_1") == "new-secret"
++
++
++def test_no_key_never_enters_sidebar_capacity_sleep(monkeypatch):
++    from core import multi_symbol_load_manager_20260707 as manager
++    sleeps = []
++    monkeypatch.setattr(manager.time, "sleep", lambda seconds: sleeps.append(seconds))
++    assert manager._wait_for_pool_capacity({}, max_wait_seconds=75) is False
++    assert not sleeps
++
++
++def test_startup_can_recover_after_key_is_added(monkeypatch):
++    from core import auto_load_startup_20261019 as startup
++    state = {}
++    monkeypatch.setattr(startup, "_resolve_twelve_key", lambda s: ("", ""))
++    assert startup.maybe_auto_load_field3(state)["reason"] == "no_twelve_key_found"
++    assert not state.get(startup.AUTO_LOAD_FLAG)
++
++
++def test_per_key_limit_can_be_set_to_actual_plan_in_secrets(monkeypatch):
++    monkeypatch.setattr(keys, "_secret_path", lambda *p: "32" if p == ("twelve_data", "per_key_minute_limit") else "")
++    pool = keys.TwelveDataKeyPool({"twelve_api_key": "plan-fixture"})
++    assert pool.minute_limit == 32
++
++
++def test_wrapper_m15_memo_cannot_hide_new_check_data(monkeypatch):
++    from core import cycle93_best as cycle
++    stale = {"EURUSD": candles([ENTRY-pd.Timedelta(hours=2)])}
++    monkeypatch.setitem(cycle._M15_FETCH_MEMO, "ts", time.monotonic())
++    monkeypatch.setitem(cycle._M15_FETCH_MEMO, "frames", stale)
++    fresh = {"EURUSD": candles([ENTRY])}
++    monkeypatch.setattr(cycle, "fetch_cycle78_m15_frames", lambda **kwargs: fresh)
++    assert cycle.fetch_cycle93_m15_frames({}) is fresh
++
++
++def test_combined_best_data_failure_cannot_fall_through(monkeypatch):
++    from core import signal_mode as mode
++    calls = []
++    def unavailable(system, *args, **kwargs):
++        calls.append(system)
++        empty = pd.DataFrame(); empty.attrs["status"] = "insufficient_m15_history"
++        return empty
++    monkeypatch.setattr(mode, "_evaluate_and_select_for", unavailable)
++    out, source = mode.evaluate_combined_entries(11, {}, ENTRY)
++    assert source == "BEST" and len(calls) == 1 and out.attrs["status"]
++
++
++def test_real_october_engine_native_vs_m15_entry_parity():
++    from core.cycle92_best import evaluate_cycle92_signals, select_cycle92_entries
++    # Use the package's existing quote fixture and its actual frozen evaluator.
++    raw = pd.read_csv(Path(__file__).parent/"fixtures/monthly_h1_quotes.csv")
++    frames = {s: runtime.normalize_ohlc(d) for s, d in raw.groupby("Symbol")}
++    compared = fired = 0
++    times = sorted(set.intersection(*(set(f.index) for f in frames.values())))
++    for entry in [t for t in times if t.month == 10 and t.hour in (15, 17, 18)][-18:]:
++        if not all(entry-pd.Timedelta(hours=1) in f.index for f in frames.values()):
++            continue
++        native = {s: f.loc[:entry].copy() for s, f in frames.items()}
++        fallback = {}
++        for s, f in native.items():
++            row = runtime.entry_candle_from_m15(candles([entry], float(f.loc[entry, "Open"])), entry, asof=entry)
++            fallback[s] = runtime._merge(f.loc[f.index < entry], row, 5000)
++        check = entry+pd.Timedelta(minutes=30)
++        a, b = evaluate_cycle92_signals(native, check), evaluate_cycle92_signals(fallback, check)
++        pd.testing.assert_frame_equal(a, b)
++        pd.testing.assert_frame_equal(select_cycle92_entries(a), select_cycle92_entries(b))
++        fired += len(a); compared += 1
++    assert compared >= 6
++    assert fired > 0  # Verify positive signals as well as genuinely silent checks.
++
++
++def test_price_display_known_sell_format():
++    from ui import field3_multisymbol_regime_summary_20260722 as panel
++    candidate = pd.DataFrame([dict(symbol="GBPJPY", direction="SELL", entry_px=210.233,
++                                   tp_pips=10, sl_pips=100, score=100, equation="FIXTURE")])
++    display = panel._c22_signals_to_display(candidate)
++    assert display.iloc[0]["Quick look"] == "GBPJPY-S-T210.133,S211.233"
++    assert display.iloc[0]["Entry"] == 210.233
++
++
++def test_no_signal_table_has_20_rows_and_real_prices():
++    from ui import field3_multisymbol_regime_summary_20260722 as panel
++    need = [ENTRY-pd.Timedelta(hours=1), ENTRY]
++    frames = {s: candles(need) for s in SYMBOLS}
++    ranking = panel._c22_build_check_ranking(pd.DataFrame(), pd.DataFrame(), frames, need)
++    assert len(ranking) == 20 and set(ranking.Symbol) == set(SYMBOLS)
++    assert ranking.Entry.eq(1.1).all() and ranking["Signal close"].eq(1.1001).all()
++    assert ranking.Score.eq(0).all()
++
++
++def test_full_20_symbol_fetch_real_engine_and_visible_entry(monkeypatch):
++    """One continuous controlled path, rather than independent layer mocks."""
++    from streamlit.testing.v1 import AppTest
++    from core import cycle92_best as engine
++    from ui import field3_multisymbol_regime_summary_20260722 as panel
++    import core.connectors.data_parts.fetchers as fetchers
++    raw = pd.read_csv(Path(__file__).parent/"fixtures/monthly_h1_quotes.csv")
++    base = {s: runtime.normalize_ohlc(d) for s, d in raw.groupby("Symbol")}
++    times = sorted(set.intersection(*(set(f.index) for f in base.values())))
++    entry = [t for t in times if t.month == 10 and t.hour in (15, 17, 18)][-17]
++    native = {s: base.get(s, base["EURJPY"] if s.endswith("JPY") else base["AUDCAD"]).loc[:entry].copy()
++              for s in SYMBOLS}
++    expected = engine.select_cycle92_entries(engine.evaluate_cycle92_signals(native, entry+pd.Timedelta(minutes=30)))
++    assert len(expected) > 0
++    repo = Repo({(s, "H1"): f.loc[f.index < entry] for s, f in native.items()})
++    monkeypatch.setattr(runtime, "_repository", lambda: repo)
++    calls = []
++    def provider(sym, key, interval, bars, **kwargs):
++        calls.append(interval)
++        # Controlled quarter-hour fixture with the native H1 opening tick.
++        row = native[sym].loc[entry]
++        data = pd.DataFrame([row.to_dict() for _ in range(4)],
++                            index=pd.date_range(entry, periods=4, freq="15min"))
++        return data, True, "controlled fixture"
++    monkeypatch.setattr(fetchers, "fetch_twelve", provider)
++    monkeypatch.setattr(panel, "_record_eval_history", lambda *a, **k: None)
++    monkeypatch.setattr(panel, "_latest_entry_window_utc", lambda *a, **k: entry)
++    monkeypatch.setattr(panel, "_c22_data_loaded", lambda *a: True)
++    at = AppTest.from_string("import streamlit as st\nfrom ui.field3_multisymbol_regime_summary_20260722 import _render_cycle92_signals_table\n_render_cycle92_signals_table(st, st.session_state)")
++    for key, value in state_keys().items():
++        at.session_state[key] = value
++    at.run(timeout=20)
++    assert not at.exception and not at.error
++    payload = at.session_state[panel._C92_SIG_STATE_KEY]
++    assert payload["n_evaluable"] == 20 and payload["diag"]["ready"] == 20
++    pd.testing.assert_frame_equal(payload["signals"], panel._c22_signals_to_display(expected))
++    assert len(calls) == 20 and set(calls) == {"15min"}
++    assert any("ENTRY:" in str(e.value) for e in at.markdown)
++
++
++def test_partial_universe_and_engine_errors_stay_retryable(monkeypatch):
++    from ui import field3_multisymbol_regime_summary_20260722 as panel
++    from core import cycle92_best as engine
++    monkeypatch.setattr(panel, "_record_eval_history", lambda *a, **k: None)
++    now = pd.Timestamp("2026-10-26 18:00")
++    frames = {s: candles([now-pd.Timedelta(hours=1), now]) for s in SYMBOLS}
++    monkeypatch.setattr(panel, "_fetch_c22_frames", lambda *a, **k: (frames, now, {}))
++    def broken(*args, **kwargs):
++        raise RuntimeError("fixture error")
++    monkeypatch.setattr(engine, "evaluate_cycle92_signals", broken)
++    payload = panel._evaluate_c92_window({}, 18, day=now)
++    assert payload["n_evaluable"] == 20 and panel._payload_data_failed(payload)
++    assert payload["diag"]["evaluation_error"] and payload["signals"].empty
++    frames.pop("USDJPY")
++    payload = panel._evaluate_c92_window({}, 18, day=now)
++    assert payload["n_evaluable"] == 19 and panel._payload_data_failed(payload)
++    assert len(payload["ranking"]) == 20
++
++
++@pytest.mark.parametrize("entry", [True, False])
++def test_streamlit_panel_renders_entry_or_numeric_no_trade(monkeypatch, entry):
++    from streamlit.testing.v1 import AppTest
++    from ui import field3_multisymbol_regime_summary_20260722 as panel
++    now = pd.Timestamp("2026-10-26 18:00")
++    need = [now-pd.Timedelta(hours=1), now]
++    frames = {s: candles(need) for s in SYMBOLS}
++    sig = pd.DataFrame([dict(symbol="GBPJPY", direction="SELL", entry_px=210.233,
++                             tp_pips=10, sl_pips=100, score=100)]) if entry else pd.DataFrame()
++    payload = dict(window_utc=now, window_mmt="00:30", evaluated_at_utc=now, n_symbols=20,
++                   n_evaluable=20, diag={}, signals=panel._c22_signals_to_display(sig),
++                   ranking=panel._c22_build_check_ranking(sig, sig, frames, need))
++    monkeypatch.setattr(panel, "_latest_entry_window_utc", lambda *a, **k: now)
++    monkeypatch.setattr(panel, "_c22_data_loaded", lambda *a: True)
++    monkeypatch.setattr(panel, "_evaluate_c92_window", lambda *a, **k: payload)
++    at = AppTest.from_string("import streamlit as st\nfrom ui.field3_multisymbol_regime_summary_20260722 import _render_cycle92_signals_table\n_render_cycle92_signals_table(st, st.session_state)").run(timeout=20)
++    assert not at.exception and not at.error
++    text = " ".join(str(e.value) for e in at.markdown)
++    assert ("ENTRY:" in text) == entry
++    assert len(at.table) >= 1
++    if not entry:
++        assert any("No Cycle" in str(e.value) for e in at.info)
+--- original/tools/verify_check_runtime_20261027.py
++++ repaired/tools/verify_check_runtime_20261027.py
+@@ -0,0 +1,75 @@
++"""Read-only provider/evaluator evidence. No broker orders are placed.
++
++Run in the app directory at a check: python tools/verify_check_runtime_20261027.py
++Credentials come from the same environment / .streamlit/secrets.toml / vault as
++the app. Never put a key in command-line arguments or a saved evidence report.
++"""
++from __future__ import annotations
++
++import argparse
++import json
++from pathlib import Path
++import sys
++import time
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++
++import pandas as pd
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--system", default="cycle92", help="Standing monthly system, e.g. cycle92")
++    parser.add_argument("--check-mmt", help="Optional exact check in Myanmar time: YYYY-MM-DD HH:MM")
++    parser.add_argument("--report", help="Optional output JSON path")
++    args = parser.parse_args()
++    from core import signal_mode as mode
++    from core.check_candle_runtime import fetch_check_frames
++    from core.twelve_data_key_pool import TwelveDataKeyPool
++    from ui.field3_multisymbol_regime_summary_20260722 import (
++        _CYCLE22_PANEL_SYMBOLS, _c22_signals_to_display, _latest_entry_window_utc)
++    mode.set_active_system(args.system)
++    now = pd.Timestamp.now(tz="UTC")
++    if args.check_mmt:
++        entry = pd.Timestamp(args.check_mmt).tz_localize("Asia/Rangoon").tz_convert("UTC").tz_localize(None)
++    else:
++        entry = _latest_entry_window_utc(now)
++    if entry is None or entry.hour not in mode.active_check_hours() or entry.minute or entry.weekday() >= 5:
++        parser.error("check-mmt must be a weekday entry window of the chosen system")
++    if entry.tz_localize("UTC") > now:
++        parser.error("the check is in the future; run this command when the check starts")
++    state = {}
++    if not TwelveDataKeyPool(state).has_available_key():
++        print(json.dumps({"status": "NO_KEY", "live_check_proven": False,
++                          "message": "Configure Twelve Data in Streamlit Secrets or the environment first."}))
++        return 2
++    started = time.monotonic()
++    frames, latest, diag = fetch_check_frames(state, _CYCLE22_PANEL_SYMBOLS,
++                                             [entry-pd.Timedelta(hours=1), entry])
++    entries = pd.DataFrame()
++    status = "INCOMPLETE_DATA"
++    if diag["ready"] == 20:
++        try:
++            entries = mode._evaluate_and_select_for(args.system, frames, entry+pd.Timedelta(minutes=30))
++            status = "FEATURE_DATA_INCOMPLETE" if entries.attrs.get("status") else "CALCULATED"
++        except Exception as exc:
++            status = "CALCULATION_ERROR_"+type(exc).__name__
++    finished = pd.Timestamp.now(tz="UTC")
++    delay = (finished-entry.tz_localize("UTC")).total_seconds()
++    evidence = dict(system=args.system, check_mmt=str(entry.tz_localize("UTC").tz_convert("Asia/Rangoon")),
++                    observed_at_utc=finished.isoformat(), elapsed_seconds=round(time.monotonic()-started, 3),
++                    seconds_after_check=round(delay, 3), status=status,
++                    within_check_minute=0 <= delay < 60,
++                    provider_evaluation_within_check_minute=status == "CALCULATED" and 0 <= delay < 60,
++                    deployed_ui_verified=False,
++                    live_check_proven=False,  # CLI cannot verify the deployed browser UI.
++                    diagnostics=diag, signals=_c22_signals_to_display(entries).to_dict("records"))
++    text = json.dumps(evidence, indent=2, default=str)
++    print(text)
++    if args.report:
++        Path(args.report).write_text(text+"\n", encoding="utf-8")
++    return 0 if status == "CALCULATED" else 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

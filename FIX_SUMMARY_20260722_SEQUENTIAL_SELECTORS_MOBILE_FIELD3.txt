@@ -1,0 +1,64 @@
+ADX QUANT PRO — SEQUENTIAL SELECTOR + FIELD 3 MOBILE FIX
+Date: 2026-07-22
+
+FIXED 1 — Selector 1 -> Selector 2 -> Selector 3 sequential loading
+- Root cause: the foreground selector button requested only its own symbols, but
+  the market-data orchestrator rejected any request that was not exactly equal
+  to the complete configured canonical universe.
+- Result before fix: symbols already in local cache appeared READY, while a new
+  symbol in Selector 2/3 was blocked before an API request and displayed
+  PROVIDER_NOT_READY / NOT_ATTEMPTED.
+- New behavior: a selector may request a strict subset of the canonical universe.
+  Only symbols belonging to that selector are fetched; the complete Settings
+  universe stays authoritative and earlier valid selector results are preserved.
+- Unknown/unselected symbols remain blocked by an explicit safety guard.
+- Persisted runtime preferences are no longer reduced to one selector during a
+  selector-only load.
+
+Expected workflow now:
+1. Select and load Selector 1.
+2. After it finishes, select and load Selector 2.
+3. Selector 2 performs a real cache/API decision for its own symbols.
+4. Selector 1 READY rows stay in the canonical board.
+5. Selector 3 can then load independently in the same way.
+6. Load All Selected and failed-only reload continue to merge successful rows.
+
+FIXED 2 — Currency-pair quick presets
+First Best 10 now contains:
+XAUUSD, AUDUSD, EURAUD, EURCAD, EURCHF, EURGBP, USDCHF, NZDUSD, GBPCHF, GBPAUD
+
+Second Best 10 now contains:
+GBPUSD, USDCAD, USDJPY, EURJPY, GBPJPY, EURUSD, EURNZD, GBPCAD, AUDJPY, XAGUSD
+
+Therefore EURAUD moved to First Best 10 and EURUSD moved to Second Best 10.
+
+FIXED 3 — Field 3 on iPhone 11 / narrow screens
+- Phone mode now renders Field 3 rankings as stacked two-column record cards.
+- Main phone view no longer requires swiping through one column at a time.
+- Regime Age Ranking, Higher/Lower/Middle summaries, final cross-symbol ranking,
+  main Field 3 table, and active-symbol detail all use phone cards.
+- The complete desktop-style table remains available inside a collapsed
+  "Full table" expander when detailed audit columns are needed.
+- Desktop/laptop behavior remains the full-width dataframe design.
+
+FILES CHANGED
+- core/calculation/run_orchestrator.py
+- ui/multi_symbol_settings_20260701.py
+- ui/field3_multisymbol_regime_summary_20260722.py
+- ui/field3_three_regime_panel.py
+
+FILE ADDED
+- ui/field3_mobile_cards_20260722.py
+- tools/validate_selector_sequential_fix_20260722.py
+
+VALIDATION
+- Full Python syntax compilation for core/, ui/, and tabs/: PASS
+- Offline sequential subset orchestration regression: PASS
+- Unknown-symbol safety guard: PASS
+- First/Second Best 10 preset swap: PASS
+- Field 3 phone-card renderer: PASS
+
+Note: Offline validation does not consume or expose your private Twelve Data API
+keys. A live request will still depend on key validity, remaining provider quota,
+network access, and Twelve Data symbol availability, but the application no
+longer blocks Selector 2/3 merely because Selector 1 was loaded first.

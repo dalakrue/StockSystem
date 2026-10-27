@@ -1,0 +1,57 @@
+{
+  "build": "check-minute-direct-m15-20261027",
+  "date_mmt": "2026-10-27",
+  "repair_checks": {
+    "tests": 52,
+    "passed": 52,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 8.178
+  },
+  "full_suite_comparison": {
+    "original": {
+      "name": "pytest",
+      "errors": "29",
+      "failures": "51",
+      "skipped": "18",
+      "tests": "357",
+      "time": "55.864",
+      "timestamp": "2026-10-27T01:56:48.237429+00:00",
+      "hostname": "425e8efdfb9d"
+    },
+    "updated_broad_run": {
+      "name": "pytest",
+      "errors": "29",
+      "failures": "51",
+      "skipped": "18",
+      "tests": "389",
+      "time": "55.159",
+      "timestamp": "2026-10-27T02:01:01.916199+00:00",
+      "hostname": "425e8efdfb9d"
+    },
+    "new_failure_ids": [],
+    "resolved_failure_ids": [],
+    "same_preexisting_failure_ids": 80,
+    "note": "The broad run includes the original 357 tests and 32 repair tests. One final end-to-end repair test was added afterward and is included in the 52-check focused run."
+  },
+  "startup_smoke": {
+    "exceptions": 0,
+    "error_boxes": 0,
+    "warnings": 1,
+    "credentials_configured": false
+  },
+  "compile_check": "PASS for core, ui, tabs, app.py, main.py and the new verifier",
+  "runtime": {
+    "python": "3.12.14",
+    "streamlit": "1.66.1",
+    "pandas": "2.2.3",
+    "numpy": "2.2.6"
+  },
+  "live_deployed_check_verified": false,
+  "status": "TARGETED_REPAIR_TESTED; GLOBAL_ERROR_FREE_CERTIFICATION_NOT_ESTABLISHED",
+  "limitations": [
+    "No authenticated deployed app or live check-minute observation in this task.",
+    "Provider publication timing, real API credit capacity and execution price equality with MT5 are unverified.",
+    "Original legacy suite retains 51 failures and 29 setup errors; no new failure IDs in the compared broad runs."
+  ]
+}

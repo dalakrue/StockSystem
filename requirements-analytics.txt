@@ -1,0 +1,6 @@
+pyarrow>=15.0
+polars>=0.20
+duckdb>=0.10
+plotly-resampler>=0.10
+statsmodels>=0.14
+numba>=0.61; python_version < "3.14"

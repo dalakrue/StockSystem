@@ -1,0 +1,1439 @@
+AUDCAD-Jan: AUDCAD-01-R05E7
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_gap > 0.25 AND ema_dist < -0.25).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Feb: AUDCAD-02-N1R032E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0 AND atr_ratio < 1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Mar: AUDCAD-03-N1R002E02
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0 AND eff24 > 0.25).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Apr: AUDCAD-04-N1R017E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-May: AUDCAD-05-N1R019E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.0 AND eff12 > 0.5).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Jun: AUDCAD-06-R62E4
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 5; exact mean, scale and centers in the JSON).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Jul: AUDCAD-07-N1R041E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.5).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Aug: AUDCAD-08-N1R035E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.0 AND eff12 > 0.5).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Sep: AUDCAD-09-N1R067E02
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.5).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Oct: AUDCAD-10-N1R058E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.5 AND eff24 > 0.25).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Nov: AUDCAD-11-N1R098E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.5 AND atr_ratio < 1.0).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCAD-Dec: AUDCAD-12-N1R136E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.25 AND eff24 > 0.25).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Jan: AUDCHF-01-N1R069E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Feb: AUDCHF-02-N1R138E09
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.5 AND eff24 > 0.25).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Mar: AUDCHF-03-N1R092E07
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.25 AND eff24 > 0.25).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Apr: AUDCHF-04-N1R078E06
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.25 AND atr_ratio < 1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-May: AUDCHF-05-N1R081E02
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.5 AND eff12 > 0.5).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Jun: AUDCHF-06-N1R087E05
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.0).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Jul: AUDCHF-07-N1R082E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.5 AND atr_ratio < 1.0).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Aug: AUDCHF-08-N1R001E12
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Sep: AUDCHF-09-N1R135E09
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.25).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Oct: AUDCHF-10-N1R082E03
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.5 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Nov: AUDCHF-11-R08E3
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (body > 0.5).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.5*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDCHF-Dec: AUDCHF-12-N1R089E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.0 AND eff12 > 0.5).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Jan: AUDJPY-01-N1R055E07
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.25 AND eff12 > 0.5).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Feb: AUDJPY-02-N1R087E02
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Mar: AUDJPY-03-N1R122E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.0 AND atr_ratio < 1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Apr: AUDJPY-04-N1R001E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-May: AUDJPY-05-N1R001E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Jun: AUDJPY-06-N1R004E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0 AND atr_ratio < 1.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Jul: AUDJPY-07-N1R002E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0 AND eff24 > 0.25).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Aug: AUDJPY-08-N1R029E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Sep: AUDJPY-09-N1R075E04
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.25).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Oct: AUDJPY-10-R22E5
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_dist < -0.5 AND body > 0).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Nov: AUDJPY-11-N1R066E01
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.25 AND eff24 > 0.25).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDJPY-Dec: AUDJPY-12-N1R122E07
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.0 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Jan: AUDNZD-01-N1R016E02
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 1.0 AND atr_ratio < 1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Feb: AUDNZD-02-R57E7
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 2; exact mean, scale and centers in the JSON).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Mar: AUDNZD-03-N1R104E02
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -0.0 AND eff24 > 0.25).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Apr: AUDNZD-04-N1R020E12
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.0 AND atr_ratio < 1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-May: AUDNZD-05-R52E7
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (ema_gap < 0.6635450124740601 AND ema_gap > -0.5966996252536774 AND vol_ratio > 0.7592743933200836).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Jun: AUDNZD-06-N1R124E01
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.25 AND eff24 > 0.25).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Jul: AUDNZD-07-N1R135E09
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.25).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Aug: AUDNZD-08-N1R012E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.5 AND atr_ratio < 1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Sep: AUDNZD-09-R20E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (pos24 > 0.7 AND vol_ratio > 1.0).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Oct: AUDNZD-10-N1R079E09
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.5).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Nov: AUDNZD-11-R01E7
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (r6 > 0.25).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDNZD-Dec: AUDNZD-12-N1R136E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.25 AND eff24 > 0.25).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Jan: AUDUSD-01-N1R106E06
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -0.0 AND atr_ratio < 1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Feb: AUDUSD-02-N1R070E09
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 1.0 AND eff24 > 0.25).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Mar: AUDUSD-03-N1R032E07
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Apr: AUDUSD-04-N1R033E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-May: AUDUSD-05-N1R048E10
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 1.0 AND atr_ratio < 1.0).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Jun: AUDUSD-06-R47E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND ((-0.2264373836177622 * r1) + (0.06874916411291478 * r3) + (0.0035758597889060722 * r6) + (0.006747755921969278 * r12) + (-0.10116566688077722 * r24) + (0.19593863176882392 * body) + (0.2631525351249174 * range_atr) + (0.09159011624812587 * ema_gap) + (-0.0880089505948396 * ema_dist) + (1.1732713436960243 * pos24) + (-0.1421949564840092 * breakout24) + (0.061709869977387005 * seq3) + (-0.0646325254700166 * accel) + (0.10620784437893298 * vol_ratio) + (0.24928940596921106 * wick_low) + (0.053887083869335044 * wick_high) + (0.020546701772861317 * middle_score) + (-1.120659483013458) > 0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Jul: AUDUSD-07-N1R054E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.25 AND eff24 > 0.25).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Aug: AUDUSD-08-N1R011E04
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.5 AND eff12 > 0.5).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Sep: AUDUSD-09-N1R065E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.25).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Oct: AUDUSD-10-N1R085E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -1.0 AND eff12 > 0.5).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Nov: AUDUSD-11-N1R102E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -1.0 AND atr_ratio < 1.0).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+AUDUSD-Dec: AUDUSD-12-R13E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (ema_gap < -0.25 AND ema_dist > 0.25).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Jan: CHFJPY-01-N1R040E10
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.25 AND atr_ratio < 1.0).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Feb: CHFJPY-02-R60E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 4; exact mean, scale and centers in the JSON).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Mar: CHFJPY-03-N1R071E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Apr: CHFJPY-04-R22E3
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_dist < -0.5 AND body > 0).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.5*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-May: CHFJPY-05-N1R017E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Jun: CHFJPY-06-N1R001E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Jul: CHFJPY-07-N1R080E04
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.5 AND eff24 > 0.25).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Aug: CHFJPY-08-N1R118E01
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -1.0 AND atr_ratio < 1.0).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Sep: CHFJPY-09-R60E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 6; exact mean, scale and centers in the JSON).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Oct: CHFJPY-10-R53E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_gap > 0.4353220909833908 AND middle_score < 1.7542278170585632 AND vol_ratio < 0.5637991428375244).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Nov: CHFJPY-11-R26E5
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (seq3 < -1.5).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+CHFJPY-Dec: CHFJPY-12-N1R099E01
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -1.0).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Jan: EURAUD-01-N1R099E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Feb: EURAUD-02-N1R028E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.5 AND atr_ratio < 1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Mar: EURAUD-03-R19E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wick_low > 0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Apr: EURAUD-04-N1R114E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -0.5 AND atr_ratio < 1.0).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-May: EURAUD-05-N1R124E05
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.25 AND eff24 > 0.25).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Jun: EURAUD-06-N1R057E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.5).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Jul: EURAUD-07-N1R091E08
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.25).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Aug: EURAUD-08-N1R050E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.0 AND eff24 > 0.25).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Sep: EURAUD-09-R07E6
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (r3 < -0.75).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.0*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Oct: EURAUD-10-R05E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_gap > 0.25 AND ema_dist < -0.25).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Nov: EURAUD-11-N1R083E06
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURAUD-Dec: EURAUD-12-N1R004E07
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Jan: EURCAD-01-N1R088E03
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.0 AND eff24 > 0.25).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Feb: EURCAD-02-N1R077E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.25 AND eff12 > 0.5).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Mar: EURCAD-03-N1R034E04
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.0 AND eff24 > 0.25).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Apr: EURCAD-04-R47E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND ((-0.14575196580005517 * r1) + (0.10030733728672399 * r3) + (0.06829615380621 * r6) + (0.010273338247495899 * r12) + (0.03612583743548983 * r24) + (0.3159169465207396 * body) + (0.26524231181017294 * range_atr) + (0.05669519464963733 * ema_gap) + (-0.15232082111936868 * ema_dist) + (-1.3078178734804617 * pos24) + (-0.5727908449613942 * breakout24) + (0.03672647014481401 * seq3) + (-0.02870885195155019 * accel) + (0.005536042893419978 * vol_ratio) + (0.10165018891942866 * wick_low) + (0.0177161626700813 * wick_high) + (-0.04438878666266764 * middle_score) + (0.1658806926942364) > 0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-May: EURCAD-05-N1R137E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.5).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Jun: EURCAD-06-N1R003E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0 AND eff12 > 0.5).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Jul: EURCAD-07-N1R067E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.5).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Aug: EURCAD-08-R58E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 3; exact mean, scale and centers in the JSON).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Sep: EURCAD-09-N1R096E06
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.5 AND eff24 > 0.25).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Oct: EURCAD-10-R29E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (r6 < -0.5 AND range_atr < 1.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Nov: EURCAD-11-R25E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (r3 < -0.25 AND r12 < -0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCAD-Dec: EURCAD-12-N1R022E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.25 AND eff24 > 0.25).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Jan: EURCHF-01-N1R048E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 1.0 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Feb: EURCHF-02-N1R030E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0 AND eff24 > 0.25).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Mar: EURCHF-03-N1R045E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Apr: EURCHF-04-N1R052E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.0 AND atr_ratio < 1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-May: EURCHF-05-R55E5
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 0; exact mean, scale and centers in the JSON).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Jun: EURCHF-06-N2R040E04
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ordinal4 == 156.0 AND eff24 < 0.3).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Jul: EURCHF-07-N1R050E12
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.0 AND eff24 > 0.25).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Aug: EURCHF-08-R41E7
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND ((-0.47308834108579173 * r1) + (0.09454390397528128 * r3) + (0.09636249122756967 * r6) + (-0.02328581476009538 * r12) + (-0.07641994923281122 * r24) + (0.4672242109076978 * body) + (-0.05350546008458025 * range_atr) + (0.02961843687825711 * ema_gap) + (-0.006701803697334424 * ema_dist) + (0.3142769575074397 * pos24) + (0.7106882035868208 * breakout24) + (-0.16668239651615357 * seq3) + (0.03852124456048313 * accel) + (-0.02098888087494882 * vol_ratio) + (-0.13048468120939338 * wick_low) + (-0.2975883848632315 * wick_high) + (0.07226129097048242 * middle_score) + (-0.009070408822284146) > 0.0).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Sep: EURCHF-09-N1R086E04
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -1.0 AND atr_ratio < 1.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Oct: EURCHF-10-N1R139E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -1.0).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Nov: EURCHF-11-R46E4
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND ((-0.19330494337154439 * r1) + (-0.11112179156433041 * r3) + (0.006103799757720281 * r6) + (0.04891364550620952 * r12) + (-0.13704782207645297 * r24) + (0.13614221489278186 * body) + (-0.049152879066234834 * range_atr) + (-0.25245487871365807 * ema_gap) + (-0.02999486332320444 * ema_dist) + (1.2035483955757063 * pos24) + (0.32688283742121715 * breakout24) + (-0.02763119265656065 * seq3) + (0.062394259022274086 * accel) + (-0.21724613415632746 * vol_ratio) + (-0.5796845352106351 * wick_low) + (0.025608458108405046 * wick_high) + (0.4703967473608077 * middle_score) + (-0.29014940846949183) > 0.2).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURCHF-Dec: EURCHF-12-N1R139E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Jan: EURGBP-01-N1R066E01
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.25 AND eff24 > 0.25).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Feb: EURGBP-02-N1R032E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0 AND atr_ratio < 1.0).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Mar: EURGBP-03-N1R102E09
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -1.0 AND atr_ratio < 1.0).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Apr: EURGBP-04-N1R123E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.25).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-May: EURGBP-05-N1R007E04
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.25 AND eff12 > 0.5).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Jun: EURGBP-06-N1R117E03
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -1.0 AND eff12 > 0.5).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Jul: EURGBP-07-N1R120E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.0 AND eff24 > 0.25).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Aug: EURGBP-08-N1R090E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.0 AND atr_ratio < 1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Sep: EURGBP-09-R23E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (accel > 0.5 AND r3 > 0).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Oct: EURGBP-10-R22E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_dist < -0.5 AND body > 0).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Nov: EURGBP-11-N1R015E01
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 1.0 AND eff12 > 0.5).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURGBP-Dec: EURGBP-12-N1R118E09
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -1.0 AND atr_ratio < 1.0).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Jan: EURJPY-01-N1R034E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.0 AND eff24 > 0.25).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Feb: EURJPY-02-R33E2
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND ((-0.14199784782557828 * r1) + (0.08024773303920443 * r3) + (-0.03560049035829277 * r6) + (0.0132244500407975 * r12) + (0.10998164325056542 * r24) + (0.029510681525020142 * body) + (0.22591265838000568 * range_atr) + (-0.4411939460506802 * ema_gap) + (0.2105320470061314 * ema_dist) + (-1.2637274909763778 * pos24) + (0.28693875508899874 * breakout24) + (0.049211980871927116 * seq3) + (-0.07968049410082029 * accel) + (-0.11353856241643609 * vol_ratio) + (0.217163565143001 * wick_low) + (0.16318772721372593 * wick_high) + (0.16081683151790158 * middle_score) + (0.7322919248793339) > 0.0).
+TP pips = clip(1.5*ATR14/pip,5,500); SL pips = clip(1.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Mar: EURJPY-03-N1R045E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 1.0).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Apr: EURJPY-04-N1R005E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.25).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-May: EURJPY-05-N1R017E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Jun: EURJPY-06-N1R001E02
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Jul: EURJPY-07-N1R115E03
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Aug: EURJPY-08-N1R019E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.0 AND eff12 > 0.5).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Sep: EURJPY-09-N1R132E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -1.0 AND eff24 > 0.25).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Oct: EURJPY-10-N1R107E01
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -0.25).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Nov: EURJPY-11-N1R074E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.0 AND atr_ratio < 1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURJPY-Dec: EURJPY-12-N1R016E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 1.0 AND atr_ratio < 1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Jan: EURNZD-01-N1R117E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -1.0 AND eff12 > 0.5).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Feb: EURNZD-02-N1R137E06
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.5).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Mar: EURNZD-03-R19E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wick_low > 0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Apr: EURNZD-04-N1R045E02
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-May: EURNZD-05-R05E6
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_gap > 0.25 AND ema_dist < -0.25).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.0*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Jun: EURNZD-06-N1R049E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Jul: EURNZD-07-R13E2
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (ema_gap < -0.25 AND ema_dist > 0.25).
+TP pips = clip(1.5*ATR14/pip,5,500); SL pips = clip(1.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Aug: EURNZD-08-N1R135E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.25).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Sep: EURNZD-09-R05E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_gap > 0.25 AND ema_dist < -0.25).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Oct: EURNZD-10-R61E5
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 5; exact mean, scale and centers in the JSON).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Nov: EURNZD-11-R15E1
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (r3 > 0.75).
+TP pips = clip(1.0*ATR14/pip,5,500); SL pips = clip(1.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURNZD-Dec: EURNZD-12-R19E5
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wick_low > 0.5).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Jan: EURUSD-01-R32E4
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (r24 < -1.0 AND vol_ratio < 1.2).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Feb: EURUSD-02-N1R032E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0 AND atr_ratio < 1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Mar: EURUSD-03-N1R045E07
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Apr: EURUSD-04-N1R021E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.25).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-May: EURUSD-05-R46E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND ((0.11231339034483963 * r1) + (-0.13253928875280538 * r3) + (-0.1271911514084413 * r6) + (0.1628798370656999 * r12) + (-0.002129626311602733 * r24) + (0.0013970316491442622 * body) + (0.0003863273690941569 * range_atr) + (-0.039688252874481675 * ema_gap) + (0.014264828773943942 * ema_dist) + (-0.6141287017841406 * pos24) + (-0.07721244812429903 * breakout24) + (0.0419725776217442 * seq3) + (0.060450132912323186 * accel) + (-0.13513007441464386 * vol_ratio) + (-0.13844825888832518 * wick_low) + (-0.09867986329187275 * wick_high) + (0.19842501921972713 * middle_score) + (0.616048087835453) > 0.2).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Jun: EURUSD-06-N1R028E07
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.5 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Jul: EURUSD-07-N1R005E12
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.25).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Aug: EURUSD-08-R60E7
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 4; exact mean, scale and centers in the JSON).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Sep: EURUSD-09-R51E4
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (range_atr < 1.1115159392356873 AND pos24 > 0.474871888756752 AND r24 < 0.6061300337314606).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Oct: EURUSD-10-R32E3
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (r24 < -1.0 AND vol_ratio < 1.2).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.5*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Nov: EURUSD-11-N1R115E06
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+EURUSD-Dec: EURUSD-12-N1R137E06
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.5).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Jan: GBPJPY-01-R56E5
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 2; exact mean, scale and centers in the JSON).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Feb: GBPJPY-02-N1R037E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.25).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Mar: GBPJPY-03-N1R052E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.0 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Apr: GBPJPY-04-N1R049E07
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-May: GBPJPY-05-R56E3
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 0; exact mean, scale and centers in the JSON).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.5*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Jun: GBPJPY-06-N1R001E04
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Jul: GBPJPY-07-R56E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 2; exact mean, scale and centers in the JSON).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Aug: GBPJPY-08-N1R069E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Sep: GBPJPY-09-N1R071E02
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Oct: GBPJPY-10-R53E3
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 0; exact mean, scale and centers in the JSON).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.5*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Nov: GBPJPY-11-R59E5
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 3; exact mean, scale and centers in the JSON).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPJPY-Dec: GBPJPY-12-R53E4
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 0; exact mean, scale and centers in the JSON).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Jan: GBPUSD-01-R14E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (breakout24 < 0).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Feb: GBPUSD-02-N1R070E09
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 1.0 AND eff24 > 0.25).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Mar: GBPUSD-03-N1R061E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Apr: GBPUSD-04-R52E5
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (middle_score < 1.1327853202819824 AND r24 > -3.2390233278274536 AND vol_ratio > 0.7918948531150818).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-May: GBPUSD-05-N1R042E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.5 AND eff24 > 0.25).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Jun: GBPUSD-06-N1R029E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Jul: GBPUSD-07-N1R071E08
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Aug: GBPUSD-08-R45E3
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND ((-0.0037703475681059666 * r1) + (-0.03813588037465921 * r3) + (-0.020126679888483837 * r6) + (0.03642526379638505 * r12) + (0.09688641815809758 * r24) + (-0.010165787678833577 * body) + (0.0910036268897019 * range_atr) + (-0.11745936182658868 * ema_gap) + (0.040712596314076754 * ema_dist) + (0.4429400423164387 * pos24) + (0.20464509023390828 * breakout24) + (0.04480728676185625 * seq3) + (-0.05441614391555125 * accel) + (-0.10497815246504501 * vol_ratio) + (-0.05061444017341662 * wick_low) + (0.14508139065976533 * wick_high) + (-0.14946465277530233 * middle_score) + (-0.29975403587350885) > 0.0).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.5*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Sep: GBPUSD-09-N1R087E08
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Oct: GBPUSD-10-N1R082E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.5 AND atr_ratio < 1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Nov: GBPUSD-11-R16E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (body < -0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+GBPUSD-Dec: GBPUSD-12-N1R006E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.25 AND eff24 > 0.25).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Jan: NZDCAD-01-R41E7
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND ((-0.09862454767561381 * r1) + (-0.0592619767053662 * r3) + (0.04001340711221721 * r6) + (-0.010951294958070127 * r12) + (0.06807829960562493 * r24) + (0.05528763225536193 * body) + (-0.061746076114115846 * range_atr) + (-0.06062083845427056 * ema_gap) + (-0.08347354113672271 * ema_dist) + (-0.906791042416887 * pos24) + (-0.6114166417399021 * breakout24) + (0.05698360266861078 * seq3) + (0.03296124014569039 * accel) + (0.5468787090118159 * vol_ratio) + (1.041142100016318 * wick_low) + (-0.149134427797867 * wick_high) + (0.062109356021810246 * middle_score) + (-0.2887997760804901) > 0.0).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Feb: NZDCAD-02-N1R013E12
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Mar: NZDCAD-03-N1R007E09
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.25 AND eff12 > 0.5).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Apr: NZDCAD-04-R57E4
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 2; exact mean, scale and centers in the JSON).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-May: NZDCAD-05-N1R096E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.5 AND eff24 > 0.25).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Jun: NZDCAD-06-R16E5
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (body < -0.5).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Jul: NZDCAD-07-N1R025E10
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 0.5).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Aug: NZDCAD-08-N1R085E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -1.0 AND eff12 > 0.5).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Sep: NZDCAD-09-N1R140E07
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -1.0 AND eff24 > 0.25).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Oct: NZDCAD-10-R13E4
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (ema_gap < -0.25 AND ema_dist > 0.25).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Nov: NZDCAD-11-R16E4
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (body < -0.5).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDCAD-Dec: NZDCAD-12-R30E3
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (ema_dist > 0.5 AND body < 0).
+TP pips = clip(2.0*ATR14/pip,5,500); SL pips = clip(1.5*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Jan: NZDUSD-01-R42E4
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND ((-0.07460116974599354 * r1) + (-0.07403803919296638 * r3) + (-0.045902237307993504 * r6) + (-0.1426838044527346 * r12) + (0.045977541237189036 * r24) + (0.12575848984713217 * body) + (-0.08425780246954208 * range_atr) + (0.016144252906576596 * ema_gap) + (-0.23248421450381992 * ema_dist) + (0.1499349153620193 * pos24) + (0.27356222102585 * breakout24) + (0.06768715096813105 * seq3) + (0.006332071509184629 * accel) + (0.09887750971565493 * vol_ratio) + (0.103051419374464 * wick_low) + (-0.3988731628448749 * wick_high) + (-0.07916972537509452 * middle_score) + (-0.17190460470527352) > 0.2).
+TP pips = clip(3.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Feb: NZDUSD-02-N1R136E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.25 AND eff24 > 0.25).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Mar: NZDUSD-03-N1R038E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.25 AND eff24 > 0.25).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Apr: NZDUSD-04-N1R067E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.5).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-May: NZDUSD-05-N1R116E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -1.0 AND eff24 > 0.25).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Jun: NZDUSD-06-N1R088E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.0 AND eff24 > 0.25).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Jul: NZDUSD-07-N1R087E08
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -0.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Aug: NZDUSD-08-N1R032E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Sep: NZDUSD-09-N1R132E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -1.0 AND eff24 > 0.25).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Oct: NZDUSD-10-R37E7
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND ((-0.015286175271801735 * r1) + (-0.12569472202320642 * r3) + (0.04747834252796835 * r6) + (-0.05281466288609979 * r12) + (-0.06436350278632237 * r24) + (0.041557129126861506 * body) + (-0.36247046236386105 * range_atr) + (-0.022176763931956077 * ema_gap) + (0.1265405126390899 * ema_dist) + (0.6144036416319065 * pos24) + (0.1718944684949584 * breakout24) + (-0.10979764524730701 * seq3) + (0.10003871905014469 * accel) + (0.3771766282674554 * vol_ratio) + (-0.577903904441415 * wick_low) + (-0.3274102085615656 * wick_high) + (0.11304470734327056 * middle_score) + (0.017056601025031454) > 0.0).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Nov: NZDUSD-11-N1R016E03
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 1.0 AND atr_ratio < 1.0).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+NZDUSD-Dec: NZDUSD-12-N1R086E05
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -1.0 AND atr_ratio < 1.0).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Jan: USDCAD-01-N1R065E10
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.25).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Feb: USDCAD-02-N1R067E02
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.5).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Mar: USDCAD-03-R22E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (ema_dist < -0.5 AND body > 0).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Apr: USDCAD-04-R27E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wick_high > 0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-May: USDCAD-05-N1R004E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.0 AND atr_ratio < 1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Jun: USDCAD-06-N1R069E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 1.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Jul: USDCAD-07-N1R065E06
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (wave_accel > 0.25).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Aug: USDCAD-08-N1R123E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.25).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Sep: USDCAD-09-R55E7
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 1; exact mean, scale and centers in the JSON).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Oct: USDCAD-10-N1R008E12
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 0.25 AND atr_ratio < 1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Nov: USDCAD-11-N1R100E01
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -1.0 AND eff24 > 0.25).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCAD-Dec: USDCAD-12-N1R014E02
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 1.0 AND eff24 > 0.25).
+TP pips = clip(1.25*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Jan: USDCHF-01-N1R086E04
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -1.0 AND atr_ratio < 1.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Feb: USDCHF-02-R27E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wick_high > 0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Mar: USDCHF-03-N1R016E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 1.0 AND atr_ratio < 1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Apr: USDCHF-04-N1R079E03
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar4 < -0.5).
+TP pips = clip(1.75*ATR14/pip,5,500); SL pips = clip(1.25*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-May: USDCHF-05-N1R111E08
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -0.5).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Jun: USDCHF-06-N1R136E05
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (wave_accel < -0.25 AND eff24 > 0.25).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Jul: USDCHF-07-N1R131E12
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Aug: USDCHF-08-N1R121E08
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.0 AND eff12 > 0.5).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Sep: USDCHF-09-N1R102E09
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar8 < -1.0 AND atr_ratio < 1.0).
+TP pips = 15.0; SL pips = 10.0; hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Oct: USDCHF-10-R56E7
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 0; exact mean, scale and centers in the JSON).
+TP pips = 30.0; SL pips = 30.0; hold = 24 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Nov: USDCHF-11-N1R121E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.0 AND eff12 > 0.5).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDCHF-Dec: USDCHF-12-N1R120E10
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar32 < -0.0 AND eff24 > 0.25).
+TP pips = 20.0; SL pips = 15.0; hold = 12 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Jan: USDJPY-01-N1R050E01
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar32 > 0.0 AND eff24 > 0.25).
+TP pips = clip(0.75*ATR14/pip,5,500); SL pips = clip(0.75*ATR14/pip,5,103); hold = 6 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Feb: USDJPY-02-R15E5
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (r3 > 0.75).
+TP pips = clip(4.0*ATR14/pip,5,500); SL pips = clip(2.0*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Mar: USDJPY-03-N1R118E11
+Origin: REPLACEMENT. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (haar16 < -1.0 AND atr_ratio < 1.0).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Apr: USDJPY-04-N1R033E05
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.0).
+TP pips = clip(3.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-May: USDJPY-05-N1R033E08
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar16 > 0.0).
+TP pips = clip(2.5*ATR14/pip,5,500); SL pips = clip(1.75*ATR14/pip,5,103); hold = 12 elapsed hours; danger = 0.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Jun: USDJPY-06-R50E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (pos24 < 0.5363237261772156 AND vol_ratio < 0.8724603056907654 AND r24 > -1.9513694643974304).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Jul: USDJPY-07-R16E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (body < -0.5).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Aug: USDJPY-08-N1R016E12
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar4 > 1.0 AND atr_ratio < 1.0).
+TP pips = 60.0; SL pips = 40.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Sep: USDJPY-09-R60E8
+Origin: PRESERVED. BUY/SELL side: -1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 6; exact mean, scale and centers in the JSON).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Oct: USDJPY-10-R54E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (nearest standardized cluster == 0; exact mean, scale and centers in the JSON).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Nov: USDJPY-11-R35E8
+Origin: PRESERVED. BUY/SELL side: 1.
+Entry: Middle Bias == side AND ((-0.287539208750151 * r1) + (-0.17628056462082295 * r3) + (0.11002863051058055 * r6) + (0.11884383709875049 * r12) + (-0.014358367076354878 * r24) + (0.3844537986769132 * body) + (-0.27853539961347723 * range_atr) + (0.34231744060958996 * ema_gap) + (0.2742086698661904 * ema_dist) + (-1.3972570303572263 * pos24) + (-0.1929067849973827 * breakout24) + (-0.22901789425707972 * seq3) + (0.12601607707810522 * accel) + (0.9287862851519919 * vol_ratio) + (-0.23913090967232692 * wick_low) + (-0.849502754006962 * wick_high) + (-0.4592038531676352 * middle_score) + (0.10969882481194854) > 0.25).
+TP pips = 100.0; SL pips = 100.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.
+
+USDJPY-Dec: USDJPY-12-N1R030E11
+Origin: REPLACEMENT. BUY/SELL side: 1.
+Entry: Middle Bias == side AND (haar8 > 1.0 AND eff24 > 0.25).
+TP pips = 40.0; SL pips = 25.0; hold = 24 elapsed hours; danger = 1.
+Pip check: YES (completed historical trades). Strict unseen validation: NO.

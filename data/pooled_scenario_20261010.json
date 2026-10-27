@@ -1,0 +1,3430 @@
+{
+ "scenario": "pooled_exits_research",
+ "live_enabled": false,
+ "engine_version": "exit-engine-20261010-v1",
+ "strategy_engine": "monthly-240-v1-9540f398e9afd1fa",
+ "config_source": "Forex_Detailed_App_Improvement_Command.docx Table 1; Forex_Additional_Research.zip was never uploaded",
+ "pooled_config": {
+  "EURJPY": {
+   "basis": "FIXED_PIPS",
+   "sl_pips": 50.0,
+   "tp_pips": 30.0
+  },
+  "EURNZD": {
+   "basis": "FIXED_PIPS",
+   "sl_pips": 50.0,
+   "tp_pips": 30.0
+  },
+  "GBPJPY": {
+   "basis": "ATR14_MULTIPLIER",
+   "sl_clip": [
+    10.0,
+    100.0
+   ],
+   "sl_mult": 2.0,
+   "tp_clip": [
+    10.0,
+    500.0
+   ],
+   "tp_mult": 3.0
+  },
+  "USDJPY": {
+   "basis": "FIXED_PIPS",
+   "sl_pips": 20.0,
+   "tp_pips": 50.0
+  }
+ },
+ "entry_gate": {
+  "formula": "(TP - 3) / (SL + 3) >= 0.5",
+  "cost_pips": 3.0,
+  "min_rr": 0.5
+ },
+ "hold_cap_hours": 48,
+ "exit_eval_order": [
+  "OPEN_CHECKS",
+  "HOLD_CAP",
+  "BIAS_FLIP",
+  "DANGER",
+  "BARRIERS",
+  "FRIDAY_CLOSE"
+ ],
+ "config_hash": "92e40e04eda5a312d5ecf939886ee09e08332db24edc73073fb30ec65161ae96",
+ "s_mapping": [
+  {
+   "s_column": "S1",
+   "equation_id": "AUDCAD-01-R05E7",
+   "symbol": "AUDCAD",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S2",
+   "equation_id": "AUDCAD-02-N1R032E11",
+   "symbol": "AUDCAD",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S3",
+   "equation_id": "AUDCAD-03-N1R002E02",
+   "symbol": "AUDCAD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S4",
+   "equation_id": "AUDCAD-04-N1R017E08",
+   "symbol": "AUDCAD",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S5",
+   "equation_id": "AUDCAD-05-N1R019E11",
+   "symbol": "AUDCAD",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S6",
+   "equation_id": "AUDCAD-06-R62E4",
+   "symbol": "AUDCAD",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S7",
+   "equation_id": "AUDCAD-07-N1R041E11",
+   "symbol": "AUDCAD",
+   "myanmar_month": 7,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S8",
+   "equation_id": "AUDCAD-08-N1R035E05",
+   "symbol": "AUDCAD",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S9",
+   "equation_id": "AUDCAD-09-N1R067E02",
+   "symbol": "AUDCAD",
+   "myanmar_month": 9,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S10",
+   "equation_id": "AUDCAD-10-N1R058E03",
+   "symbol": "AUDCAD",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S11",
+   "equation_id": "AUDCAD-11-N1R098E10",
+   "symbol": "AUDCAD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S12",
+   "equation_id": "AUDCAD-12-N1R136E10",
+   "symbol": "AUDCAD",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S13",
+   "equation_id": "AUDCHF-01-N1R069E03",
+   "symbol": "AUDCHF",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S14",
+   "equation_id": "AUDCHF-02-N1R138E09",
+   "symbol": "AUDCHF",
+   "myanmar_month": 2,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S15",
+   "equation_id": "AUDCHF-03-N1R092E07",
+   "symbol": "AUDCHF",
+   "myanmar_month": 3,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S16",
+   "equation_id": "AUDCHF-04-N1R078E06",
+   "symbol": "AUDCHF",
+   "myanmar_month": 4,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S17",
+   "equation_id": "AUDCHF-05-N1R081E02",
+   "symbol": "AUDCHF",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S18",
+   "equation_id": "AUDCHF-06-N1R087E05",
+   "symbol": "AUDCHF",
+   "myanmar_month": 6,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S19",
+   "equation_id": "AUDCHF-07-N1R082E10",
+   "symbol": "AUDCHF",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S20",
+   "equation_id": "AUDCHF-08-N1R001E12",
+   "symbol": "AUDCHF",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S21",
+   "equation_id": "AUDCHF-09-N1R135E09",
+   "symbol": "AUDCHF",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S22",
+   "equation_id": "AUDCHF-10-N1R082E03",
+   "symbol": "AUDCHF",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S23",
+   "equation_id": "AUDCHF-11-R08E3",
+   "symbol": "AUDCHF",
+   "myanmar_month": 11,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S24",
+   "equation_id": "AUDCHF-12-N1R089E11",
+   "symbol": "AUDCHF",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S25",
+   "equation_id": "AUDJPY-01-N1R055E07",
+   "symbol": "AUDJPY",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S26",
+   "equation_id": "AUDJPY-02-N1R087E02",
+   "symbol": "AUDJPY",
+   "myanmar_month": 2,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S27",
+   "equation_id": "AUDJPY-03-N1R122E12",
+   "symbol": "AUDJPY",
+   "myanmar_month": 3,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S28",
+   "equation_id": "AUDJPY-04-N1R001E06",
+   "symbol": "AUDJPY",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S29",
+   "equation_id": "AUDJPY-05-N1R001E05",
+   "symbol": "AUDJPY",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S30",
+   "equation_id": "AUDJPY-06-N1R004E08",
+   "symbol": "AUDJPY",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S31",
+   "equation_id": "AUDJPY-07-N1R002E06",
+   "symbol": "AUDJPY",
+   "myanmar_month": 7,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S32",
+   "equation_id": "AUDJPY-08-N1R029E11",
+   "symbol": "AUDJPY",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S33",
+   "equation_id": "AUDJPY-09-N1R075E04",
+   "symbol": "AUDJPY",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S34",
+   "equation_id": "AUDJPY-10-R22E5",
+   "symbol": "AUDJPY",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S35",
+   "equation_id": "AUDJPY-11-N1R066E01",
+   "symbol": "AUDJPY",
+   "myanmar_month": 11,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S36",
+   "equation_id": "AUDJPY-12-N1R122E07",
+   "symbol": "AUDJPY",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S37",
+   "equation_id": "AUDNZD-01-N1R016E02",
+   "symbol": "AUDNZD",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S38",
+   "equation_id": "AUDNZD-02-R57E7",
+   "symbol": "AUDNZD",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S39",
+   "equation_id": "AUDNZD-03-N1R104E02",
+   "symbol": "AUDNZD",
+   "myanmar_month": 3,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S40",
+   "equation_id": "AUDNZD-04-N1R020E12",
+   "symbol": "AUDNZD",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S41",
+   "equation_id": "AUDNZD-05-R52E7",
+   "symbol": "AUDNZD",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S42",
+   "equation_id": "AUDNZD-06-N1R124E01",
+   "symbol": "AUDNZD",
+   "myanmar_month": 6,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S43",
+   "equation_id": "AUDNZD-07-N1R135E09",
+   "symbol": "AUDNZD",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S44",
+   "equation_id": "AUDNZD-08-N1R012E06",
+   "symbol": "AUDNZD",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S45",
+   "equation_id": "AUDNZD-09-R20E8",
+   "symbol": "AUDNZD",
+   "myanmar_month": 9,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S46",
+   "equation_id": "AUDNZD-10-N1R079E09",
+   "symbol": "AUDNZD",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S47",
+   "equation_id": "AUDNZD-11-R01E7",
+   "symbol": "AUDNZD",
+   "myanmar_month": 11,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S48",
+   "equation_id": "AUDNZD-12-N1R136E12",
+   "symbol": "AUDNZD",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S49",
+   "equation_id": "AUDUSD-01-N1R106E06",
+   "symbol": "AUDUSD",
+   "myanmar_month": 1,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S50",
+   "equation_id": "AUDUSD-02-N1R070E09",
+   "symbol": "AUDUSD",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S51",
+   "equation_id": "AUDUSD-03-N1R032E07",
+   "symbol": "AUDUSD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S52",
+   "equation_id": "AUDUSD-04-N1R033E11",
+   "symbol": "AUDUSD",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S53",
+   "equation_id": "AUDUSD-05-N1R048E10",
+   "symbol": "AUDUSD",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S54",
+   "equation_id": "AUDUSD-06-R47E8",
+   "symbol": "AUDUSD",
+   "myanmar_month": 6,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S55",
+   "equation_id": "AUDUSD-07-N1R054E05",
+   "symbol": "AUDUSD",
+   "myanmar_month": 7,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S56",
+   "equation_id": "AUDUSD-08-N1R011E04",
+   "symbol": "AUDUSD",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S57",
+   "equation_id": "AUDUSD-09-N1R065E11",
+   "symbol": "AUDUSD",
+   "myanmar_month": 9,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S58",
+   "equation_id": "AUDUSD-10-N1R085E10",
+   "symbol": "AUDUSD",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S59",
+   "equation_id": "AUDUSD-11-N1R102E10",
+   "symbol": "AUDUSD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S60",
+   "equation_id": "AUDUSD-12-R13E8",
+   "symbol": "AUDUSD",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S61",
+   "equation_id": "CHFJPY-01-N1R040E10",
+   "symbol": "CHFJPY",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S62",
+   "equation_id": "CHFJPY-02-R60E8",
+   "symbol": "CHFJPY",
+   "myanmar_month": 2,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S63",
+   "equation_id": "CHFJPY-03-N1R071E12",
+   "symbol": "CHFJPY",
+   "myanmar_month": 3,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S64",
+   "equation_id": "CHFJPY-04-R22E3",
+   "symbol": "CHFJPY",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S65",
+   "equation_id": "CHFJPY-05-N1R017E06",
+   "symbol": "CHFJPY",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S66",
+   "equation_id": "CHFJPY-06-N1R001E08",
+   "symbol": "CHFJPY",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S67",
+   "equation_id": "CHFJPY-07-N1R080E04",
+   "symbol": "CHFJPY",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S68",
+   "equation_id": "CHFJPY-08-N1R118E01",
+   "symbol": "CHFJPY",
+   "myanmar_month": 8,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S69",
+   "equation_id": "CHFJPY-09-R60E8",
+   "symbol": "CHFJPY",
+   "myanmar_month": 9,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S70",
+   "equation_id": "CHFJPY-10-R53E8",
+   "symbol": "CHFJPY",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S71",
+   "equation_id": "CHFJPY-11-R26E5",
+   "symbol": "CHFJPY",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S72",
+   "equation_id": "CHFJPY-12-N1R099E01",
+   "symbol": "CHFJPY",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S73",
+   "equation_id": "EURAUD-01-N1R099E11",
+   "symbol": "EURAUD",
+   "myanmar_month": 1,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S74",
+   "equation_id": "EURAUD-02-N1R028E06",
+   "symbol": "EURAUD",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S75",
+   "equation_id": "EURAUD-03-R19E8",
+   "symbol": "EURAUD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S76",
+   "equation_id": "EURAUD-04-N1R114E10",
+   "symbol": "EURAUD",
+   "myanmar_month": 4,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S77",
+   "equation_id": "EURAUD-05-N1R124E05",
+   "symbol": "EURAUD",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S78",
+   "equation_id": "EURAUD-06-N1R057E05",
+   "symbol": "EURAUD",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S79",
+   "equation_id": "EURAUD-07-N1R091E08",
+   "symbol": "EURAUD",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S80",
+   "equation_id": "EURAUD-08-N1R050E06",
+   "symbol": "EURAUD",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S81",
+   "equation_id": "EURAUD-09-R07E6",
+   "symbol": "EURAUD",
+   "myanmar_month": 9,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S82",
+   "equation_id": "EURAUD-10-R05E8",
+   "symbol": "EURAUD",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S83",
+   "equation_id": "EURAUD-11-N1R083E06",
+   "symbol": "EURAUD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S84",
+   "equation_id": "EURAUD-12-N1R004E07",
+   "symbol": "EURAUD",
+   "myanmar_month": 12,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S85",
+   "equation_id": "EURCAD-01-N1R088E03",
+   "symbol": "EURCAD",
+   "myanmar_month": 1,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S86",
+   "equation_id": "EURCAD-02-N1R077E12",
+   "symbol": "EURCAD",
+   "myanmar_month": 2,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S87",
+   "equation_id": "EURCAD-03-N1R034E04",
+   "symbol": "EURCAD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S88",
+   "equation_id": "EURCAD-04-R47E8",
+   "symbol": "EURCAD",
+   "myanmar_month": 4,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S89",
+   "equation_id": "EURCAD-05-N1R137E11",
+   "symbol": "EURCAD",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S90",
+   "equation_id": "EURCAD-06-N1R003E03",
+   "symbol": "EURCAD",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S91",
+   "equation_id": "EURCAD-07-N1R067E08",
+   "symbol": "EURCAD",
+   "myanmar_month": 7,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S92",
+   "equation_id": "EURCAD-08-R58E8",
+   "symbol": "EURCAD",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S93",
+   "equation_id": "EURCAD-09-N1R096E06",
+   "symbol": "EURCAD",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S94",
+   "equation_id": "EURCAD-10-R29E8",
+   "symbol": "EURCAD",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S95",
+   "equation_id": "EURCAD-11-R25E8",
+   "symbol": "EURCAD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S96",
+   "equation_id": "EURCAD-12-N1R022E06",
+   "symbol": "EURCAD",
+   "myanmar_month": 12,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S97",
+   "equation_id": "EURCHF-01-N1R048E03",
+   "symbol": "EURCHF",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S98",
+   "equation_id": "EURCHF-02-N1R030E03",
+   "symbol": "EURCHF",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S99",
+   "equation_id": "EURCHF-03-N1R045E06",
+   "symbol": "EURCHF",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S100",
+   "equation_id": "EURCHF-04-N1R052E11",
+   "symbol": "EURCHF",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S101",
+   "equation_id": "EURCHF-05-R55E5",
+   "symbol": "EURCHF",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S102",
+   "equation_id": "EURCHF-06-N2R040E04",
+   "symbol": "EURCHF",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S103",
+   "equation_id": "EURCHF-07-N1R050E12",
+   "symbol": "EURCHF",
+   "myanmar_month": 7,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S104",
+   "equation_id": "EURCHF-08-R41E7",
+   "symbol": "EURCHF",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S105",
+   "equation_id": "EURCHF-09-N1R086E04",
+   "symbol": "EURCHF",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S106",
+   "equation_id": "EURCHF-10-N1R139E10",
+   "symbol": "EURCHF",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S107",
+   "equation_id": "EURCHF-11-R46E4",
+   "symbol": "EURCHF",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S108",
+   "equation_id": "EURCHF-12-N1R139E11",
+   "symbol": "EURCHF",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S109",
+   "equation_id": "EURGBP-01-N1R066E01",
+   "symbol": "EURGBP",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S110",
+   "equation_id": "EURGBP-02-N1R032E05",
+   "symbol": "EURGBP",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S111",
+   "equation_id": "EURGBP-03-N1R102E09",
+   "symbol": "EURGBP",
+   "myanmar_month": 3,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S112",
+   "equation_id": "EURGBP-04-N1R123E11",
+   "symbol": "EURGBP",
+   "myanmar_month": 4,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S113",
+   "equation_id": "EURGBP-05-N1R007E04",
+   "symbol": "EURGBP",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S114",
+   "equation_id": "EURGBP-06-N1R117E03",
+   "symbol": "EURGBP",
+   "myanmar_month": 6,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S115",
+   "equation_id": "EURGBP-07-N1R120E10",
+   "symbol": "EURGBP",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S116",
+   "equation_id": "EURGBP-08-N1R090E12",
+   "symbol": "EURGBP",
+   "myanmar_month": 8,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S117",
+   "equation_id": "EURGBP-09-R23E8",
+   "symbol": "EURGBP",
+   "myanmar_month": 9,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S118",
+   "equation_id": "EURGBP-10-R22E8",
+   "symbol": "EURGBP",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S119",
+   "equation_id": "EURGBP-11-N1R015E01",
+   "symbol": "EURGBP",
+   "myanmar_month": 11,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S120",
+   "equation_id": "EURGBP-12-N1R118E09",
+   "symbol": "EURGBP",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S121",
+   "equation_id": "EURJPY-01-N1R034E08",
+   "symbol": "EURJPY",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S122",
+   "equation_id": "EURJPY-02-R33E2",
+   "symbol": "EURJPY",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S123",
+   "equation_id": "EURJPY-03-N1R045E05",
+   "symbol": "EURJPY",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S124",
+   "equation_id": "EURJPY-04-N1R005E05",
+   "symbol": "EURJPY",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S125",
+   "equation_id": "EURJPY-05-N1R017E06",
+   "symbol": "EURJPY",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S126",
+   "equation_id": "EURJPY-06-N1R001E02",
+   "symbol": "EURJPY",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S127",
+   "equation_id": "EURJPY-07-N1R115E03",
+   "symbol": "EURJPY",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S128",
+   "equation_id": "EURJPY-08-N1R019E08",
+   "symbol": "EURJPY",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S129",
+   "equation_id": "EURJPY-09-N1R132E12",
+   "symbol": "EURJPY",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S130",
+   "equation_id": "EURJPY-10-N1R107E01",
+   "symbol": "EURJPY",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S131",
+   "equation_id": "EURJPY-11-N1R074E12",
+   "symbol": "EURJPY",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S132",
+   "equation_id": "EURJPY-12-N1R016E11",
+   "symbol": "EURJPY",
+   "myanmar_month": 12,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S133",
+   "equation_id": "EURNZD-01-N1R117E11",
+   "symbol": "EURNZD",
+   "myanmar_month": 1,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S134",
+   "equation_id": "EURNZD-02-N1R137E06",
+   "symbol": "EURNZD",
+   "myanmar_month": 2,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S135",
+   "equation_id": "EURNZD-03-R19E8",
+   "symbol": "EURNZD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S136",
+   "equation_id": "EURNZD-04-N1R045E02",
+   "symbol": "EURNZD",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S137",
+   "equation_id": "EURNZD-05-R05E6",
+   "symbol": "EURNZD",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S138",
+   "equation_id": "EURNZD-06-N1R049E08",
+   "symbol": "EURNZD",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S139",
+   "equation_id": "EURNZD-07-R13E2",
+   "symbol": "EURNZD",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S140",
+   "equation_id": "EURNZD-08-N1R135E11",
+   "symbol": "EURNZD",
+   "myanmar_month": 8,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S141",
+   "equation_id": "EURNZD-09-R05E8",
+   "symbol": "EURNZD",
+   "myanmar_month": 9,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S142",
+   "equation_id": "EURNZD-10-R61E5",
+   "symbol": "EURNZD",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S143",
+   "equation_id": "EURNZD-11-R15E1",
+   "symbol": "EURNZD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S144",
+   "equation_id": "EURNZD-12-R19E5",
+   "symbol": "EURNZD",
+   "myanmar_month": 12,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 30.0,
+     "sl_pips": 50.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S145",
+   "equation_id": "EURUSD-01-R32E4",
+   "symbol": "EURUSD",
+   "myanmar_month": 1,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S146",
+   "equation_id": "EURUSD-02-N1R032E11",
+   "symbol": "EURUSD",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S147",
+   "equation_id": "EURUSD-03-N1R045E07",
+   "symbol": "EURUSD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S148",
+   "equation_id": "EURUSD-04-N1R021E08",
+   "symbol": "EURUSD",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S149",
+   "equation_id": "EURUSD-05-R46E8",
+   "symbol": "EURUSD",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S150",
+   "equation_id": "EURUSD-06-N1R028E07",
+   "symbol": "EURUSD",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S151",
+   "equation_id": "EURUSD-07-N1R005E12",
+   "symbol": "EURUSD",
+   "myanmar_month": 7,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S152",
+   "equation_id": "EURUSD-08-R60E7",
+   "symbol": "EURUSD",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S153",
+   "equation_id": "EURUSD-09-R51E4",
+   "symbol": "EURUSD",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S154",
+   "equation_id": "EURUSD-10-R32E3",
+   "symbol": "EURUSD",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S155",
+   "equation_id": "EURUSD-11-N1R115E06",
+   "symbol": "EURUSD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S156",
+   "equation_id": "EURUSD-12-N1R137E06",
+   "symbol": "EURUSD",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S157",
+   "equation_id": "GBPJPY-01-R56E5",
+   "symbol": "GBPJPY",
+   "myanmar_month": 1,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S158",
+   "equation_id": "GBPJPY-02-N1R037E11",
+   "symbol": "GBPJPY",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S159",
+   "equation_id": "GBPJPY-03-N1R052E03",
+   "symbol": "GBPJPY",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S160",
+   "equation_id": "GBPJPY-04-N1R049E07",
+   "symbol": "GBPJPY",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S161",
+   "equation_id": "GBPJPY-05-R56E3",
+   "symbol": "GBPJPY",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S162",
+   "equation_id": "GBPJPY-06-N1R001E04",
+   "symbol": "GBPJPY",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S163",
+   "equation_id": "GBPJPY-07-R56E8",
+   "symbol": "GBPJPY",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S164",
+   "equation_id": "GBPJPY-08-N1R069E03",
+   "symbol": "GBPJPY",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S165",
+   "equation_id": "GBPJPY-09-N1R071E02",
+   "symbol": "GBPJPY",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S166",
+   "equation_id": "GBPJPY-10-R53E3",
+   "symbol": "GBPJPY",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S167",
+   "equation_id": "GBPJPY-11-R59E5",
+   "symbol": "GBPJPY",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S168",
+   "equation_id": "GBPJPY-12-R53E4",
+   "symbol": "GBPJPY",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_mult": 3.0,
+     "sl_mult": 2.0,
+     "tp_clip": [
+      10.0,
+      500.0
+     ],
+     "sl_clip": [
+      10.0,
+      100.0
+     ],
+     "basis": "ATR14_MULTIPLIER"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S169",
+   "equation_id": "GBPUSD-01-R14E8",
+   "symbol": "GBPUSD",
+   "myanmar_month": 1,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S170",
+   "equation_id": "GBPUSD-02-N1R070E09",
+   "symbol": "GBPUSD",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S171",
+   "equation_id": "GBPUSD-03-N1R061E03",
+   "symbol": "GBPUSD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S172",
+   "equation_id": "GBPUSD-04-R52E5",
+   "symbol": "GBPUSD",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S173",
+   "equation_id": "GBPUSD-05-N1R042E08",
+   "symbol": "GBPUSD",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S174",
+   "equation_id": "GBPUSD-06-N1R029E06",
+   "symbol": "GBPUSD",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S175",
+   "equation_id": "GBPUSD-07-N1R071E08",
+   "symbol": "GBPUSD",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S176",
+   "equation_id": "GBPUSD-08-R45E3",
+   "symbol": "GBPUSD",
+   "myanmar_month": 8,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S177",
+   "equation_id": "GBPUSD-09-N1R087E08",
+   "symbol": "GBPUSD",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S178",
+   "equation_id": "GBPUSD-10-N1R082E12",
+   "symbol": "GBPUSD",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S179",
+   "equation_id": "GBPUSD-11-R16E8",
+   "symbol": "GBPUSD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S180",
+   "equation_id": "GBPUSD-12-N1R006E08",
+   "symbol": "GBPUSD",
+   "myanmar_month": 12,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S181",
+   "equation_id": "NZDCAD-01-R41E7",
+   "symbol": "NZDCAD",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S182",
+   "equation_id": "NZDCAD-02-N1R013E12",
+   "symbol": "NZDCAD",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S183",
+   "equation_id": "NZDCAD-03-N1R007E09",
+   "symbol": "NZDCAD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S184",
+   "equation_id": "NZDCAD-04-R57E4",
+   "symbol": "NZDCAD",
+   "myanmar_month": 4,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S185",
+   "equation_id": "NZDCAD-05-N1R096E10",
+   "symbol": "NZDCAD",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S186",
+   "equation_id": "NZDCAD-06-R16E5",
+   "symbol": "NZDCAD",
+   "myanmar_month": 6,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S187",
+   "equation_id": "NZDCAD-07-N1R025E10",
+   "symbol": "NZDCAD",
+   "myanmar_month": 7,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S188",
+   "equation_id": "NZDCAD-08-N1R085E12",
+   "symbol": "NZDCAD",
+   "myanmar_month": 8,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S189",
+   "equation_id": "NZDCAD-09-N1R140E07",
+   "symbol": "NZDCAD",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S190",
+   "equation_id": "NZDCAD-10-R13E4",
+   "symbol": "NZDCAD",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S191",
+   "equation_id": "NZDCAD-11-R16E4",
+   "symbol": "NZDCAD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S192",
+   "equation_id": "NZDCAD-12-R30E3",
+   "symbol": "NZDCAD",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S193",
+   "equation_id": "NZDUSD-01-R42E4",
+   "symbol": "NZDUSD",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S194",
+   "equation_id": "NZDUSD-02-N1R136E10",
+   "symbol": "NZDUSD",
+   "myanmar_month": 2,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S195",
+   "equation_id": "NZDUSD-03-N1R038E03",
+   "symbol": "NZDUSD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S196",
+   "equation_id": "NZDUSD-04-N1R067E05",
+   "symbol": "NZDUSD",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S197",
+   "equation_id": "NZDUSD-05-N1R116E10",
+   "symbol": "NZDUSD",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S198",
+   "equation_id": "NZDUSD-06-N1R088E12",
+   "symbol": "NZDUSD",
+   "myanmar_month": 6,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S199",
+   "equation_id": "NZDUSD-07-N1R087E08",
+   "symbol": "NZDUSD",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S200",
+   "equation_id": "NZDUSD-08-N1R032E03",
+   "symbol": "NZDUSD",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S201",
+   "equation_id": "NZDUSD-09-N1R132E12",
+   "symbol": "NZDUSD",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S202",
+   "equation_id": "NZDUSD-10-R37E7",
+   "symbol": "NZDUSD",
+   "myanmar_month": 10,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S203",
+   "equation_id": "NZDUSD-11-N1R016E03",
+   "symbol": "NZDUSD",
+   "myanmar_month": 11,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S204",
+   "equation_id": "NZDUSD-12-N1R086E05",
+   "symbol": "NZDUSD",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S205",
+   "equation_id": "USDCAD-01-N1R065E10",
+   "symbol": "USDCAD",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S206",
+   "equation_id": "USDCAD-02-N1R067E02",
+   "symbol": "USDCAD",
+   "myanmar_month": 2,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S207",
+   "equation_id": "USDCAD-03-R22E8",
+   "symbol": "USDCAD",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S208",
+   "equation_id": "USDCAD-04-R27E8",
+   "symbol": "USDCAD",
+   "myanmar_month": 4,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S209",
+   "equation_id": "USDCAD-05-N1R004E11",
+   "symbol": "USDCAD",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S210",
+   "equation_id": "USDCAD-06-N1R069E08",
+   "symbol": "USDCAD",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S211",
+   "equation_id": "USDCAD-07-N1R065E06",
+   "symbol": "USDCAD",
+   "myanmar_month": 7,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S212",
+   "equation_id": "USDCAD-08-N1R123E11",
+   "symbol": "USDCAD",
+   "myanmar_month": 8,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S213",
+   "equation_id": "USDCAD-09-R55E7",
+   "symbol": "USDCAD",
+   "myanmar_month": 9,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S214",
+   "equation_id": "USDCAD-10-N1R008E12",
+   "symbol": "USDCAD",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S215",
+   "equation_id": "USDCAD-11-N1R100E01",
+   "symbol": "USDCAD",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S216",
+   "equation_id": "USDCAD-12-N1R014E02",
+   "symbol": "USDCAD",
+   "myanmar_month": 12,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S217",
+   "equation_id": "USDCHF-01-N1R086E04",
+   "symbol": "USDCHF",
+   "myanmar_month": 1,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S218",
+   "equation_id": "USDCHF-02-R27E8",
+   "symbol": "USDCHF",
+   "myanmar_month": 2,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S219",
+   "equation_id": "USDCHF-03-N1R016E11",
+   "symbol": "USDCHF",
+   "myanmar_month": 3,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S220",
+   "equation_id": "USDCHF-04-N1R079E03",
+   "symbol": "USDCHF",
+   "myanmar_month": 4,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S221",
+   "equation_id": "USDCHF-05-N1R111E08",
+   "symbol": "USDCHF",
+   "myanmar_month": 5,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S222",
+   "equation_id": "USDCHF-06-N1R136E05",
+   "symbol": "USDCHF",
+   "myanmar_month": 6,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S223",
+   "equation_id": "USDCHF-07-N1R131E12",
+   "symbol": "USDCHF",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S224",
+   "equation_id": "USDCHF-08-N1R121E08",
+   "symbol": "USDCHF",
+   "myanmar_month": 8,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S225",
+   "equation_id": "USDCHF-09-N1R102E09",
+   "symbol": "USDCHF",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S226",
+   "equation_id": "USDCHF-10-R56E7",
+   "symbol": "USDCHF",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S227",
+   "equation_id": "USDCHF-11-N1R121E11",
+   "symbol": "USDCHF",
+   "myanmar_month": 11,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S228",
+   "equation_id": "USDCHF-12-N1R120E10",
+   "symbol": "USDCHF",
+   "myanmar_month": 12,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": false,
+    "reason": "REJECT_PAIR_NOT_IN_SCENARIO"
+   },
+   "status": "REJECTED"
+  },
+  {
+   "s_column": "S229",
+   "equation_id": "USDJPY-01-N1R050E01",
+   "symbol": "USDJPY",
+   "myanmar_month": 1,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S230",
+   "equation_id": "USDJPY-02-R15E5",
+   "symbol": "USDJPY",
+   "myanmar_month": 2,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S231",
+   "equation_id": "USDJPY-03-N1R118E11",
+   "symbol": "USDJPY",
+   "myanmar_month": 3,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S232",
+   "equation_id": "USDJPY-04-N1R033E05",
+   "symbol": "USDJPY",
+   "myanmar_month": 4,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S233",
+   "equation_id": "USDJPY-05-N1R033E08",
+   "symbol": "USDJPY",
+   "myanmar_month": 5,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S234",
+   "equation_id": "USDJPY-06-R50E8",
+   "symbol": "USDJPY",
+   "myanmar_month": 6,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S235",
+   "equation_id": "USDJPY-07-R16E8",
+   "symbol": "USDJPY",
+   "myanmar_month": 7,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S236",
+   "equation_id": "USDJPY-08-N1R016E12",
+   "symbol": "USDJPY",
+   "myanmar_month": 8,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S237",
+   "equation_id": "USDJPY-09-R60E8",
+   "symbol": "USDJPY",
+   "myanmar_month": 9,
+   "direction": "SELL",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S238",
+   "equation_id": "USDJPY-10-R54E8",
+   "symbol": "USDJPY",
+   "myanmar_month": 10,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S239",
+   "equation_id": "USDJPY-11-R35E8",
+   "symbol": "USDJPY",
+   "myanmar_month": 11,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  },
+  {
+   "s_column": "S240",
+   "equation_id": "USDJPY-12-N1R030E11",
+   "symbol": "USDJPY",
+   "myanmar_month": 12,
+   "direction": "BUY",
+   "pooled_exits": {
+    "assigned": true,
+    "config": {
+     "tp_pips": 50.0,
+     "sl_pips": 20.0,
+     "basis": "FIXED_PIPS"
+    }
+   },
+   "status": "DEVELOPMENT_CANDIDATE"
+  }
+ ],
+ "rebuilt_family_disabled": [
+  {
+   "id": "RB01",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB02",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB03",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB04",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB05",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB06",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB07",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB08",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB09",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB10",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB11",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB12",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB13",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB14",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB15",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB16",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB17",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB18",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB19",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB20",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB21",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB22",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB23",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB24",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB25",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB26",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  },
+  {
+   "id": "RB27",
+   "rule_version": "rebuilt-entry-exit-v1",
+   "status": "REJECTED",
+   "enabled": false,
+   "reason": "FAILED training qualification: all 27 rebuilt entry/exit combinations failed the training screen and the five past-only walk-forward selection folds admitted no candidate. DISABLED \u2014 diagnostics only."
+  }
+ ],
+ "readiness_flags": [
+  "data_quality_passed",
+  "causal_replay_passed",
+  "development_screen_passed",
+  "fresh_evaluation_passed",
+  "execution_model_verified",
+  "paper_forward_passed",
+  "live_approved"
+ ],
+ "status_definitions": {
+  "REJECTED": "Training, cost, stability or validation screen fails.",
+  "INSUFFICIENT_SAMPLE": "Too little evidence for a meaningful conclusion.",
+  "DEVELOPMENT_CANDIDATE": "Passed a limited screen on development data.",
+  "PAPER_PENDING": "Locked version collecting new forward evidence.",
+  "FRESH_VALIDATED": "Passed the predeclared evaluation on genuinely new data."
+ },
+ "notes": "A symbol-level pooled screen is not a statistical approval of its 12 monthly strategies. live_approved stays FALSE everywhere. The pooled configuration passes ONLY development_screen_passed: its CI includes losses and its 5-pip cost result is negative."
+}

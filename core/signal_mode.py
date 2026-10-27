@@ -123,12 +123,12 @@ SYSTEM_BEST_N = {
 }
 
 # Months that carry a second-priority system in the combined
-# layer. September: cycle287 (2026-10-25 waiver). November and
-# December (user order 2026-10-26): the OLD incumbent systems
-# (cycle93 / cycle94) are second priority behind the promoted
-# BRIEF21 C20a improved systems; December's cycle274 remains a
-# selectable standalone system but is no longer December's
-# combined fallback. January (user order 2026-10-26): the OLD
+# layer. September: cycle287 (2026-10-25 waiver). November
+# (user order 2026-10-26): the OLD incumbent system cycle93 is
+# second priority behind the promoted BRIEF21 C20a improved
+# system. December (user order 2026-10-27, 12-system rebuild):
+# cycle274 is December's combined fallback behind cycle94b
+# (replacing cycle94). January (user order 2026-10-26): the OLD
 # C60-03 (cycle60) is second priority behind the promoted
 # BRIEF23 C20_STACK improved system (cycle60b).
 MONTH_SECOND_BEST = {
@@ -136,7 +136,9 @@ MONTH_SECOND_BEST = {
     4: SYSTEM_CYCLE87,   # April -- old C87-24 behind C20a
     9: SYSTEM_CYCLE287,   # September
     11: SYSTEM_CYCLE93,   # November -- old C93-24 behind C20a
-    12: SYSTEM_CYCLE94,   # December -- old C94-23 behind C20a
+    12: SYSTEM_CYCLE274,   # December -- C274 stack behind C20a
+    # (12-system rebuild 2026-10-27: user confirmed cycle274 is
+    # December's kept second best, replacing cycle94 as fallback)
 }
 
 
@@ -333,9 +335,9 @@ def describe_active() -> str:
                 "n650 / net +4479.75 / leftover 66.20%; audit "
                 "n157 / net +1135.57 / leftover 75.39% (BRIEF21 "
                 "validated HUGE; app replay EXACT 2026-10-26). "
-                "The old C94-23 (cycle94) is December's second "
-                "priority in the combined layer; cycle274 stays "
-                "selectable standalone")
+                "December's second priority in the combined "
+                "layer is the C274 stack (cycle274), behind this "
+                "BEST system (12-system rebuild 2026-10-27)")
     if _ACTIVE == SYSTEM_CYCLE87B:
         return ("cycle87b (BRIEF21 C20a IMPROVED) -- April "
                 "BEST system since 2026-10-26: C87-24 + C12 "
@@ -539,8 +541,8 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
 # As of 2026-10-26 the combined layer covers: September (best
 # cycle91, second cycle287, 2026-10-25 waiver), November (best
 # cycle93b BRIEF21 C20a, second cycle93), December (best cycle94b
-# BRIEF21 C20a, second cycle94; cycle274 remains selectable
-# standalone), January (best cycle60b BRIEF23 C20_STACK, second
+# BRIEF21 C20a, second cycle274 since the 2026-10-27 12-system
+# rebuild), January (best cycle60b BRIEF23 C20_STACK, second
 # cycle60) and April (best cycle87b BRIEF21 C20a, second
 # cycle87). October's internal C155 dual-pick is untouched.
 # ============================================================================

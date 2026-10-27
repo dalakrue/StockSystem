@@ -1,4 +1,4 @@
-"""Authoritative fixed 29-symbol universe for StratLit.
+"""Authoritative fixed 28-symbol universe for StratLit.
 
 All multi-symbol loading, Super Quick calculations, and Finder history are
 restricted to this list.  Keeping the boundary in one small module prevents
@@ -8,12 +8,15 @@ requests or historical results.
 2026-10-27 (user order, 29-symbol build): the universe grew from the
 original 20 FX pairs to 29 symbols -- the 8 additional FX crosses the NEW8
 research programme trades (CADCHF, CADJPY, GBPAUD, GBPCAD, GBPCHF,
-GBPNZD, NZDCHF, NZDJPY) plus DXY, the Twelve Data U.S. Dollar Index
-(indices symbol "DXY", no slash form).  DXY is loaded like every other
-symbol; if the connected Twelve Data plan refuses it, the symbol simply
-shows as not loaded and the other 28 are unaffected.  The FIRST/SECOND
-selector groups keep their original 10 + 10 membership; the 9 new
-symbols form the THIRD group.
+GBPNZD, NZDCHF, NZDJPY) plus DXY, the Twelve Data U.S. Dollar Index.
+2026-10-27 (user order, two-phase update Phase 2): DXY is REMOVED from
+the universe entirely -- the app reads exactly the 28 FX symbols.  No
+shipped system trades the dollar index (zero dollar-trading equations,
+enumerated in work_29load/UPDATE_20261027.md); three installed designs
+still consume dollar data as an input FEATURE (named exceptions, left
+as-is per the update record).  The FIRST/SECOND selector groups keep
+their original 10 + 10 membership; the 8 NEW8 crosses form the THIRD
+group.
 """
 from __future__ import annotations
 
@@ -26,11 +29,11 @@ TARGET_FX_SYMBOLS: tuple[str, ...] = (
     "EURJPY", "EURNZD", "EURUSD", "GBPJPY", "GBPUSD",
     "NZDCAD", "NZDUSD", "USDCAD", "USDCHF", "USDJPY",
     "CADCHF", "CADJPY", "GBPAUD", "GBPCAD", "GBPCHF",
-    "GBPNZD", "NZDCHF", "NZDJPY", "DXY",
+    "GBPNZD", "NZDCHF", "NZDJPY",
 )
 FIRST_TARGET_10: tuple[str, ...] = TARGET_FX_SYMBOLS[:10]
 SECOND_TARGET_10: tuple[str, ...] = TARGET_FX_SYMBOLS[10:20]
-THIRD_TARGET_9: tuple[str, ...] = TARGET_FX_SYMBOLS[20:]
+THIRD_TARGET_8: tuple[str, ...] = TARGET_FX_SYMBOLS[20:]
 TARGET_FX_SET = frozenset(TARGET_FX_SYMBOLS)
 
 
@@ -57,11 +60,11 @@ def fixed_groups() -> dict[str, list[str]]:
     return {
         "FIRST": list(FIRST_TARGET_10),
         "SECOND": list(SECOND_TARGET_10),
-        "THIRD": list(THIRD_TARGET_9),
+        "THIRD": list(THIRD_TARGET_8),
     }
 
 
 __all__ = [
-    "TARGET_FX_SYMBOLS", "FIRST_TARGET_10", "SECOND_TARGET_10", "THIRD_TARGET_9", "TARGET_FX_SET",
+    "TARGET_FX_SYMBOLS", "FIRST_TARGET_10", "SECOND_TARGET_10", "THIRD_TARGET_8", "TARGET_FX_SET",
     "normalize_fx_symbol", "filter_target_symbols", "fixed_groups",
 ]

@@ -2954,18 +2954,17 @@ _CYCLE22_PANEL_SYMBOLS = (
     "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD", "GBPJPY",
     "GBPUSD", "NZDCAD", "NZDUSD", "USDCAD", "USDCHF", "USDJPY",
     # 2026-10-27 (29-symbol build, user order): the 8 NEW8 FX crosses
-    # the installed layers trade, plus DXY (Twelve Data dollar index).
+    # the installed layers trade. 2026-10-27 (two-phase update,
+    # Phase 2, user order): DXY removed -- panels read exactly the
+    # 28 FX symbols.
     "CADCHF", "CADJPY", "GBPAUD", "GBPCAD", "GBPCHF",
-    "GBPNZD", "NZDCHF", "NZDJPY", "DXY",
+    "GBPNZD", "NZDCHF", "NZDJPY",
 )
 
-# The 28 FX symbols a panel needs for a complete evaluation.  DXY is
-# fetched with the panel set (the xdx context columns and the user's
-# own later work read it) but is NOT required: if the connected
-# Twelve Data plan refuses DXY it simply stays unloaded and no panel
-# is marked incomplete for it (user order 2026-10-27).
-_CYCLE22_REQUIRED_SYMBOLS = tuple(
-    sym for sym in _CYCLE22_PANEL_SYMBOLS if sym != "DXY")
+# The 28 FX symbols a panel needs for a complete evaluation --
+# the full panel set (Phase 2, 2026-10-27: completeness is
+# judged on exactly these 28).
+_CYCLE22_REQUIRED_SYMBOLS = tuple(_CYCLE22_PANEL_SYMBOLS)
 _C22_N_FETCH = len(_CYCLE22_PANEL_SYMBOLS)
 _C22_N_REQ = len(_CYCLE22_REQUIRED_SYMBOLS)
 
@@ -5246,7 +5245,7 @@ def _evaluate_c85_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle85_best import evaluate_cycle85_signals, select_cycle85_entries
+    from core.cycle85b_best import evaluate_cycle85b_signals as evaluate_cycle85_signals, select_cycle85b_entries as select_cycle85_entries
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         day = (_pd.Timestamp(day).normalize() if day is not None
@@ -5281,7 +5280,9 @@ def _evaluate_c85_window(state, hour_utc, day=None):
         try:
             if diag.get("evaluation_error"):
                 raise ValueError("evaluation_incomplete")
-            entries = select_cycle85_entries(sig, open_symbols=())
+            entries = select_cycle85_entries(sig, open_symbols=(),
+                                             live_count=0,
+                                             check_time_utc=check_label)
         except Exception as exc:
             diag = dict(diag or {})
             diag["evaluation_error"] = type(exc).__name__
@@ -5368,7 +5369,7 @@ def _render_cycle85_signals_table(st, state):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle85_best import CYCLE85_CHECK_HOURS as _C85_CHECK_HOURS
+    from core.cycle85b_best import CYCLE85B_CHECK_HOURS as _C85_CHECK_HOURS
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(_C85_SIG_STATE_KEY)
@@ -5569,7 +5570,7 @@ def _evaluate_c86_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle86_best import evaluate_cycle86_signals, select_cycle86_entries
+    from core.cycle86b_best import evaluate_cycle86b_signals as evaluate_cycle86_signals, select_cycle86b_entries as select_cycle86_entries
     from core.cycle86_best import fetch_cycle86_m15_frames as _fetch_c86_m15
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
@@ -5693,7 +5694,7 @@ def _render_cycle86_signals_table(st, state):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle86_best import CYCLE86_CHECK_HOURS as _C86_CHECK_HOURS
+    from core.cycle86b_best import CYCLE86B_CHECK_HOURS as _C86_CHECK_HOURS
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(_C86_SIG_STATE_KEY)
@@ -10145,36 +10146,6 @@ def _auto_refresh_field3(st: Any, interval_ms: int = 30_000) -> None:
 # _MONTH_PANEL_ORDER (the original 12 positions never shift).
 # ============================================================================
 
-COMBINED_RULE_TEXT = (
-    "29-symbol build (2026-10-27): exactly 12 month systems, one "
-    "per month, in month order, over a 29-symbol universe (the 20 "
-    "original pairs + CADCHF, CADJPY, GBPAUD, GBPCAD, GBPCHF, "
-    "GBPNZD, NZDCHF, NZDJPY + DXY). At every check time, each "
-    "month's BEST cycle runs first and has priority; the "
-    "SECOND-BEST cycle is evaluated and shown ONLY when the Best "
-    "cycle has NO entry at that check time. Map: January -- 1st "
-    "Cycle 60B (BRIEF23 C20_STACK), 2nd old Cycle 60 (C60-03). "
-    "February -- Cycle 85 (C85-23) best-only (NEW8 layer HELD BY "
-    "USER ORDER -- it uses the Dukascopy dollar index; DXY is "
-    "loaded as the 29th symbol for the user's own fix). March -- "
-    "Cycle 86 (C86-24) best-only. April -- 1st Cycle 87B (BRIEF21 "
-    "C20a), 2nd old Cycle 87 (C87-24) (NEW8 layer likewise HELD "
-    "BY USER ORDER). May -- 1st Cycle 88N (C88-03 + NEW8 E07), "
-    "2nd old Cycle 88 (C88-03). June -- 1st Cycle 89N (C89-21 + "
-    "NEW8 P07), 2nd old Cycle 89 (C89-21). July -- Cycle 78 "
-    "(C78-34) best-only. August -- 1st Cycle 67 (C67-04), 2nd "
-    "Cycle 67P (NEW8 P07). September -- 1st Cycle 91N (C91-15 + "
-    "NEW8 D26 + P07), 2nd Cycle 287. October -- 1st Cycle 92 "
-    "with the C155 dual-pick, 2nd Cycle 92E (NEW8 E07). "
-    "November -- 1st Cycle 93N (Cycle 93B + NEW8 Plan B-4 "
-    "partner C16), 2nd Cycle 93B (BRIEF21 C20a). December -- 1st "
-    "Cycle 94B (BRIEF21 C20a), 2nd Cycle 274 (C274 stack). Every "
-    "NEW8 layer above passed exact replay against its research "
-    "ledger before install (build record 2026-10-27). February "
-    "H485 and July C407 remain research-only (blocked with proof "
-    "2026-10-25). Position sizing: Best N divided by 3 stays "
-    "active for every month."
-)
 _COMBINED_CFG = {
     1: {
         "sysid": "cycle60bcombined",
@@ -10225,14 +10196,14 @@ _COMBINED_CFG = {
         "sheet": "SepCombined",
     },
     11: {
-        "sysid": "cycle93ncombined",
+        "sysid": "cycle93pcombined",
         "month_name": "November",
-        "best_id": "cycle93n",
-        "best_label": "Cycle 93N (93B + NEW8 B-4 partner IMPROVED)",
-        "second_id": "cycle93b",
-        "second_label": "Cycle 93B (BRIEF21 C20a IMPROVED)",
-        "hours_mod": "core.cycle93n_best",
-        "hours_attr": "CYCLE93N_CHECK_HOURS",
+        "best_id": "cycle93p",
+        "best_label": "Cycle 93P (93N + NEW8 Plan B-7 C02 IMPROVED)",
+        "second_id": "cycle93n",
+        "second_label": "Cycle 93N (93B + NEW8 B-4 partner IMPROVED)",
+        "hours_mod": "core.cycle93p_best",
+        "hours_attr": "CYCLE93P_CHECK_HOURS",
         "state_key": "combined_nov_signals_latest_v1",
         "age_key": "combined_nov_candle_age_txt",
         "diag_key": "combined_nov_signals_diag_v1",
@@ -10511,7 +10482,6 @@ def _render_combined_signals_table(st, state, month):
 
         st.markdown(f"### \U0001F3AF {cfg['month_name']} COMBINED signals \u2014 "
                     f"Best first, Second-Best only when Best is silent")
-        st.info(COMBINED_RULE_TEXT)
         win_ts = None
         if payload is not None:
             try:
@@ -10714,8 +10684,8 @@ _MONTH_PANEL_ORDER = [
     # (core.cycle<nn>_best / CYCLE<NN>_CHECK_HOURS) used by the
     # check-time reminders.
     ("January", "cycle60bcombined", "60b", "C60B+C60-03"),
-    ("February", "cycle85", 85, "C85-23"),
-    ("March", "cycle86", 86, "C86-24"),
+    ("February", "cycle85b", "85b", "C85B+C19"),
+    ("March", "cycle86b", "86b", "C86B+C01"),
     ("April", "cycle87bcombined", "87b", "C87B+C87-24"),
     ("May", "cycle88ncombined", "88n", "C88N+C88-03"),
     ("June", "cycle89ncombined", "89n", "C89N+C89-21"),
@@ -10723,21 +10693,21 @@ _MONTH_PANEL_ORDER = [
     ("August", "cycle67combined", 67, "C67-04+C67P"),
     ("September", "cycle91combined", "91n", "C91N+C287"),
     ("October", "cycle92combined", 92, "C92-24+C92E"),
-    ("November", "cycle93ncombined", "93n", "C93N+C93B"),
+    ("November", "cycle93pcombined", "93p", "C93P+C93N"),
     ("December", "cycle94combined", "94b", "C94B+C274"),
 ]
 
 _SIGNAL_PANELS = {
-    "cycle85": {"render": _render_cycle85_signals_table,
+    "cycle85b": {"render": _render_cycle85_signals_table,
                 "download": render_cycle85_download_buttons,
                 "state_key": _C85_SIG_STATE_KEY, "age_key": _C85_SIG_AGE_KEY,
                 "diag_key": _C85_SIG_DIAG_KEY, "fail_key": _C85_SIG_FAIL_KEY,
-                "label": "Cycle 85 (C85-23) \u2014 February system"},
-    "cycle86": {"render": _render_cycle86_signals_table,
+                "label": "Cycle 85B (C85-23 + BRIEF22 C19) \u2014 February system"},
+    "cycle86b": {"render": _render_cycle86_signals_table,
                 "download": render_cycle86_download_buttons,
                 "state_key": _C86_SIG_STATE_KEY, "age_key": _C86_SIG_AGE_KEY,
                 "diag_key": _C86_SIG_DIAG_KEY, "fail_key": _C86_SIG_FAIL_KEY,
-                "label": "Cycle 86 (C86-24) \u2014 March system"},
+                "label": "Cycle 86B (C86-24 + BRIEF22 C01) \u2014 March system"},
     "cycle88ncombined": {"render": _render_may_combined_signals_table,
                 "download": render_may_combined_download_buttons,
                 "state_key": _COMBINED_CFG[5]["state_key"], "age_key": _COMBINED_CFG[5]["age_key"],
@@ -10773,7 +10743,7 @@ _SIGNAL_PANELS = {
                 "state_key": _COMBINED_CFG[12]["state_key"], "age_key": _COMBINED_CFG[12]["age_key"],
                 "diag_key": _COMBINED_CFG[12]["diag_key"], "fail_key": _COMBINED_CFG[12]["fail_key"],
                 "label": "December COMBINED (Best first, Second-Best only when Best is silent)"},
-    "cycle93ncombined": {"render": _render_nov_combined_signals_table,
+    "cycle93pcombined": {"render": _render_nov_combined_signals_table,
                 "download": render_nov_combined_download_buttons,
                 "state_key": _COMBINED_CFG[11]["state_key"], "age_key": _COMBINED_CFG[11]["age_key"],
                 "diag_key": _COMBINED_CFG[11]["diag_key"], "fail_key": _COMBINED_CFG[11]["fail_key"],
@@ -10864,12 +10834,6 @@ def render_multisymbol_regime_summary(
             _active = "cycle92"
     _panel = _SIGNAL_PANELS.get(_active) or _SIGNAL_PANELS["cycle92"]
     _render_cycle12_check_banner(st, state.get(_panel["age_key"]))
-    # Combined Best + Second-Best rule (2026-10-26): shown at the top
-    # of the signal panels area for every panel.
-    try:
-        st.info(COMBINED_RULE_TEXT)
-    except Exception:
-        pass
     _render_symbols_loaded_box(st, context)
 
     # Refresh button at the TOP of the ranking/signals table: forces a

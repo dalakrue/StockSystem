@@ -40,9 +40,9 @@ SUPPORTED_SYMBOLS: tuple[str, ...] = (
     "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD",
     "GBPJPY", "GBPUSD", "NZDCAD", "NZDUSD", "USDCAD", "USDCHF", "USDJPY",
     # 2026-10-27 (29-symbol build, user order): the 8 NEW8 FX crosses
-    # plus DXY (Twelve Data dollar index) load through the same path.
+    # load through the same path.
     "CADCHF", "CADJPY", "GBPAUD", "GBPCAD", "GBPCHF",
-    "GBPNZD", "NZDCHF", "NZDJPY", "DXY",
+    "GBPNZD", "NZDCHF", "NZDJPY",
 )
 
 # Canonical names remain provider-neutral.  Provider aliases are resolved only

@@ -37,6 +37,104 @@ from core.new8_walk import (MAX_HOLD, DesignWalk, ohlc_from_frame,
 
 DOLLAR_KEYS = ("DXY", "DOLLARIDX")
 
+# Plan B-7 cross-symbol baskets (build_features_planb7
+# verbatim): each symbol's basket = the pairs sharing its
+# base currency; the USD basket is signed (USD as quote
+# currency counts negative).
+B7_BASKETS = {
+    'EUR': ['EURUSD', 'EURGBP', 'EURJPY', 'EURCHF', 'EURCAD',
+            'EURAUD', 'EURNZD'],
+    'GBP': ['GBPUSD', 'GBPJPY', 'GBPCHF', 'GBPCAD', 'GBPAUD',
+            'GBPNZD'],
+    'USD': ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD', 'USDJPY',
+            'USDCHF', 'USDCAD'],
+    'JPY': ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'CHFJPY',
+            'CADJPY', 'NZDJPY'],
+    'CHF': ['USDCHF', 'EURCHF', 'GBPCHF', 'AUDCHF', 'CADCHF',
+            'NZDCHF'],
+    'AUD': ['AUDUSD', 'AUDJPY', 'AUDCHF', 'AUDCAD', 'AUDNZD',
+            'EURAUD', 'GBPAUD'],
+    'NZD': ['NZDUSD', 'NZDJPY', 'NZDCHF', 'NZDCAD', 'EURNZD',
+            'GBPNZD', 'AUDNZD'],
+    'CAD': ['USDCAD', 'EURCAD', 'GBPCAD', 'AUDCAD', 'NZDCAD',
+            'CADJPY', 'CADCHF'],
+}
+B7_USD_SIGNS = {'EURUSD': -1.0, 'GBPUSD': -1.0, 'AUDUSD': -1.0,
+                'NZDUSD': -1.0, 'USDJPY': 1.0, 'USDCHF': 1.0,
+                'USDCAD': 1.0}
+
+
+def _b7_basket_of(sym):
+    if sym in DOLLAR_KEYS or sym == 'DOLLARIDX':
+        return 'USD'
+    return sym[:3]
+
+
+def b7_context(frames):
+    """Cross-symbol context for the Plan B-7 feature block
+    (build_features_planb7.main verbatim): basket momentum /
+    signed-RSI series per currency basket and the dollar
+    momentum / deviation / RSI series, all on the EURUSD
+    frame index. Returns {symbol: {'bm','br','dm','dd','dr'}}
+    with Series on that reference index (the feature builder
+    reindexes to each symbol's own index). Base features are
+    computed for every frame present; missing members simply
+    drop out of the basket means (research semantics)."""
+    base = {}
+    for sym, h1 in frames.items():
+        if h1 is None or len(h1) == 0:
+            continue
+        try:
+            bf = build_symbol_features(sym, h1, ())
+        except Exception:
+            continue
+        if 'ema_dev' not in bf:
+            # The research frames carry ema_dev from the r4
+            # block: (Close - EMA200) / atr14, verbatim.
+            cl = bf['Close']
+            bf['ema_dev'] = (cl - cl.ewm(
+                span=200, adjust=False).mean()) / bf['atr14']
+        base[sym] = bf
+    if 'EURUSD' not in base:
+        return {}
+    ref_idx = base['EURUSD'].index
+
+    def _col(sym, col):
+        s = base[sym][col]
+        return pd.Series(s.to_numpy(), index=s.index)
+
+    basket_mom, basket_rsi = {}, {}
+    for code, members in B7_BASKETS.items():
+        moms, rsis = {}, {}
+        for m in members:
+            if m not in base:
+                continue
+            sgn = B7_USD_SIGNS.get(m, 1.0) if code == 'USD' \
+                else 1.0
+            moms[m] = _col(m, 'mom24').reindex(ref_idx) * sgn
+            rsis[m] = ((_col(m, 'rsi14') - 50.0) / 50.0) \
+                .reindex(ref_idx) * sgn
+        basket_mom[code] = pd.DataFrame(moms).mean(axis=1) \
+            if moms else pd.Series(np.nan, index=ref_idx)
+        basket_rsi[code] = pd.DataFrame(rsis).mean(axis=1) \
+            if rsis else pd.Series(np.nan, index=ref_idx)
+    dx_key = next((k for k in DOLLAR_KEYS if k in base), None)
+    if dx_key is not None:
+        d_mom = _col(dx_key, 'mom24').reindex(ref_idx)
+        d_dev = _col(dx_key, 'ema_dev').reindex(ref_idx)
+        d_rsi = ((_col(dx_key, 'rsi14') - 50.0) / 50.0) \
+            .reindex(ref_idx)
+    else:
+        d_mom = d_dev = d_rsi = pd.Series(np.nan, index=ref_idx)
+    out = {}
+    for sym in frames:
+        b = _b7_basket_of(sym)
+        if b not in basket_mom:
+            continue
+        out[sym] = {'bm': basket_mom[b], 'br': basket_rsi[b],
+                    'dm': d_mom, 'dd': d_dev, 'dr': d_rsi}
+    return out
+
 
 def _norm_frame(df):
     """App frame -> Datetime-indexed naive-UTC frame."""
@@ -91,11 +189,14 @@ class CandidateContext:
             groups.update(d["groups"])
             syms.update(e["symbol"] for e in d["equations"])
         self.groups = tuple(g for g in
-                            ("r4", "planb", "b2cf", "b3", "b4")
+                            ("r4", "planb", "b2cf", "b3", "b4",
+                             "b5", "b6v", "b7")
                             if g in groups)
         self.symbols = sorted(syms)
         self._dx_mom = self._build_dx_mom() if "r4" in groups \
             else None
+        self._b7 = b7_context(self.frames) if "b7" in groups \
+            else {}
         self.feats = {}
         self.ohlc = {}
         for sym in self.symbols:
@@ -122,7 +223,7 @@ class CandidateContext:
         m30 = m30_from_m15(m15) if m15 is not None else None
         self.feats[sym] = build_symbol_features(
             sym, h1, self.groups, m15=m15, m30=m30,
-            dx_mom=self._dx_mom)
+            dx_mom=self._dx_mom, b7ctx=self._b7.get(sym))
         fr, _ = frame_to_research(h1)
         self.ohlc[sym] = ohlc_from_frame(fr)
 

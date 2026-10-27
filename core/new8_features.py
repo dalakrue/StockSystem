@@ -214,6 +214,7 @@ def add_features_base(df):
     ag = d.clip(lower=0).ewm(alpha=1 / 14, min_periods=14, adjust=False).mean()
     al = (-d.clip(upper=0)).ewm(alpha=1 / 14, min_periods=14, adjust=False).mean()
     rsi = 100.0 - 100.0 / (1.0 + ag / al.replace(0.0, np.nan))
+    g['rsi14'] = rsi
     k = _stoch(rsi, 14).rolling(3, min_periods=3).mean()
     dd = k.rolling(3, min_periods=3).mean()
     g['srsi_k'] = k
@@ -745,6 +746,110 @@ def add_b4_columns(f):
     return f
 
 
+def add_b5_columns(f):
+    """build_features_planb5 verbatim for the one column the
+    Plan B-7 design chain needs: atr_r = atr14 / EWM100(TR)."""
+    close, high, low = f['Close'], f['High'], f['Low']
+    atr = f['atr14']
+    tr = pd.concat([high - low, (high - close.shift(1)).abs(),
+                    (low - close.shift(1)).abs()],
+                   axis=1).max(axis=1)
+    atr100 = tr.ewm(span=100, adjust=False).mean()
+    f['atr_r'] = atr / atr100.replace(0.0, np.nan)
+    return f
+
+
+def add_b6v_columns(f, sym, m15):
+    """build_features_planb6v.build_one verbatim: M15 tick-
+    volume ratio volm_r (last M15 bar at or before the H1
+    signal bar / rolling 96-bar median M15 Volume, causal
+    asof) and volm_z (z of log(volm_r) over trailing 500 H1
+    bars). DOLLARIDX: NaN by the programme convention."""
+    if is_dollar(sym) or m15 is None or 'Volume' not in m15:
+        f['volm_r'] = np.nan
+        f['volm_z'] = np.nan
+        return f
+    m = m15.sort_index()
+    vol = m['Volume'].astype(float)
+    med = vol.rolling(96).median().replace(0.0, np.nan)
+    r = (vol / med).dropna()
+    idx = f.index.to_numpy()
+    pos = np.searchsorted(r.index.to_numpy(), idx,
+                          side='right') - 1
+    rv = np.where(pos >= 0,
+                  r.to_numpy()[np.maximum(pos, 0)], np.nan)
+    rv = np.where(pos >= 0, rv, np.nan)
+    f['volm_r'] = rv
+    lr = np.log(np.where(rv > 0, rv, np.nan))
+    s = pd.Series(lr, index=f.index)
+    mu = s.rolling(500).mean()
+    sd = s.rolling(500).std().replace(0.0, np.nan)
+    f['volm_z'] = ((s - mu) / sd).to_numpy()
+    return f
+
+
+def add_b7_columns(f, sym, ctx7):
+    """build_features_planb7.build_one verbatim, given the
+    cross-symbol context (ctx7: bm/br basket momentum / RSI
+    and dm/dd/dr dollar momentum / deviation / RSI Series
+    aligned to f.index, prepared by
+    core.new8_candidate.b7_context; None -> all NaN).
+    nx_vol / nx_cf are the Plan B-6 composites (build_
+    features_planb6 verbatim) from columns already present."""
+    if 'nx_vol' not in f:
+        f['nx_vol'] = f['vol_z'] + f['atr_r']
+    if 'nx_cf' not in f:
+        # cf_stack (Plan B block) was never ported to the app
+        # chain -- no installed design reads it; nx_cf (and
+        # b7_nest2 below) stay NaN unless all three stacks
+        # are present. The C02 design does not use them.
+        if all(c in f for c in ('cf_stack', 'cf2_stack',
+                                'cf3_stack')):
+            f['nx_cf'] = f['cf_stack'] + f['cf2_stack'] \
+                + f['cf3_stack']
+        else:
+            f['nx_cf'] = np.nan
+    nan = pd.Series(np.nan, index=f.index)
+    if ctx7 is None:
+        bm = br = dm = dd = dr = nan
+    else:
+        bm = ctx7['bm'].reindex(f.index)
+        br = ctx7['br'].reindex(f.index)
+        dm = ctx7['dm'].reindex(f.index)
+        dd = ctx7['dd'].reindex(f.index)
+        dr = ctx7['dr'].reindex(f.index)
+    f['vx_h1m15'] = f['vol_z'] + f['volm_z']
+    f['vx_shock'] = f['volm_r'] * f['atr_r']
+    f['vx_flow'] = f['cmf20'] + f['obv_z'] / 10.0 \
+        + f['volm_z'] / 2.0
+    f['vx_nx'] = f['nx_vol'] + f['volm_z']
+    f['b7_dxy_mom'] = dm
+    f['b7_dxy_dev'] = dd
+    f['b7_dxy_rsi'] = dr
+    f['b7_corr_basket'] = bm
+    f['b7_corr_rsi'] = br
+    f['b7_corr_dxy'] = bm - dm
+    f['b7_vcorr'] = f['vx_h1m15'] + br
+    f['b7_nest2'] = f['nx_cf'] / 3.0 + f['vx_h1m15'] / 2.0 + br
+    f['b7_vol_state'] = np.where(
+        (f['volm_z'] > 0) & (f['vol_z'] > 0), 1.0,
+        np.where((f['volm_z'] < 0) & (f['vol_z'] < 0), -1.0,
+                 0.0))
+    f['b7_dxy_state'] = np.where(
+        (dm > 0) & (dr > 0), 1.0,
+        np.where((dm < 0) & (dr < 0), -1.0, 0.0))
+    f['b7_corr_state'] = np.where(
+        (bm > 0) & (br > 0), 1.0,
+        np.where((bm < 0) & (br < 0), -1.0, 0.0))
+    f['b7_all_state'] = np.where(
+        (f['b7_vol_state'] > 0) & (f['b7_dxy_state'] > 0)
+        & (f['b7_corr_state'] > 0), 1.0,
+        np.where((f['b7_vol_state'] < 0)
+                 & (f['b7_dxy_state'] < 0)
+                 & (f['b7_corr_state'] < 0), -1.0, 0.0))
+    return f
+
+
 # ======================================================== builder --
 def frame_to_research(h1):
     """Normalise an app H1 frame (Datetime index, OHLC[V]) to
@@ -793,15 +898,18 @@ def m30_from_m15(m15):
 
 
 def build_symbol_features(sym, h1, groups, m15=None, m30=None,
-                          dx_mom=None):
+                          dx_mom=None, b7ctx=None):
     """Full feature frame for one symbol.
 
     h1: app-shape H1 frame (Datetime index, OHLC[V]).
-    groups: subset of {'r4', 'planb', 'b2cf', 'b3', 'b4'} on top
-    of the base block (order fixed to the research chain).
-    m15: Datetime-indexed M15 frame (b2cf). m30: research-shape
-    M30 frame (Datetime column); derived from m15 when not
-    given. dx_mom: dollar mom24 Series for the xdx columns.
+    groups: subset of {'r4', 'planb', 'b2cf', 'b3', 'b4',
+    'b5', 'b6v', 'b7'} on top of the base block (order fixed
+    to the research chain). m15: Datetime-indexed M15 frame
+    (b2cf, b6v). m30: research-shape M30 frame (Datetime
+    column); derived from m15 when not given. dx_mom: dollar
+    mom24 Series for the xdx columns. b7ctx: cross-symbol
+    basket/dollar Series dict for the b7 block (see
+    core.new8_candidate.b7_context).
     Returns a Datetime-indexed feature frame."""
     fr, vol = frame_to_research(h1)
     if vol is None:
@@ -822,4 +930,10 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
         f = add_b3_columns(f, m30)
     if 'b4' in groups:
         f = add_b4_columns(f)
+    if 'b5' in groups:
+        f = add_b5_columns(f)
+    if 'b6v' in groups:
+        f = add_b6v_columns(f, sym, m15)
+    if 'b7' in groups:
+        f = add_b7_columns(f, sym, b7ctx)
     return f

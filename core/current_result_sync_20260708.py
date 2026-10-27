@@ -52,7 +52,6 @@ def normalize_symbol(value: Any) -> str:
         "GOLD": "XAUUSD", "XBTUSD": "BTCUSD", "BTCUSDT": "BTCUSD",
         "USTEC": "NAS100", "US100": "NAS100", "NDX": "NAS100",
         "SPX500": "US500", "SP500": "US500", "GSPC": "US500",
-        "USDX": "DXY", "DOLLARINDEX": "DXY", "DX-Y.NYB": "DXY",
     }
     return aliases.get(raw, raw)
 

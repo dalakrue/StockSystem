@@ -118,7 +118,6 @@ _YAHOO_SYMBOL_ALIASES = {
     "AVAXUSD": "AVAX-USD",
     "DOTUSD": "DOT-USD",
     "LINKUSD": "LINK-USD",
-    "DXY": "DX-Y.NYB",
     # Common broker index aliases used by the three-selector UI.
     "NAS100": "^NDX",
     "US500": "^GSPC",
@@ -335,8 +334,6 @@ class MarketDataOrchestrator:
         aliases = {
             ("XAUUSD", TWELVE_FALLBACK_PROVIDER): "XAU/USD",
             ("BTCUSD", TWELVE_FALLBACK_PROVIDER): "BTC/USD",
-            ("DXY", TWELVE_FALLBACK_PROVIDER): "DXY",
-            ("DXY", FCS_PROVIDER): "DXY",
         }
         return aliases.get((canonical, provider_name), canonical)
 

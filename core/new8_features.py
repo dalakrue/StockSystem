@@ -779,7 +779,17 @@ def m30_from_m15(m15):
          'Close': 'last',
          **({'Volume': 'sum'} if 'Volume' in m15.columns
             else {})}).dropna(subset=['Open'])
-    return r.reset_index().rename(columns={'index': 'Datetime'})
+    # The resample inherits the M15 frame's index name: the
+    # research frames call it 'Datetime', but the live panel
+    # path (check_candle_runtime.normalize_ohlc) names it
+    # after the source time column ('open_time', 'time', ...).
+    # Name the output column after the actual index name --
+    # the same pattern frame_to_research uses -- so the M30
+    # frame always carries the 'Datetime' column the feature
+    # builders read. (2026-10-27 live KeyError fix; for
+    # 'Datetime'-named input the output is unchanged.)
+    return r.reset_index().rename(
+        columns={r.index.name or 'index': 'Datetime'})
 
 
 def build_symbol_features(sym, h1, groups, m15=None, m30=None,

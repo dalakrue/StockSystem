@@ -136,6 +136,85 @@ def b7_context(frames):
     return out
 
 
+def _quote_code(sym):
+    """build_features_planb8b.quote_code: the symbol's quote
+    currency ('USD' for the dollar index itself)."""
+    if sym in DOLLAR_KEYS:
+        return 'USD'
+    return sym[3:6]
+
+
+def cross_context(frames):
+    """Extended cross-symbol context (2026-10-28): everything
+    b7_context computes (base-currency baskets bm/br + dollar
+    dm/dd/dr) PLUS the Plan B-8 quote-currency baskets qm/qr
+    (build_features_planb8b pass 1: same BASKETS composition,
+    read at each symbol's quote code) and the P-BRANCH
+    cross-section context (pbctx: mom24 percentile rank over
+    the 28 FX pairs + the dollar mom24 series). Returns
+    (per_symbol_ctx, pbctx)."""
+    base = {}
+    for sym, h1 in frames.items():
+        if h1 is None or len(h1) == 0:
+            continue
+        try:
+            bf = build_symbol_features(sym, h1, ())
+        except Exception:
+            continue
+        if 'ema_dev' not in bf:
+            cl = bf['Close']
+            bf['ema_dev'] = (cl - cl.ewm(
+                span=200, adjust=False).mean()) / bf['atr14']
+        base[sym] = bf
+    if 'EURUSD' not in base:
+        return {}, {'xs_rank': None, 'dxy_mom': None}
+    ref_idx = base['EURUSD'].index
+
+    def _col(sym, col):
+        s = base[sym][col]
+        return pd.Series(s.to_numpy(), index=s.index)
+
+    basket_mom, basket_rsi = {}, {}
+    for code, members in B7_BASKETS.items():
+        moms, rsis = {}, {}
+        for m in members:
+            if m not in base:
+                continue
+            sgn = B7_USD_SIGNS.get(m, 1.0) if code == 'USD' \
+                else 1.0
+            moms[m] = _col(m, 'mom24').reindex(ref_idx) * sgn
+            rsis[m] = ((_col(m, 'rsi14') - 50.0) / 50.0) \
+                .reindex(ref_idx) * sgn
+        basket_mom[code] = pd.DataFrame(moms).mean(axis=1) \
+            if moms else pd.Series(np.nan, index=ref_idx)
+        basket_rsi[code] = pd.DataFrame(rsis).mean(axis=1) \
+            if rsis else pd.Series(np.nan, index=ref_idx)
+    dx_key = next((k for k in DOLLAR_KEYS if k in base), None)
+    if dx_key is not None:
+        d_mom = _col(dx_key, 'mom24').reindex(ref_idx)
+        d_dev = _col(dx_key, 'ema_dev').reindex(ref_idx)
+        d_rsi = ((_col(dx_key, 'rsi14') - 50.0) / 50.0) \
+            .reindex(ref_idx)
+    else:
+        d_mom = d_dev = d_rsi = pd.Series(np.nan, index=ref_idx)
+    out = {}
+    for sym in frames:
+        b = _b7_basket_of(sym)
+        q = _quote_code(sym)
+        if b not in basket_mom or q not in basket_mom:
+            continue
+        out[sym] = {'bm': basket_mom[b], 'br': basket_rsi[b],
+                    'qm': basket_mom[q], 'qr': basket_rsi[q],
+                    'dm': d_mom, 'dd': d_dev, 'dr': d_rsi}
+    moms = {s: _col(s, 'mom24') for s in base
+            if s not in DOLLAR_KEYS}
+    xs_rank = pd.DataFrame(moms).rank(axis=1, pct=True) \
+        if moms else None
+    pbctx = {'xs_rank': xs_rank,
+             'dxy_mom': d_mom if dx_key is not None else None}
+    return out, pbctx
+
+
 def _norm_frame(df):
     """App frame -> Datetime-indexed naive-UTC frame."""
     if df is None or len(df) == 0:
@@ -184,19 +263,32 @@ class CandidateContext:
         self.design_names = tuple(design_names)
         groups = set()
         syms = set()
+        pv_variants = {}
         for name in self.design_names:
             d = DESIGNS[name]
             groups.update(d["groups"])
             syms.update(e["symbol"] for e in d["equations"])
+            units = [u for e in d["equations"]
+                     for u in e.get("branches", [e])]
+            for u in units:
+                for col, _op, _v in u["conditions"]:
+                    if col.startswith("pv_"):
+                        stem = col[3:].rsplit("_", 1)[0]
+                        pv_variants[stem] = (stem, None)
         self.groups = tuple(g for g in
-                            ("r4", "planb", "b2cf", "b3", "b4",
-                             "b5", "b6v", "b7")
+                            ("r4", "planb", "b2cf", "b2x", "b3",
+                             "b4", "b5", "b6v", "b7", "b8", "b9",
+                             "b9c", "pv", "pbc")
                             if g in groups)
         self.symbols = sorted(syms)
+        self._pv = pv_variants
         self._dx_mom = self._build_dx_mom() if "r4" in groups \
             else None
-        self._b7 = b7_context(self.frames) if "b7" in groups \
-            else {}
+        if groups & {"b7", "b8", "b9", "pbc"}:
+            self._b7, self._pbctx = cross_context(self.frames)
+        else:
+            self._b7, self._pbctx = {}, {'xs_rank': None,
+                                         'dxy_mom': None}
         self.feats = {}
         self.ohlc = {}
         for sym in self.symbols:
@@ -220,10 +312,18 @@ class CandidateContext:
         if h1 is None:
             return
         m15 = self.m15.get(sym)
+        if m15 is None and ("b9c" in self.groups
+                            or "pbc" in self.groups):
+            self.m15 = ensure_m15(self.m15, (sym,))
+            m15 = self.m15.get(sym)
         m30 = m30_from_m15(m15) if m15 is not None else None
         self.feats[sym] = build_symbol_features(
             sym, h1, self.groups, m15=m15, m30=m30,
-            dx_mom=self._dx_mom, b7ctx=self._b7.get(sym))
+            dx_mom=self._dx_mom, b7ctx=self._b7.get(sym),
+            pv_variants=self._pv if "pv" in self.groups
+            else None,
+            pbctx=self._pbctx if "pbc" in self.groups
+            else None)
         fr, _ = frame_to_research(h1)
         self.ohlc[sym] = ohlc_from_frame(fr)
 
@@ -252,56 +352,66 @@ class CandidateContext:
             if pos < 0:
                 continue
             row = feat.iloc[pos]
-            ok = True
-            for col, op, val in eq["conditions"]:
-                v = row[col]
-                if not np.isfinite(v):
-                    ok = False
+            # OR-branch equations: the FIRST firing branch (in
+            # design order) supplies the row, exactly as the
+            # batch tab construction de-duplicates on check.
+            units = eq.get("branches") or [eq]
+            for u in units:
+                ok = True
+                for col, op, val in u["conditions"]:
+                    v = row[col]
+                    if not np.isfinite(v):
+                        ok = False
+                        break
+                    if op == ">" and not (v > val):
+                        ok = False
+                        break
+                    if op == "<" and not (v < val):
+                        ok = False
+                        break
+                    if op == ">=" and not (v >= val):
+                        ok = False
+                        break
+                    if op == "<=" and not (v <= val):
+                        ok = False
+                        break
+                if not ok:
+                    continue
+                atr = float(row["atr14"])
+                pip = pip_size_new8(sym)
+                tp = float(np.clip(u["tp_mult"] * atr / pip,
+                                   10.0, 500.0))
+                sl = float(np.clip(u["sl_mult"] * atr / pip,
+                                   5.0, 100.0))
+                ent_pos = oc["pos_of"].get_indexer([ent_t])[0]
+                if ent_pos < 0:
                     break
-                if op == ">" and not (v > val):
-                    ok = False
-                    break
-                if op == "<" and not (v < val):
-                    ok = False
-                    break
-                if op == ">=" and not (v >= val):
-                    ok = False
-                    break
-                if op == "<=" and not (v <= val):
-                    ok = False
-                    break
-            if not ok:
-                continue
-            atr = float(row["atr14"])
-            pip = pip_size_new8(sym)
-            tp = float(np.clip(eq["tp_mult"] * atr / pip,
-                               10.0, 500.0))
-            sl = float(np.clip(eq["sl_mult"] * atr / pip,
-                               5.0, 100.0))
-            ent_pos = oc["pos_of"].get_indexer([ent_t])[0]
-            if ent_pos < 0:
-                continue
-            direction = eq["direction"]
-            if direction == "TREND":
-                mom = float(row["mom24"])
-                direction = "BUY" if mom > 0 else "SELL"
-            r = sim_fixed_vec(oc["o"], oc["h"], oc["l"], oc["c"],
-                              np.array([ent_pos]), direction,
-                              np.array([tp]), np.array([sl]), pip,
-                              max_hold=MAX_HOLD, cost=2.5)
-            out[eq["id"]] = dict(
-                check=chk, symbol=sym, direction=direction,
-                entry_px=float(r["entry_px"][0]),
-                exit_px=float(r["exit_px"][0]),
-                tp_pips_used=tp, sl_pips_used=sl,
-                gross_pips=float(r["gross_pips"][0]),
-                net_pips=float(r["net_pips"][0]),
-                exit_reason=str(r["exit_reason"][0]),
-                hold_h=int(r["hold_h"][0]),
-                exit_time=pd.Timestamp(oc["dt"][r["exit_pos"][0]]),
-                entry_time=ent_t,
-                provisional_exit=bool(
-                    ent_pos + MAX_HOLD - 1 >= len(oc["c"])))
+                direction = u["direction"]
+                if direction == "TREND":
+                    mom = float(row["mom24"])
+                    direction = "BUY" if mom > 0 else "SELL"
+                hold = int(u.get("hold", MAX_HOLD))
+                r = sim_fixed_vec(oc["o"], oc["h"], oc["l"],
+                                  oc["c"],
+                                  np.array([ent_pos]), direction,
+                                  np.array([tp]), np.array([sl]),
+                                  pip, max_hold=hold, cost=2.5)
+                out[eq["id"]] = dict(
+                    check=chk, symbol=sym, direction=direction,
+                    entry_px=float(r["entry_px"][0]),
+                    exit_px=float(r["exit_px"][0]),
+                    tp_pips_used=tp, sl_pips_used=sl,
+                    gross_pips=float(r["gross_pips"][0]),
+                    net_pips=float(r["net_pips"][0]),
+                    exit_reason=str(r["exit_reason"][0]),
+                    hold_h=int(r["hold_h"][0]),
+                    max_hold=hold,
+                    exit_time=pd.Timestamp(
+                        oc["dt"][r["exit_pos"][0]]),
+                    entry_time=ent_t,
+                    provisional_exit=bool(
+                        ent_pos + hold - 1 >= len(oc["c"])))
+                break
         return out
 
     def signal_frame(self, design_name, check):
@@ -448,14 +558,17 @@ class MergedWalkState:
                           np.array([ent_pos]), row["direction"],
                           np.array([row["tp_pips_used"]]),
                           np.array([row["sl_pips_used"]]), pip,
-                          max_hold=MAX_HOLD, cost=2.5)
+                          max_hold=int(row.get("max_hold",
+                                               MAX_HOLD)),
+                          cost=2.5)
         row["exit_px"] = float(r["exit_px"][0])
         row["exit_time"] = pd.Timestamp(oc["dt"][r["exit_pos"][0]])
         row["exit_reason"] = str(r["exit_reason"][0])
         row["hold_h"] = int(r["hold_h"][0])
         row["gross_pips"] = float(r["gross_pips"][0])
         row["net_pips"] = float(r["net_pips"][0])
-        return ent_pos + MAX_HOLD - 1 < len(oc["c"])
+        return ent_pos + int(row.get("max_hold", MAX_HOLD)) - 1 \
+            < len(oc["c"])
 
     def refresh_exits(self, ctx):
         for row in self.incumbent_picks + self.accepted:

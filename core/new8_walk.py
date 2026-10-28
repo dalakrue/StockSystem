@@ -183,13 +183,38 @@ def evaluate_candidate(sym, hour, direction, conditions, tp_mult,
 def design_tab(eq, grid, feat, ohlc):
     """The research tab_of for one design equation: the
     candidate trades frame over the grid rows of the
-    equation's hour (None when it never fires)."""
+    equation's hour (None when it never fires).
+
+    OR-branch equations (P-BRANCH, 2026-10-28): the tab is
+    the research mine_pbranch construction -- each branch
+    evaluated with its own conditions / exit pair / hold,
+    branch tabs concatenated in branch order, sorted by
+    check (mergesort) and de-duplicated on check keeping
+    the FIRST branch's row. Flat equations use their own
+    'hold' (48 for every design shipped before 2026-10-28,
+    so their tabs are unchanged)."""
     gh = grid[grid['hour'] == eq['hour']]
+    if 'branches' in eq:
+        parts = []
+        for b in eq['branches']:
+            r = evaluate_candidate(
+                b['symbol'], b['hour'], b['direction'],
+                [tuple(c) for c in b['conditions']],
+                b['tp_mult'], b['sl_mult'], gh, feat, ohlc,
+                cost=COST, max_hold=b.get('hold', MAX_HOLD))
+            if r is not None:
+                parts.append(r['trades'])
+        if not parts:
+            return None
+        tab = pd.concat(parts).sort_values(
+            'check', kind='mergesort')
+        return tab.drop_duplicates('check', keep='first') \
+            .reset_index(drop=True)
     r = evaluate_candidate(
         eq['symbol'], eq['hour'], eq['direction'],
         [tuple(c) for c in eq['conditions']], eq['tp_mult'],
         eq['sl_mult'], gh, feat, ohlc, cost=COST,
-        max_hold=MAX_HOLD)
+        max_hold=eq.get('hold', MAX_HOLD))
     return None if r is None else r['trades']
 
 
@@ -402,6 +427,7 @@ class DesignWalk:
                 net_pips=tr['net_pips'],
                 exit_reason=tr['exit_reason'],
                 hold_h=tr['hold_h'],
+                max_hold=int(tr.get('max_hold', MAX_HOLD)),
                 exit_time=pd.Timestamp(tr['exit_time']),
                 entry_time=ent_t)
             self.open_exit.setdefault(e['symbol'], []).append(

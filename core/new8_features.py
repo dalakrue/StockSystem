@@ -19,6 +19,23 @@ of read from fx_data.db / the research caches:
     cf_m30dev, cf2_stack).
   * b4 block    = build_features_planb4.build_one (coppock,
     rvi10, rvi_state, stc, kelt_p, cf_d1dev, cf3_stack).
+  * b2x block   = build_features_planb2.build_one own-frame
+    columns (bb_bw, roc24, adx_chg, vma_dev, ha_body,
+    psar_state, st_state) -- ported 2026-10-28 for the Apr
+    Q09 layer; the B-2 rsi14 overwrite is NOT applied (no
+    shipped design reads rsi14 through this block, and the
+    overwrite would alter proven b2cf-era frames).
+  * b8 block    = build_features_planb8b pass 2 (quote-
+    currency baskets from the cross-symbol context).
+  * b9 block    = build_features_planb9.build_one.
+  * b9c block   = build_features_planb9c.build_one (M15
+    columns; last M15 bar whose start is < t).
+  * pv block    = parallel_vote/pv_common vote shares
+    (leg_votes / pool_share verbatim; only the pools a
+    design's equations reference are materialised).
+  * pbc block   = parallel_score/build_features_pbranch
+    per-symbol block (pb_* H1 + pbc_* M15 columns; M15
+    aligned by last bar starting at or before t).
 
 Conventions match the research builders exactly: the value on
 H1 bar t uses bars up to and including t; M30 values come from
@@ -850,6 +867,645 @@ def add_b7_columns(f, sym, ctx7):
     return f
 
 
+# ============================================================ b2x --
+def _psar_state(high, low, close, step=0.02, maxaf=0.2):
+    """build_features_planb2._psar_state verbatim."""
+    n = len(close)
+    sar = np.zeros(n)
+    ep = np.zeros(n)
+    af = np.full(n, step)
+    up = np.ones(n, dtype=bool)
+    sar[0] = low[0]
+    ep[0] = high[0]
+    for i in range(1, n):
+        ps, pe, pa = sar[i - 1], ep[i - 1], af[i - 1]
+        if up[i - 1]:
+            s = ps + pa * (pe - ps)
+            s = min(s, low[i - 1],
+                    low[i - 2] if i >= 2 else low[i - 1])
+            if low[i] < s:
+                up[i] = False
+                sar[i] = pe
+                ep[i] = low[i]
+                af[i] = step
+            else:
+                up[i] = True
+                sar[i] = s
+                if high[i] > pe:
+                    ep[i] = high[i]
+                    af[i] = min(pa + step, maxaf)
+                else:
+                    ep[i] = pe
+                    af[i] = pa
+        else:
+            s = ps + pa * (pe - ps)
+            s = max(s, high[i - 1],
+                    high[i - 2] if i >= 2 else high[i - 1])
+            if high[i] > s:
+                up[i] = True
+                sar[i] = pe
+                ep[i] = high[i]
+                af[i] = step
+            else:
+                up[i] = False
+                sar[i] = s
+                if low[i] < pe:
+                    ep[i] = low[i]
+                    af[i] = min(pa + step, maxaf)
+                else:
+                    ep[i] = pe
+                    af[i] = pa
+    return np.where(close > sar, 1.0, -1.0)
+
+
+def _supertrend_state(high, low, close, atr, mult=3.0):
+    """build_features_planb2._supertrend_state verbatim."""
+    hl2 = (high + low) / 2.0
+    ub = hl2 + mult * atr
+    lb = hl2 - mult * atr
+    n = len(close)
+    fub = np.zeros(n)
+    flb = np.zeros(n)
+    up = np.ones(n, dtype=bool)
+    fub[0] = ub[0]
+    flb[0] = lb[0]
+    for i in range(1, n):
+        fub[i] = ub[i] if (ub[i] < fub[i - 1]
+                           or close[i - 1] > fub[i - 1]) \
+            else fub[i - 1]
+        flb[i] = lb[i] if (lb[i] > flb[i - 1]
+                           or close[i - 1] < flb[i - 1]) \
+            else flb[i - 1]
+        if up[i - 1]:
+            up[i] = bool(close[i] >= flb[i])
+        else:
+            up[i] = bool(close[i] > fub[i])
+    return np.where(up, 1.0, -1.0)
+
+
+def add_b2x_columns(f, sym, vol):
+    """build_features_planb2.build_one own-frame columns
+    verbatim (the M15/H4 confirmation columns live in the
+    b2cf block; cf_stack is not ported -- no design that
+    ships reads it). vol: the frame's H1 Volume Series."""
+    close, high, low = f['Close'], f['High'], f['Low']
+    atr = f['atr14']
+    mid = close.rolling(20).mean()
+    sd = close.rolling(20).std(ddof=0)
+    f['bb_bw'] = (4.0 * sd) / atr
+    f['roc24'] = (close - close.shift(24)) / atr
+    f['adx_chg'] = f['adx14'] - f['adx14'].shift(6)
+    if not is_dollar(sym) and vol is not None:
+        v = vol.reindex(f.index)
+        vwma = ((close * v).rolling(20).sum()
+                / v.rolling(20).sum())
+        f['vma_dev'] = (close - vwma) / atr
+    else:
+        f['vma_dev'] = np.nan
+    ha_close = (f['Open'] + high + low + close) / 4.0
+    ha_open = np.empty(len(f))
+    hc = ha_close.to_numpy()
+    ha_open[0] = (f['Open'].iloc[0] + close.iloc[0]) / 2.0
+    for i in range(1, len(f)):
+        ha_open[i] = (ha_open[i - 1] + hc[i - 1]) / 2.0
+    f['ha_body'] = (hc - ha_open) / atr.to_numpy()
+    f['psar_state'] = _psar_state(high.to_numpy(),
+                                  low.to_numpy(),
+                                  close.to_numpy())
+    f['st_state'] = _supertrend_state(high.to_numpy(),
+                                      low.to_numpy(),
+                                      close.to_numpy(),
+                                      atr.to_numpy())
+    return f
+
+
+# ============================================================ b8 --
+def add_b8_columns(f, sym, ctx):
+    """build_features_planb8b pass 2 verbatim. ctx carries
+    the quote-currency basket Series 'qm' / 'qr' (prepared
+    by core.new8_candidate.cross_context; None -> NaN)."""
+    nan = pd.Series(np.nan, index=f.index)
+    if ctx is None:
+        qb = qr = nan.to_numpy()
+    else:
+        qb = ctx['qm'].reindex(f.index).to_numpy()
+        qr = ctx['qr'].reindex(f.index).to_numpy()
+    f['b8_vsh'] = f['vol_r'] * f['atr_r']
+    f['b8_vdiv'] = f['vol_z'] - f['volm_z']
+    f['b8_vacc'] = f['volm_z'] + f['vol_r']
+    f['b8_vflow2'] = f['cmf20'] - f['obv_z'] / 10.0 \
+        + f['vol_z'] / 2.0
+    f['b8_vdxy'] = f['vx_h1m15'] + f['b7_dxy_mom']
+    f['b8_dxy_mom2'] = f['b7_dxy_mom'] + f['b7_dxy_dev']
+    f['b8_dxy_rsi_mom'] = f['b7_dxy_rsi'] + f['b7_dxy_mom']
+    f['b8_corr_mom_rsi'] = f['b7_corr_basket'] + f['b7_corr_rsi']
+    f['b8_corr_spread'] = f['b7_corr_basket'] - f['mom24']
+    f['b8_corr_dxy2'] = f['b7_corr_rsi'] - f['b7_dxy_rsi']
+    f['b8_own_corr'] = f['mom24'] + f['b7_corr_basket']
+    f['b8_rsi_spread'] = (f['rsi14'] - 50.0) / 50.0 \
+        - f['b7_corr_rsi']
+    f['b8_q_basket'] = qb
+    f['b8_q_rsi'] = qr
+    f['b8_basket_spread'] = f['b7_corr_basket'] - qb
+    f['b8_nest3'] = f['b7_nest2'] / 2.0 + f['b8_vacc'] / 2.0 \
+        + f['b7_corr_dxy']
+    f['b8_vnest3'] = f['vx_nx'] / 2.0 + f['b8_vsh'] / 2.0 \
+        + f['b7_dxy_dev']
+    vu = (f['vol_z'] > 0) & (f['vol_r'] > 0)
+    vd = (f['vol_z'] < 0) & (f['vol_r'] < 0)
+    f['b8_vol_state'] = np.where(vu, 1.0, np.where(vd, -1.0, 0.0))
+    xu = (f['b7_dxy_rsi'] > 0) & (f['b7_dxy_mom'] > 0)
+    xd = (f['b7_dxy_rsi'] < 0) & (f['b7_dxy_mom'] < 0)
+    f['b8_dxy_state2'] = np.where(xu, 1.0,
+                                  np.where(xd, -1.0, 0.0))
+    cu = (f['b8_corr_spread'] > 0) & (f['b7_corr_rsi'] > 0)
+    cd = (f['b8_corr_spread'] < 0) & (f['b7_corr_rsi'] < 0)
+    f['b8_corr_state2'] = np.where(cu, 1.0,
+                                   np.where(cd, -1.0, 0.0))
+    au = (f['b8_vol_state'] > 0) & (f['b8_dxy_state2'] > 0) \
+        & (f['b8_corr_state2'] > 0)
+    ad = (f['b8_vol_state'] < 0) & (f['b8_dxy_state2'] < 0) \
+        & (f['b8_corr_state2'] < 0)
+    f['b8_all_state2'] = np.where(au, 1.0, np.where(ad, -1.0, 0.0))
+    return f
+
+
+# ============================================================ b9 --
+def add_b9_columns(f):
+    """build_features_planb9.build_one verbatim (reads the
+    frame's own columns + the b7 / b8 blocks)."""
+    o, h, l, c = f['Open'], f['High'], f['Low'], f['Close']
+    atr = f['atr14']
+    rng = (h - l).replace(0, np.nan)
+    tenkan = (h.rolling(9).max() + l.rolling(9).min()) / 2.0
+    kijun = (h.rolling(26).max() + l.rolling(26).min()) / 2.0
+    f['b9_tk_spread'] = (tenkan - kijun) / atr
+    ema12 = c.ewm(span=12, adjust=False).mean()
+    f['b9_ema_slope'] = (ema12 - ema12.shift(6)) / atr
+    up = h.diff()
+    dn = -l.diff()
+    pdm = np.where((up > dn) & (up > 0), up, 0.0)
+    mdm = np.where((dn > up) & (dn > 0), dn, 0.0)
+    tr = pd.concat([h - l, (h - c.shift()).abs(),
+                    (l - c.shift()).abs()], axis=1).max(axis=1)
+    str_ = tr.ewm(alpha=1 / 14, adjust=False).mean()
+    spdm = pd.Series(pdm, index=f.index).ewm(
+        alpha=1 / 14, adjust=False).mean()
+    smdm = pd.Series(mdm, index=f.index).ewm(
+        alpha=1 / 14, adjust=False).mean()
+    f['b9_di_diff'] = (100.0 * spdm / str_
+                       - 100.0 * smdm / str_) / 100.0
+    f['b9_mom_acc'] = (c.shift(24) - c.shift(6)) / atr
+    f['b9_rsi_vel'] = f['rsi14'] - f['rsi14'].shift(5)
+    f['b9_stoch_vel'] = f['stoch_k'] - f['stoch_k'].shift(4)
+    f['b9_rng_exp'] = (rng.rolling(12).mean()
+                       / rng.rolling(48).mean())
+    ll6 = l.rolling(6).min()
+    hh6 = h.rolling(6).max()
+    f['b9_pos6'] = ((c - ll6) / (hh6 - ll6)).fillna(0.5)
+    f['b9_atr_pc'] = atr / c * 1000.0
+    body = (c - o) / rng
+    f['b9_body_dom'] = body.rolling(6).mean()
+    wick_up = (h - pd.concat([o, c], axis=1).max(axis=1)) / rng
+    wick_dn = (pd.concat([o, c], axis=1).min(axis=1) - l) / rng
+    f['b9_wick_rej'] = (wick_up - wick_dn).rolling(6).mean()
+    pivot = ((h + l + c) / 3.0).shift(1)
+    f['b9_pivot_dev'] = (c - pivot) / atr
+    vz = f['vol_z']
+    f['b9_vol_trend'] = (vz.ewm(span=6, adjust=False).mean()
+                         - vz.ewm(span=24, adjust=False).mean())
+    f['b9_svp12'] = (np.sign(c - o) * vz).rolling(12).mean()
+    f['b9_pvd'] = vz - f['b9_mom_acc']
+    f['b9_dxy_own_rsi'] = f['b7_dxy_rsi'] \
+        - (f['rsi14'] - 50.0) / 50.0
+    dm = f['b7_dxy_mom']
+    f['b9_dxy_trend'] = (dm.ewm(span=6, adjust=False).mean()
+                         - dm.ewm(span=24, adjust=False).mean())
+    f['b9_q_spread_own'] = f['mom24'] - f['b8_q_basket']
+    f['b9_base_q_mom'] = f['b7_corr_basket'] + f['b8_q_basket']
+    f['b9_nest_vol'] = (f['b9_vol_trend'] + f['b8_vacc'] / 2.0
+                        + f['b9_dxy_trend'])
+    ts = pd.Series(0.0, index=f.index)
+    ts[(f['b9_tk_spread'] > 0) & (f['b9_ema_slope'] > 0)] = 1.0
+    ts[(f['b9_tk_spread'] < 0) & (f['b9_ema_slope'] < 0)] = -1.0
+    f['b9_trend_state'] = ts
+    ms = pd.Series(0.0, index=f.index)
+    ms[(f['b9_rsi_vel'] > 0) & (f['b9_stoch_vel'] > 0)] = 1.0
+    ms[(f['b9_rsi_vel'] < 0) & (f['b9_stoch_vel'] < 0)] = -1.0
+    f['b9_mom_state'] = ms
+    vs = pd.Series(0.0, index=f.index)
+    vs[(f['b9_vol_trend'] > 0) & (vz > 0)] = 1.0
+    vs[(f['b9_vol_trend'] < 0) & (vz < 0)] = -1.0
+    f['b9_vol_state9'] = vs
+    al = pd.Series(0.0, index=f.index)
+    agree = (ts != 0) & (ts == ms) & (ts == vs)
+    al[agree] = ts[agree]
+    f['b9_all_state9'] = al
+    return f
+
+
+# =========================================================== b9c --
+def _rsi_m15(close, n=14):
+    """build_features_planb9c._rsi verbatim."""
+    d = close.diff()
+    gain = d.clip(lower=0).ewm(alpha=1 / n, adjust=False).mean()
+    loss = (-d.clip(upper=0)).ewm(alpha=1 / n,
+                                  adjust=False).mean()
+    rs = gain / loss.replace(0, np.nan)
+    return 100.0 - 100.0 / (1.0 + rs)
+
+
+def add_b9c_columns(f, sym, m15):
+    """build_features_planb9c.build_one verbatim, with the
+    M15 frame passed in (Datetime-indexed OHLCV). Alignment:
+    the last M15 bar whose start is < t. m15 None -> NaN."""
+    cols = ['b9c_m15_rsi', 'b9c_m15_mom', 'b9c_m15_volz',
+            'b9c_m15_volr', 'b9c_m15_range', 'b9c_m15_ema',
+            'b9c_vol_mix', 'b9c_m15_body']
+    if m15 is None or len(m15) == 0 or 'Volume' not in m15:
+        for col in cols:
+            f[col] = np.nan
+        return f
+    m = m15.sort_index()
+    c, h, l, o, v = (m['Close'], m['High'], m['Low'],
+                     m['Open'], m['Volume'])
+    s = {}
+    s['rsi'] = _rsi_m15(c)
+    s['mom_raw'] = c / c.shift(16) - 1.0
+    s['close'] = c
+    logv = np.log(v.clip(lower=0) + 1.0)
+    s['volz'] = ((logv - logv.rolling(384).mean())
+                 / logv.rolling(384).std())
+    vs16 = v.rolling(16).sum()
+    s['volr'] = vs16 / vs16.rolling(384).median()
+    ll = l.rolling(16).min()
+    hh = h.rolling(16).max()
+    s['range'] = ((c - ll) / (hh - ll)).fillna(0.5)
+    ema12 = c.ewm(span=12, adjust=False).mean()
+    ema48 = c.ewm(span=48, adjust=False).mean()
+    s['ema'] = (ema12 - ema48) / ema48 * 100.0
+    rng = (h - l).replace(0, np.nan)
+    s['body'] = ((c - o) / rng).rolling(8).mean()
+    idx = m.index.values
+    pos = np.searchsorted(idx, f.index.values,
+                          side='left') - 1
+    ok = pos >= 0
+    pos_c = np.clip(pos, 0, len(m) - 1)
+
+    def take(series):
+        vals = series.to_numpy(dtype=float)[pos_c]
+        vals = np.where(ok, vals, np.nan)
+        return pd.Series(vals, index=f.index)
+
+    f['b9c_m15_rsi'] = (take(s['rsi']) - 50.0) / 50.0
+    mom = take(s['mom_raw'])
+    cl = take(s['close'])
+    f['b9c_m15_mom'] = mom * cl / f['atr14']
+    f['b9c_m15_volz'] = take(s['volz'])
+    f['b9c_m15_volr'] = take(s['volr'])
+    f['b9c_m15_range'] = take(s['range'])
+    f['b9c_m15_ema'] = take(s['ema'])
+    f['b9c_m15_body'] = take(s['body'])
+    f['b9c_vol_mix'] = f['volm_z'] + 2.0 * f['b9c_m15_volz']
+    return f
+
+
+# ============================================================ pv --
+PV_POOLS = {
+    'V01': (['VL_H1FLOW', 'VL_M15VOL', 'TL_EMA', 'ML_RSI',
+             'BL_CORR', 'DL_MOM', 'PL_VWAP'], {}),
+    'V02': (['VL_FLOWR', 'VL_OBVM15', 'TL_H4', 'ML_MACD',
+             'AL_ATR', 'BL_Q', 'SL_US'], {}),
+    'V03': (['VL_MFI', 'VL_ACC', 'TL_D1', 'ML_STOCH',
+             'BL_CRSI', 'PL_HA', 'TL_MOM'],
+            {'VL_MFI': 1.5, 'VL_ACC': 1.5}),
+    'V04': (['VL_H1FLOW', 'VL_ACC', 'ML_B9RSI', 'TL_B9EMA',
+             'AL_RNG', 'DL_RSI', 'PL_BODY'], {}),
+    'V05': (['VL_OBVM15', 'VL_M15VOL', 'TL_KH', 'ML_FISH',
+             'BL_SPRD', 'BL_BQ', 'PL_DON'],
+            {'BL_SPRD': 1.5, 'BL_BQ': 1.5}),
+    'V06': (['VL_FLOWR', 'VL_MFI', 'TL_M30', 'ML_UO',
+             'AL_EXP', 'PL_DON', 'DL_TRND'], {}),
+    'V07': (['VL_H1FLOW', 'VL_M15VOL', 'ML_TRIX', 'TL_EMA',
+             'BL_CORR', 'PL_POS6', 'SL_EU'],
+            {'VL_H1FLOW': 1.5, 'VL_M15VOL': 1.5}),
+    'V08': (['VL_ACC', 'VL_OBVM15', 'TL_H4', 'ML_COPP',
+             'BL_Q', 'PL_WICK', 'ML_RSI'], {}),
+    'V09': (['VL_MFI', 'VL_FLOWR', 'TL_D1', 'ML_MACD',
+             'AL_ATR', 'DL_MOM', 'PL_VWAP'], {}),
+    'V10': (['VL_M15VOL', 'VL_H1FLOW', 'TL_B9EMA', 'ML_STOCH',
+             'BL_BQ', 'SL_US', 'PL_HA'], {}),
+    'V11': (['VL_ACC', 'VL_FLOWR', 'TL_KH', 'ML_B9RSI',
+             'BL_CRSI', 'DL_RSI', 'AL_RNG', 'PL_BODY'], {}),
+    'V12': (['VL_OBVM15', 'VL_MFI', 'TL_MOM', 'ML_FISH',
+             'BL_SPRD', 'PL_DON', 'ML_UO'], {}),
+    'V13': (['VL_H1FLOW', 'VL_M15VOL', 'TL_M30', 'ML_WT',
+             'AL_EXP', 'DL_TRND', 'PL_POS6'], {}),
+    'V14': (['VL_M15VOL', 'VL_ACC', 'TL_EMA', 'ML_RSI',
+             'BL_Q', 'SL_US'], {}),
+    'V15': (['VL_FLOWR', 'VL_OBVM15', 'TL_H4', 'ML_TRIX',
+             'BL_BQ', 'PL_WICK'], {}),
+}
+
+
+def _pv_usd_sign(sym):
+    if sym.startswith('USD'):
+        return 1.0
+    if sym.endswith('USD'):
+        return -1.0
+    return 0.0
+
+
+def _pv_leg_votes(rows, leg, sym):
+    """parallel_vote/pv_common.leg_votes verbatim."""
+    def _c(col):
+        return rows[col].to_numpy(float)
+    if leg == 'VL_H1FLOW':
+        v, f = _c('vol_z'), _c('cmf20')
+        return (v > 0) & (f > 0), (v > 0) & (f < 0)
+    if leg == 'VL_M15VOL':
+        v, m = _c('volm_z'), _c('b9c_m15_mom')
+        return (v > 0) & (m > 0), (v > 0) & (m < 0)
+    if leg == 'VL_FLOWR':
+        v, r = _c('vx_flow'), _c('vol_r')
+        return (v > 0) & (r > 1), (v < 0) & (r > 1)
+    if leg == 'VL_OBVM15':
+        v, r = _c('obv_z'), _c('volm_r')
+        return (v > 0) & (r > 1), (v < 0) & (r > 1)
+    if leg == 'VL_MFI':
+        v, m = _c('b9_vol_trend'), _c('mfi14')
+        return (v > 0) & (m > 50), (v < 0) & (m < 50)
+    if leg == 'VL_ACC':
+        v, m = _c('b8_vacc'), _c('b9c_m15_volz')
+        return (v > 0) & (m > 0), (v < 0) & (m < 0)
+    if leg == 'TL_EMA':
+        v = _c('ema_dev')
+        return v > 0, v < 0
+    if leg == 'TL_H4':
+        v = _c('h4_mom')
+        return v > 0, v < 0
+    if leg == 'TL_D1':
+        v = _c('d1_mom')
+        return v > 0, v < 0
+    if leg == 'TL_B9EMA':
+        v = _c('b9_ema_slope')
+        return v > 0, v < 0
+    if leg == 'TL_KH':
+        a, b = _c('kama_dev'), _c('hull_dev')
+        return (a > 0) & (b > 0), (a < 0) & (b < 0)
+    if leg == 'TL_MOM':
+        v = _c('mom24')
+        return v > 0, v < 0
+    if leg == 'TL_M30':
+        v = _c('m30_mom')
+        return v > 0, v < 0
+    if leg == 'ML_RSI':
+        v = _c('rsi14')
+        return v > 52, v < 48
+    if leg == 'ML_MACD':
+        v = _c('macd_h')
+        return v > 0, v < 0
+    if leg == 'ML_STOCH':
+        v = _c('stoch_k')
+        return v > 55, v < 45
+    if leg == 'ML_B9RSI':
+        v = _c('b9_rsi_vel')
+        return v > 0, v < 0
+    if leg == 'ML_FISH':
+        v = _c('fisher10')
+        return v > 0, v < 0
+    if leg == 'ML_WT':
+        v = _c('wt_diff')
+        return v > 0, v < 0
+    if leg == 'ML_UO':
+        v = _c('uo')
+        return v > 52, v < 48
+    if leg == 'ML_TRIX':
+        v = _c('trix15')
+        return v > 0, v < 0
+    if leg == 'ML_COPP':
+        v = _c('coppock')
+        return v > 0, v < 0
+    if leg == 'AL_ATR':
+        a, m = _c('atr_rank'), _c('mom24')
+        return (a > 0.6) & (m > 0), (a > 0.6) & (m < 0)
+    if leg == 'AL_RNG':
+        a, m = _c('atr_ratio'), _c('roc24')
+        return (a > 1.05) & (m > 0), (a > 1.05) & (m < 0)
+    if leg == 'AL_EXP':
+        a, m = _c('b9_atr_pc'), _c('h4_mom')
+        return (a > 0) & (m > 0), (a > 0) & (m < 0)
+    if leg == 'PL_HA':
+        v = _c('ha_body')
+        return v > 0, v < 0
+    if leg == 'PL_BODY':
+        v = _c('b9_body_dom')
+        return v > 0, v < 0
+    if leg == 'PL_DON':
+        v = _c('don_p')
+        return v > 0.7, v < 0.3
+    if leg == 'PL_VWAP':
+        v = _c('vwap_dev')
+        return v > 0, v < 0
+    if leg == 'PL_POS6':
+        v = _c('b9_pos6')
+        return v > 0, v < 0
+    if leg == 'PL_WICK':
+        v = _c('b9_wick_rej')
+        return v > 0, v < 0
+    if leg == 'BL_CORR':
+        v = _c('b7_corr_basket')
+        return v > 0, v < 0
+    if leg == 'BL_Q':
+        v = _c('b8_q_basket')
+        return v > 0, v < 0
+    if leg == 'BL_CRSI':
+        v = _c('b7_corr_rsi')
+        return v > 0, v < 0
+    if leg == 'BL_BQ':
+        v = _c('b9_base_q_mom')
+        return v > 0, v < 0
+    if leg == 'BL_SPRD':
+        v = _c('b8_basket_spread')
+        return v > 0, v < 0
+    if leg in ('DL_MOM', 'DL_RSI', 'DL_TRND'):
+        col = {'DL_MOM': 'b7_dxy_mom', 'DL_RSI': 'b7_dxy_rsi',
+               'DL_TRND': 'b9_dxy_trend'}[leg]
+        x = _pv_usd_sign(sym) * _c(col)
+        return x > 0, x < 0
+    if leg == 'SL_US':
+        h = np.asarray(rows.index.hour)
+        m = _c('mom24')
+        sess = (h >= 13) & (h <= 16)
+        return sess & (m > 0), sess & (m < 0)
+    if leg == 'SL_EU':
+        h = np.asarray(rows.index.hour)
+        m = _c('h4_mom')
+        sess = (h >= 8) & (h <= 12)
+        return sess & (m > 0), sess & (m < 0)
+    raise ValueError(leg)
+
+
+def _pv_pool_share(rows, pool_id, sym, weights=None):
+    """pv_common.pool_share verbatim."""
+    legs, w0 = PV_POOLS[pool_id]
+    if weights is None:
+        w = {leg: float(w0.get(leg, 1.0)) for leg in legs}
+    else:
+        w = {leg: float(weights.get(leg, 1.0)) for leg in legs}
+    tot = sum(w[l] for l in legs)
+    sb = np.zeros(len(rows))
+    ss = np.zeros(len(rows))
+    for leg in legs:
+        if w[leg] <= 0:
+            continue
+        up, dn = _pv_leg_votes(rows, leg, sym)
+        sb += w[leg] * up
+        ss += w[leg] * dn
+    return sb / tot, ss / tot
+
+
+def add_pv_columns(f, sym, variants):
+    """pv_common.add_pv_columns verbatim. variants:
+    {pool_key: (pool_id, weights_or_None)}."""
+    for key, (pid, weights) in variants.items():
+        sb, ss = _pv_pool_share(f, pid, sym, weights)
+        f[f'pv_{key}_B'] = sb
+        f[f'pv_{key}_S'] = ss
+    return f
+
+
+# =========================================================== pbc --
+PB_FX28 = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD',
+           'CADCHF', 'CADJPY', 'CHFJPY', 'EURAUD', 'EURCAD',
+           'EURCHF', 'EURGBP', 'EURJPY', 'EURNZD', 'EURUSD',
+           'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPJPY', 'GBPNZD',
+           'GBPUSD', 'NZDCAD', 'NZDCHF', 'NZDJPY', 'NZDUSD',
+           'USDCAD', 'USDCHF', 'USDJPY']
+
+
+def _pbc_m15_cols(m):
+    """build_features_pbranch.m15_cols verbatim (m: M15 frame
+    with o/h/l/c/v columns renamed by the caller)."""
+    c, h, l, o, v = m['c'], m['h'], m['l'], m['o'], m['v']
+    r = np.log(c).diff()
+    out = {}
+    r4 = np.log(c).diff(4)
+    out['pbc_m15_zret'] = (r4 - r4.rolling(96).mean()) \
+        / r4.rolling(96).std()
+    out['pbc_m15_skew'] = r.rolling(64).skew()
+    ll = l.rolling(32).min()
+    hh = h.rolling(32).max()
+    out['pbc_m15_chan'] = ((c - ll) / (hh - ll)).fillna(0.5)
+    typ = (h + l + c) / 3.0
+    vwap = (typ * v).rolling(64).sum() / v.rolling(64).sum()
+    atr_m = (h - l).rolling(14).mean()
+    out['pbc_m15_vwapdev'] = (c - vwap) / atr_m
+    rng = (h - l).replace(0, np.nan)
+    out['pbc_m15_body'] = ((c - o) / rng).rolling(8).mean()
+    slot = (m.index.hour * 60 + m.index.minute).to_numpy()
+    vv = v.to_numpy(float)
+    med = np.full(len(vv), np.nan)
+    std = np.full(len(vv), np.nan)
+    for sl in np.unique(slot):
+        pos = np.where(slot == sl)[0]
+        sv = pd.Series(vv[pos])
+        med[pos] = sv.rolling(80, min_periods=10).median() \
+            .to_numpy()
+        std[pos] = sv.rolling(80, min_periods=10).std() \
+            .to_numpy()
+    out['pbc_m15_volsess'] = pd.Series((vv - med) / std,
+                                       index=m.index)
+    vs16 = v.rolling(16).sum()
+    out['pbc_m15_volr'] = vs16 / vs16.rolling(384).median()
+    logv = np.log(v.clip(lower=0) + 1.0)
+    out['_m15_volz'] = (logv - logv.rolling(384).mean()) \
+        / logv.rolling(384).std()
+    return out
+
+
+def add_pbc_columns(f, sym, m15, vol, pbctx):
+    """build_features_pbranch per-symbol block verbatim.
+    pbctx: {'xs_rank': DataFrame|None, 'dxy_mom': Series|None}
+    prepared by core.new8_candidate.cross_context."""
+    c, h, l, o = f['Close'], f['High'], f['Low'], f['Open']
+    atr = f['atr14']
+    r = np.log(c).diff()
+    f['pb_zret48'] = (r - r.rolling(48).mean()) \
+        / r.rolling(48).std()
+    f['pb_vr12_48'] = r.rolling(12).std() / r.rolling(48).std()
+    f['pb_ac48'] = (r * r.shift(1)).rolling(48).mean() \
+        / r.rolling(48).var()
+    f['pb_skew48'] = r.rolling(48).skew()
+    vv_s = vol.reindex(f.index) if vol is not None else None
+    typ = (h + l + c) / 3.0
+    vwap = (typ * vv_s).rolling(24).sum() \
+        / vv_s.rolling(24).sum() if vv_s is not None else np.nan
+    f['pb_vwap_dev'] = (c - vwap) / atr
+    ll = l.rolling(34).min()
+    hh = h.rolling(34).max()
+    f['pb_don34_p'] = ((c - ll) / (hh - ll)).fillna(0.5)
+    ema20 = c.ewm(span=20, adjust=False).mean()
+    f['pb_kelt_p'] = (c - ema20) / (2.0 * atr)
+    rng = (h - l).replace(0, np.nan)
+    f['pb_body4'] = ((c - o) / rng).rolling(4).mean()
+    wick_up = (h - pd.concat([o, c], axis=1).max(axis=1)) / rng
+    wick_dn = (pd.concat([o, c], axis=1).min(axis=1) - l) / rng
+    f['pb_wick4'] = (wick_up - wick_dn).rolling(4).mean()
+    f['pb_rng6_24'] = rng.rolling(6).mean() \
+        / rng.rolling(24).mean()
+    xs = None if pbctx is None else pbctx.get('xs_rank')
+    if sym in PB_FX28 and xs is not None and sym in xs:
+        f['pb_xs_rank'] = xs[sym].reindex(f.index)
+    else:
+        f['pb_xs_rank'] = np.nan
+    dm = None if pbctx is None else pbctx.get('dxy_mom')
+    if dm is not None:
+        f['pb_dxy_dev'] = dm.reindex(f.index).ffill() \
+            - f['mom24']
+    else:
+        f['pb_dxy_dev'] = np.nan
+    vv = vv_s.to_numpy(float) if vv_s is not None \
+        else np.full(len(f), np.nan)
+    hrs = f.index.hour.to_numpy()
+    med = np.full(len(vv), np.nan)
+    std = np.full(len(vv), np.nan)
+    for hh in range(24):
+        pos = np.where(hrs == hh)[0]
+        if len(pos) == 0:
+            continue
+        sv = pd.Series(vv[pos])
+        med[pos] = sv.rolling(60, min_periods=10).median() \
+            .to_numpy()
+        std[pos] = sv.rolling(60, min_periods=10).std() \
+            .to_numpy()
+    f['pb_sess_vol'] = (vv - med) / std
+    vz = f['vol_z']
+    f['pb_svol18'] = (np.sign(c - o) * vz).rolling(18).mean()
+    f['pb_vol_tr'] = (vz.ewm(span=3, adjust=False).mean()
+                      - vz.ewm(span=12, adjust=False).mean())
+    pbc_cols = ['pbc_m15_zret', 'pbc_m15_skew', 'pbc_m15_chan',
+                'pbc_m15_vwapdev', 'pbc_m15_body',
+                'pbc_m15_volsess', 'pbc_m15_volr']
+    if m15 is None or len(m15) == 0 or 'Volume' not in m15:
+        for col in pbc_cols + ['pbc_vol_mix']:
+            f[col] = np.nan
+        return f
+    m = m15.sort_index().rename(columns={
+        'Open': 'o', 'High': 'h', 'Low': 'l', 'Close': 'c',
+        'Volume': 'v'})
+    mc = _pbc_m15_cols(m)
+    pos = m.index.get_indexer(f.index, method='pad')
+    for col in pbc_cols:
+        vals = mc[col].to_numpy(float)
+        f[col] = np.where(pos >= 0,
+                          vals[np.maximum(pos, 0)], np.nan)
+    vz15 = mc['_m15_volz'].to_numpy(float)
+    m15z = np.where(pos >= 0, vz15[np.maximum(pos, 0)], np.nan)
+    f['pbc_vol_mix'] = f['pb_sess_vol'] + 2.0 * m15z
+    return f
+
+
 # ======================================================== builder --
 def frame_to_research(h1):
     """Normalise an app H1 frame (Datetime index, OHLC[V]) to
@@ -898,18 +1554,22 @@ def m30_from_m15(m15):
 
 
 def build_symbol_features(sym, h1, groups, m15=None, m30=None,
-                          dx_mom=None, b7ctx=None):
+                          dx_mom=None, b7ctx=None,
+                          pv_variants=None, pbctx=None):
     """Full feature frame for one symbol.
 
     h1: app-shape H1 frame (Datetime index, OHLC[V]).
-    groups: subset of {'r4', 'planb', 'b2cf', 'b3', 'b4',
-    'b5', 'b6v', 'b7'} on top of the base block (order fixed
-    to the research chain). m15: Datetime-indexed M15 frame
-    (b2cf, b6v). m30: research-shape M30 frame (Datetime
+    groups: subset of {'r4', 'planb', 'b2cf', 'b2x', 'b3',
+    'b4', 'b5', 'b6v', 'b7', 'b8', 'b9', 'b9c', 'pv', 'pbc'}
+    on top of the base block (order fixed to the research
+    chain). m15: Datetime-indexed M15 frame (b2cf, b6v,
+    b9c, pbc). m30: research-shape M30 frame (Datetime
     column); derived from m15 when not given. dx_mom: dollar
     mom24 Series for the xdx columns. b7ctx: cross-symbol
-    basket/dollar Series dict for the b7 block (see
-    core.new8_candidate.b7_context).
+    basket/dollar Series dict for the b7 / b8 blocks (see
+    core.new8_candidate.cross_context). pv_variants: vote
+    pools to materialise for the pv block. pbctx: cross-
+    section context for the pbc block.
     Returns a Datetime-indexed feature frame."""
     fr, vol = frame_to_research(h1)
     if vol is None:
@@ -926,6 +1586,8 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
         f = add_planb_columns(f, fr, sym, vol)
     if 'b2cf' in groups:
         f = add_b2cf_columns(f, m15, m30)
+    if 'b2x' in groups:
+        f = add_b2x_columns(f, sym, vol)
     if 'b3' in groups:
         f = add_b3_columns(f, m30)
     if 'b4' in groups:
@@ -936,4 +1598,14 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
         f = add_b6v_columns(f, sym, m15)
     if 'b7' in groups:
         f = add_b7_columns(f, sym, b7ctx)
+    if 'b8' in groups:
+        f = add_b8_columns(f, sym, b7ctx)
+    if 'b9' in groups:
+        f = add_b9_columns(f)
+    if 'b9c' in groups:
+        f = add_b9c_columns(f, sym, m15)
+    if 'pv' in groups:
+        f = add_pv_columns(f, sym, pv_variants or {})
+    if 'pbc' in groups:
+        f = add_pbc_columns(f, sym, m15, vol, pbctx)
     return f

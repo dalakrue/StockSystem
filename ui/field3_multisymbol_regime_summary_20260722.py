@@ -10163,15 +10163,31 @@ _COMBINED_CFG = {
         "dl_base": "january_combined_signals",
         "sheet": "JanCombined",
     },
+    3: {
+        "sysid": "cycle86bcombined",
+        "month_name": "March",
+        "best_id": "cycle86b",
+        "best_label": "Cycle 86B (BRIEF22 C01 veto IMPROVED)",
+        "second_id": "cycle86s",
+        "second_label": "Cycle 86S (Plan B-6 SB-REDO R17, phase-2 install 2026-10-28)",
+        "hours_mod": "core.cycle86s_best",
+        "hours_attr": "CYCLE86S_CHECK_HOURS",
+        "state_key": "combined_mar_signals_latest_v1",
+        "age_key": "combined_mar_candle_age_txt",
+        "diag_key": "combined_mar_signals_diag_v1",
+        "fail_key": "combined_mar_signals_fail_v1",
+        "dl_base": "march_combined_signals",
+        "sheet": "MarCombined",
+    },
     4: {
         "sysid": "cycle87bcombined",
         "month_name": "April",
         "best_id": "cycle87c",
         "best_label": "Cycle 87C (87B + Plan B-2 Q09 non-dollar + P-VOTE C01 IMPROVED)",
-        "second_id": "cycle87",
-        "second_label": "Cycle 87 (C87-24, old system)",
-        "hours_mod": "core.cycle87c_best",
-        "hours_attr": "CYCLE87C_CHECK_HOURS",
+        "second_id": "cycle87s",
+        "second_label": "Cycle 87S (P-VOTE Track B fallback R13, phase-2 install 2026-10-28)",
+        "hours_mod": "core.cycle87s_best",
+        "hours_attr": "CYCLE87S_CHECK_HOURS",
         "state_key": "combined_apr_signals_latest_v1",
         "age_key": "combined_apr_candle_age_txt",
         "diag_key": "combined_apr_signals_diag_v1",
@@ -10200,10 +10216,10 @@ _COMBINED_CFG = {
         "month_name": "November",
         "best_id": "cycle93q",
         "best_label": "Cycle 93Q (93P + P-BRANCH Plan C C10 IMPROVED)",
-        "second_id": "cycle93n",
-        "second_label": "Cycle 93N (93B + NEW8 B-4 partner IMPROVED)",
-        "hours_mod": "core.cycle93q_best",
-        "hours_attr": "CYCLE93Q_CHECK_HOURS",
+        "second_id": "cycle93s",
+        "second_label": "Cycle 93S (P-BRANCH Track B R12, phase-2 install 2026-10-28)",
+        "hours_mod": "core.cycle93s_best",
+        "hours_attr": "CYCLE93S_CHECK_HOURS",
         "state_key": "combined_nov_signals_latest_v1",
         "age_key": "combined_nov_candle_age_txt",
         "diag_key": "combined_nov_signals_diag_v1",
@@ -10216,10 +10232,10 @@ _COMBINED_CFG = {
         "month_name": "December",
         "best_id": "cycle94b",
         "best_label": "Cycle 94B (BRIEF21 C20a IMPROVED)",
-        "second_id": "cycle274",
-        "second_label": "Cycle 274 (C274 stack)",
-        "hours_mod": "core.cycle94b_best",
-        "hours_attr": "CYCLE94B_CHECK_HOURS",
+        "second_id": "cycle94s",
+        "second_label": "Cycle 94S (Plan B-6 SB-REDO R18, phase-2 install 2026-10-28)",
+        "hours_mod": "core.cycle94s_best",
+        "hours_attr": "CYCLE94S_CHECK_HOURS",
         "state_key": "combined_dec_signals_latest_v1",
         "age_key": "combined_dec_candle_age_txt",
         "diag_key": "combined_dec_signals_diag_v1",
@@ -10449,8 +10465,9 @@ def _render_combined_signals_table(st, state, month):
     try:
         hours = _combined_check_hours(month)
     except Exception:
-        hours = {1: (11, 13, 17), 4: (16, 17, 18), 9: (1, 10, 11),
-                 11: (9, 13, 15), 12: (10, 11, 13)}[month]
+        hours = {1: (11, 13, 17), 3: (11, 12, 16, 17),
+                 4: (16, 17, 18, 19), 9: (1, 10, 11),
+                 11: (9, 10, 13, 15), 12: (10, 11, 13, 14)}[month]
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(cfg["state_key"])
@@ -10572,6 +10589,10 @@ def _render_jun_combined_signals_table(st, state):
     return _render_combined_signals_table(st, state, 6)
 
 
+def _render_mar_combined_signals_table(st, state):
+    return _render_combined_signals_table(st, state, 3)
+
+
 def _render_aug_combined_signals_table(st, state):
     return _render_combined_signals_table(st, state, 8)
 
@@ -10649,6 +10670,10 @@ def render_jan_combined_download_buttons(st, payload):
 
 def render_apr_combined_download_buttons(st, payload):
     return _render_combined_download_buttons(st, payload, 4)
+
+
+def render_mar_combined_download_buttons(st, payload):
+    return _render_combined_download_buttons(st, payload, 3)
 
 
 def render_may_combined_download_buttons(st, payload):
@@ -10906,13 +10931,15 @@ _MONTH_PANEL_ORDER = [
     # best exists, else the best-only panel. 29-symbol build
     # (2026-10-27): combined months are now Jan/Apr/May/Jun/Aug/
     # Sep/Oct/Nov/Dec; Feb/Mar/Jul stay best-only (Feb NEW8 layer
-    # HELD BY USER ORDER).
+    # HELD BY USER ORDER). Phase-2 update (2026-10-28): March
+    # becomes combined (cycle86s second best installed); Feb/Jul
+    # stay best-only.
     # The third element names the BEST cycle module
     # (core.cycle<nn>_best / CYCLE<NN>_CHECK_HOURS) used by the
     # check-time reminders.
     ("January", "cycle60bcombined", "60b", "C60B+C60-03"),
     ("February", "cycle85b", "85b", "C85B+C19"),
-    ("March", "cycle86b", "86b", "C86B+C01"),
+    ("March", "cycle86bcombined", "86b", "C86B+C01"),
     ("April", "cycle87bcombined", "87b", "C87B+C87-24"),
     ("May", "cycle88ncombined", "88n", "C88N+C88-03"),
     ("June", "cycle89ncombined", "89n", "C89N+C89-21"),
@@ -10935,6 +10962,11 @@ _SIGNAL_PANELS = {
                 "state_key": _C86_SIG_STATE_KEY, "age_key": _C86_SIG_AGE_KEY,
                 "diag_key": _C86_SIG_DIAG_KEY, "fail_key": _C86_SIG_FAIL_KEY,
                 "label": "Cycle 86B (C86-24 + BRIEF22 C01) \u2014 March system"},
+    "cycle86bcombined": {"render": _render_mar_combined_signals_table,
+                "download": render_mar_combined_download_buttons,
+                "state_key": _COMBINED_CFG[3]["state_key"], "age_key": _COMBINED_CFG[3]["age_key"],
+                "diag_key": _COMBINED_CFG[3]["diag_key"], "fail_key": _COMBINED_CFG[3]["fail_key"],
+                "label": "March COMBINED (Best first, Second-Best only when Best is silent)"},
     "cycle88ncombined": {"render": _render_may_combined_signals_table,
                 "download": render_may_combined_download_buttons,
                 "state_key": _COMBINED_CFG[5]["state_key"], "age_key": _COMBINED_CFG[5]["age_key"],

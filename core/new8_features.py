@@ -681,6 +681,13 @@ def add_b3_columns(f, m30):
             .replace(0.0, np.nan)
 
     f['uo'] = 100.0 * (4 * avg(7) + 2 * avg(14) + avg(28)) / 7.0
+    # TRIX(15) -- build_features_planb3.build_one verbatim
+    # (added 2026-10-28 phase 2: the P-VOTE ML_TRIX leg
+    # reads it; no earlier design did).
+    _e1 = _ema(close, 15)
+    _e2 = _ema(_e1, 15)
+    _e3 = _ema(_e2, 15)
+    f['trix15'] = 100.0 * _e3.pct_change()
     if m30 is not None:
         m30i = m30.set_index('Datetime')
         m30c = m30i['Close']
@@ -773,6 +780,164 @@ def add_b5_columns(f):
                    axis=1).max(axis=1)
     atr100 = tr.ewm(span=100, adjust=False).mean()
     f['atr_r'] = atr / atr100.replace(0.0, np.nan)
+    return f
+
+
+def _bars_since_extreme_b6(x, n, want_max):
+    """build_features_planb5._bars_since_extreme verbatim."""
+    from numpy.lib.stride_tricks import sliding_window_view
+    v = x.to_numpy(float)
+    out = np.full(len(v), np.nan)
+    if len(v) < n:
+        return pd.Series(out, index=x.index)
+    w = sliding_window_view(v, n)
+    ok = ~np.isnan(w).any(axis=1)
+    idx = np.argmax(w, axis=1) if want_max else np.argmin(w, axis=1)
+    res = (n - 1) - idx
+    out[n - 1:][ok] = res[ok]
+    return pd.Series(out, index=x.index)
+
+
+def _wilder_rsi_b6(close, n=14):
+    """build_features_planb4._wilder_rsi verbatim (local to
+    the b6 block; does NOT overwrite the frame's rsi14)."""
+    d = close.diff()
+    up = d.clip(lower=0.0)
+    dn = (-d).clip(lower=0.0)
+    ru = up.ewm(alpha=1.0 / n, adjust=False).mean()
+    rd = dn.ewm(alpha=1.0 / n, adjust=False).mean()
+    return 100.0 - 100.0 / (1.0 + ru / rd.replace(0.0, np.nan))
+
+
+def add_b6_columns(f, rcs_z=None):
+    """NEW8 Plan B-6 nested columns (build_features_planb6
+    verbatim) for the columns the PLANB6SB2 second-best
+    designs read, with their Plan B-3 / B-4 / B-5 inputs
+    ported verbatim where the app chain does not already
+    produce them: vortex_d / chop61 (planb3), qqe / aroon_d
+    (planb4), macd_hs / ichi_cd / aroon14_d / vortex21_d /
+    chop20 / ker20 / hurst100 / sqz_dur / ulcer14 (planb5;
+    atr_r is the b5 block's, identical formula). cf_stack
+    is assembled from the b2cf block's cf_m15dev and the
+    r4 block's m30_state / h4_state exactly as
+    build_features_planb2 assembles it. rcs_z is the
+    cross-sectional currency-strength z of planb5's
+    add_rcs, prepared by core.new8_candidate.rcs_context
+    (None -> NaN)."""
+    close, high, low = f['Close'], f['High'], f['Low']
+    atr = f['atr14']
+    macd_h = f['macd_h']
+    if 'atr_r' in f:
+        atr_r = f['atr_r']
+    else:
+        _tr = pd.concat([high - low,
+                         (high - close.shift(1)).abs(),
+                         (low - close.shift(1)).abs()],
+                        axis=1).max(axis=1)
+        atr_r = atr / _tr.ewm(span=100, adjust=False).mean() \
+            .replace(0.0, np.nan)
+    tr = pd.concat([high - low, (high - close.shift(1)).abs(),
+                    (low - close.shift(1)).abs()],
+                   axis=1).max(axis=1)
+    # ---- Plan B-5 inputs (build_features_planb5.build_one)
+    f['macd_hs'] = (macd_h - macd_h.shift(3)) / atr
+    tenkan = (high.rolling(9).max() + low.rolling(9).min()) / 2.0
+    kijun = (high.rolling(26).max() + low.rolling(26).min()) / 2.0
+    senkou_a = ((tenkan + kijun) / 2.0).shift(26)
+    senkou_b = ((high.rolling(52).max()
+                 + low.rolling(52).min()) / 2.0).shift(26)
+    cloud_mid = (senkou_a + senkou_b) / 2.0
+    f['ichi_cd'] = (close - cloud_mid) / atr
+    shi = _bars_since_extreme_b6(high, 14, True)
+    slo = _bars_since_extreme_b6(low, 14, False)
+    f['aroon14_d'] = (14.0 - shi) / 14.0 * 100.0 \
+        - (14.0 - slo) / 14.0 * 100.0
+    vmp = (high - low.shift(1)).abs().rolling(21).sum()
+    vmm = (low - high.shift(1)).abs().rolling(21).sum()
+    trs = tr.rolling(21).sum().replace(0.0, np.nan)
+    f['vortex21_d'] = vmp / trs - vmm / trs
+    rng = (high.rolling(20).max()
+           - low.rolling(20).min()).replace(0.0, np.nan)
+    f['chop20'] = 100.0 * np.log10(
+        tr.rolling(20).sum() / rng) / np.log10(20.0)
+    vol = close.diff().abs().rolling(20).sum().replace(0.0,
+                                                       np.nan)
+    f['ker20'] = (close - close.shift(20)).abs() / vol
+    r = np.log(close).diff()
+    var1 = r.rolling(100).var()
+    var10 = r.rolling(10).sum().rolling(100).var()
+    h = 0.5 * np.log(var10 / var1.replace(0.0, np.nan)) \
+        / np.log(10.0)
+    f['hurst100'] = h.clip(0.0, 1.0)
+    ma20 = close.rolling(20).mean()
+    sd20 = close.rolling(20).std()
+    ema20 = _ema(close, 20)
+    on = ((ma20 + 2 * sd20) < (ema20 + 1.5 * atr)) \
+        & ((ma20 - 2 * sd20) > (ema20 - 1.5 * atr))
+    on = on.fillna(False)
+    grp = (~on).cumsum()
+    dur = on.astype(float).groupby(grp).cumsum()
+    f['sqz_dur'] = dur.clip(upper=30)
+    mx14 = close.rolling(14).max()
+    dd = 100.0 * (close / mx14 - 1.0)
+    f['ulcer14'] = np.sqrt((dd ** 2).rolling(14).mean())
+    # ---- Plan B-3 inputs (build_features_planb3.build_one)
+    prev_close = close.shift(1)
+    vm_p = (high - low.shift(1)).abs()
+    vm_m = (low - high.shift(1)).abs()
+    tr1 = pd.concat([high - low, (high - prev_close).abs(),
+                     (low - prev_close).abs()],
+                    axis=1).max(axis=1)
+    vip = vm_p.rolling(14).sum() / tr1.rolling(14).sum() \
+        .replace(0.0, np.nan)
+    vim = vm_m.rolling(14).sum() / tr1.rolling(14).sum() \
+        .replace(0.0, np.nan)
+    f['vortex_d'] = vip - vim
+    atr1 = tr1
+    hh = high.rolling(14).max()
+    ll = low.rolling(14).min()
+    rng61 = (hh - ll).replace(0.0, np.nan)
+    f['chop61'] = 100.0 * np.log10(
+        atr1.rolling(14).sum() / rng61) / np.log10(14.0)
+    # ---- Plan B-4 inputs (build_features_planb4.build_one)
+    rsi_w = _wilder_rsi_b6(close, 14)
+    f['qqe'] = _ema(_ema(rsi_w, 5), 5)
+    shi25 = _bars_since_extreme_b6(high, 25, True)
+    slo25 = _bars_since_extreme_b6(low, 25, False)
+    f['aroon_d'] = (25.0 - shi25) / 25.0 * 100.0 \
+        - (25.0 - slo25) / 25.0 * 100.0
+    # ---- cf_stack (build_features_planb2) + rcs_z (planb5)
+    def _col(name):
+        if name in f:
+            return f[name]
+        return pd.Series(np.nan, index=f.index)
+    m15_sign = np.sign(np.where(
+        np.isnan(_col('cf_m15dev').to_numpy()), 0.0,
+        _col('cf_m15dev').to_numpy()))
+    f['cf_stack'] = m15_sign \
+        + _col('m30_state').fillna(0.0).to_numpy() \
+        + _col('h4_state').fillna(0.0).to_numpy()
+    if rcs_z is not None:
+        f['rcs_z'] = rcs_z.reindex(f.index)
+    else:
+        f['rcs_z'] = np.nan
+    # ---- Plan B-6 nested columns (build_features_planb6)
+    f['nx_im'] = f['ichi_cd'] + f['macd_hs']
+    f['nx_rk'] = f['rcs_z'] * f['ker20']
+    f['nx_aa'] = (f['aroon14_d'] + f['aroon_d']) / 2.0
+    f['nx_vv'] = f['vortex21_d'] - f['vortex_d']
+    f['nx_cc'] = f['chop20'] - f['chop61']
+    f['nx_ha'] = f['hurst100'] * atr_r
+    f['nx_ua'] = f['ulcer14'] / (1.0 + atr_r)
+    f['nx_kq'] = (_col('kelt_p') - 0.5) * 2.0 \
+        + (f['qqe'] - 50.0) / 50.0
+    f['nx_cf'] = f['cf_stack'] + _col('cf2_stack') \
+        + _col('cf3_stack')
+    f['nx_mf'] = _col('mfi14') / 100.0 + _col('cmf20')
+    f['nx_ad'] = _col('adx14') / 50.0 + macd_h
+    f['nx_vol'] = _col('vol_z') + atr_r
+    f['nx_sq'] = f['sqz_dur'] / 30.0 + f['ker20']
+    f['nx_hk'] = _col('hull_dev') + _col('kama_dev')
     return f
 
 
@@ -1555,21 +1720,24 @@ def m30_from_m15(m15):
 
 def build_symbol_features(sym, h1, groups, m15=None, m30=None,
                           dx_mom=None, b7ctx=None,
-                          pv_variants=None, pbctx=None):
+                          pv_variants=None, pbctx=None,
+                          rcs=None):
     """Full feature frame for one symbol.
 
     h1: app-shape H1 frame (Datetime index, OHLC[V]).
     groups: subset of {'r4', 'planb', 'b2cf', 'b2x', 'b3',
-    'b4', 'b5', 'b6v', 'b7', 'b8', 'b9', 'b9c', 'pv', 'pbc'}
-    on top of the base block (order fixed to the research
-    chain). m15: Datetime-indexed M15 frame (b2cf, b6v,
-    b9c, pbc). m30: research-shape M30 frame (Datetime
+    'b4', 'b5', 'b6', 'b6v', 'b7', 'b8', 'b9', 'b9c', 'pv',
+    'pbc'} on top of the base block (order fixed to the
+    research chain). m15: Datetime-indexed M15 frame (b2cf,
+    b6v, b9c, pbc). m30: research-shape M30 frame (Datetime
     column); derived from m15 when not given. dx_mom: dollar
     mom24 Series for the xdx columns. b7ctx: cross-symbol
     basket/dollar Series dict for the b7 / b8 blocks (see
     core.new8_candidate.cross_context). pv_variants: vote
     pools to materialise for the pv block. pbctx: cross-
-    section context for the pbc block.
+    section context for the pbc block. rcs: cross-sectional
+    currency-strength z Series for the b6 block (see
+    core.new8_candidate.rcs_context).
     Returns a Datetime-indexed feature frame."""
     fr, vol = frame_to_research(h1)
     if vol is None:
@@ -1594,6 +1762,8 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
         f = add_b4_columns(f)
     if 'b5' in groups:
         f = add_b5_columns(f)
+    if 'b6' in groups:
+        f = add_b6_columns(f, rcs)
     if 'b6v' in groups:
         f = add_b6v_columns(f, sym, m15)
     if 'b7' in groups:

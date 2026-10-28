@@ -90,6 +90,10 @@ SYSTEM_CYCLE89P = "cycle89p"   # NEW8 Plan B-9 C10 -- June IMPROVED system (2026
 SYSTEM_CYCLE91P = "cycle91p"   # NEW8 Plan B-9 C02 + Plan C C06 -- September IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE93Q = "cycle93q"   # P-BRANCH Plan C C10 -- November IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE91S = "cycle91s"   # NEW8 Plan B-9 Track B R14 -- September SECOND-BEST system (2026-10-28 update, user waiver)
+SYSTEM_CYCLE94S = "cycle94s"   # NEW8 Plan B-6 SB-REDO R18 -- December SECOND-BEST system (2026-10-28 phase 2, user order)
+SYSTEM_CYCLE86S = "cycle86s"   # NEW8 Plan B-6 SB-REDO R17 -- March SECOND-BEST system (2026-10-28 phase 2, user order)
+SYSTEM_CYCLE93S = "cycle93s"   # NEW8 P-BRANCH Track B R12 -- November SECOND-BEST system (2026-10-28 phase 2, user order)
+SYSTEM_CYCLE87S = "cycle87s"   # NEW8 P-VOTE Track B fallback R13 -- April SECOND-BEST system (2026-10-28 phase 2, user order)
 
 MONTH_SYSTEMS = {
     1: SYSTEM_CYCLE60B,   # January -- BRIEF23 C20_STACK IMPROVED (2026-10-26)
@@ -140,6 +144,10 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE91P: 83,   # NEW8 Plan B-9 September improved (as C91-15)
     SYSTEM_CYCLE93Q: 83,   # P-BRANCH Plan C November improved (as C93-24)
     SYSTEM_CYCLE91S: 83,   # NEW8 Plan B-9 Track B September second best (as C91-15)
+    SYSTEM_CYCLE94S: 105,   # NEW8 Plan B-6 SB-REDO December second best (as C94-23)
+    SYSTEM_CYCLE86S: 86,   # NEW8 Plan B-6 SB-REDO March second best (as C86-24)
+    SYSTEM_CYCLE93S: 83,   # NEW8 P-BRANCH Track B November second best (as C93-24)
+    SYSTEM_CYCLE87S: 104,   # NEW8 P-VOTE Track B April second best (as C87-24)
 }
 
 # ACTIVE Best N values (user order 2026-10-26): every month's Best N
@@ -179,6 +187,10 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE91P: 27.666666666666668,   # NEW8 Plan B-9 September improved (83 / 3)
     SYSTEM_CYCLE93Q: 27.666666666666668,   # P-BRANCH Plan C November improved (83 / 3)
     SYSTEM_CYCLE91S: 27.666666666666668,   # NEW8 Plan B-9 Track B September second best (83 / 3)
+    SYSTEM_CYCLE94S: 35.0,   # NEW8 Plan B-6 SB-REDO December second best (105 / 3)
+    SYSTEM_CYCLE86S: 28.666666666666668,   # NEW8 Plan B-6 SB-REDO March second best (86 / 3)
+    SYSTEM_CYCLE93S: 27.666666666666668,   # NEW8 P-BRANCH Track B November second best (83 / 3)
+    SYSTEM_CYCLE87S: 34.666666666666664,   # NEW8 P-VOTE Track B April second best (104 / 3)
 }
 
 # Months that carry a second-priority system in the combined
@@ -192,14 +204,15 @@ SYSTEM_BEST_N = {
 # BRIEF23 C20_STACK improved system (cycle60b).
 MONTH_SECOND_BEST = {
     1: SYSTEM_CYCLE60,   # January -- old C60-03 behind C20_STACK
-    4: SYSTEM_CYCLE87,   # April -- old C87-24 behind C20a
+    3: SYSTEM_CYCLE86S,   # March -- Plan B-6 SB-REDO R17 behind C01 (2026-10-28 phase 2, user order; slot was empty)
+    4: SYSTEM_CYCLE87S,   # April -- P-VOTE Track B fallback R13 behind cycle87c (2026-10-28 phase 2, user order; replaces cycle87)
     5: SYSTEM_CYCLE88,   # May -- old C88-03 behind NEW8 E07 (2026-10-27)
     6: SYSTEM_CYCLE89,   # June -- old C89-21 behind NEW8 P07 (2026-10-27)
     8: SYSTEM_CYCLE67P,   # August -- NEW8 P07 standalone (2026-10-27)
     9: SYSTEM_CYCLE91S,   # September -- Plan B-9 Track B R14 behind cycle91p (2026-10-28 update, user waiver; replaces cycle287)
     10: SYSTEM_CYCLE92E,   # October -- NEW8 E07 standalone (2026-10-27)
-    11: SYSTEM_CYCLE93N,   # November -- cycle93n (B-4 combined) behind NEW8 B-7 (2026-10-27 update)
-    12: SYSTEM_CYCLE274,   # December -- C274 stack behind C20a
+    11: SYSTEM_CYCLE93S,   # November -- P-BRANCH Track B R12 behind cycle93q (2026-10-28 phase 2, user order; replaces cycle93n)
+    12: SYSTEM_CYCLE94S,   # December -- Plan B-6 SB-REDO R18 behind C20a (2026-10-28 phase 2, user order; replaces cycle274)
     # (12-system rebuild 2026-10-27: user confirmed cycle274 is
     # December's kept second best, replacing cycle94 as fallback.
     # 29-symbol build 2026-10-27: November's second best becomes
@@ -234,7 +247,7 @@ def set_active_system(name: str) -> str:
     one of the two recorded second-best systems added 2026-10-25)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
                          f"monthly systems, the recorded second-best "
                          f"systems and the BRIEF21 C20a improved systems "
@@ -552,9 +565,10 @@ def describe_active() -> str:
                 "leftover 73.88%, audit leftover 39.40% "
                 "(LCT P 100% / q05 59.60%, MC PASS, PBO 0%; "
                 "cross-lane reconciliation winner; app "
-                "replay EXACT 2026-10-28). cycle93n stays "
-                "November's second priority in the combined "
-                "layer")
+                "replay EXACT 2026-10-28). November's second "
+                "priority in the combined layer is the "
+                "P-BRANCH Track B design R12 (cycle93s, "
+                "phase-2 install 2026-10-28)")
     if _ACTIVE == SYSTEM_CYCLE91S:
         return ("cycle91s (NEW8 Plan B-9 Track B R14) -- "
                 "September SECOND-BEST system: the "
@@ -565,6 +579,47 @@ def describe_active() -> str:
                 "user's scoped waiver 2026-10-28 of the two "
                 "failed creation items; app replay EXACT). "
                 "NOT the September default (cycle91p stands)")
+    if _ACTIVE == SYSTEM_CYCLE94S:
+        return ("cycle94s (NEW8 Plan B-6 SB-REDO R18) -- "
+                "December SECOND-BEST system: the standalone "
+                "R18 design (60 equations, extra check hour "
+                "14 UTC); in app pairing over cycle94b it "
+                "added 142 of its 239 walk picks (combined2 "
+                "949 trades; installed 2026-10-28 phase 2 on "
+                "the user's order, waiving the scan's NEARLY "
+                "items; app replay EXACT). NOT the December "
+                "default (cycle94b stands)")
+    if _ACTIVE == SYSTEM_CYCLE86S:
+        return ("cycle86s (NEW8 Plan B-6 SB-REDO R17) -- "
+                "March SECOND-BEST system: the standalone "
+                "R17 design (40 equations, extra check hour "
+                "12 UTC); in research pairing over cycle86b "
+                "it added 58 of its 242 walk picks (combined2 "
+                "723 trades; installed 2026-10-28 phase 2 on "
+                "the user's order, waiving the scan's NEARLY "
+                "items; app replay EXACT). NOT the March "
+                "default (cycle86b stands)")
+    if _ACTIVE == SYSTEM_CYCLE93S:
+        return ("cycle93s (NEW8 P-BRANCH Track B R12) -- "
+                "November SECOND-BEST system: the standalone "
+                "R12 OR-branch design (12 equations, extra "
+                "check hour 10 UTC); in research pairing over "
+                "cycle93q it added 124 of its 220 walk picks "
+                "(combined2 820 trades; installed 2026-10-28 "
+                "phase 2 on the user's order, waiving the "
+                "scan's NEARLY items; app replay EXACT). NOT "
+                "the November default (cycle93q stands)")
+    if _ACTIVE == SYSTEM_CYCLE87S:
+        return ("cycle87s (NEW8 P-VOTE Track B fallback "
+                "R13) -- April SECOND-BEST system: the "
+                "standalone R13 vote-threshold design (40 "
+                "equations, extra check hour 19 UTC); in "
+                "research pairing over cycle87c it added 44 "
+                "of its 124 walk picks (combined2 946 trades; "
+                "installed 2026-10-28 phase 2 on the user's "
+                "order, waiving the scan's NEARLY items; app "
+                "replay EXACT). NOT the April default "
+                "(cycle87c stands)")
     return "Cycle 60 (C60-03) -- January system"
 
 
@@ -717,6 +772,18 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE91S:
         from core.cycle91s_best import evaluate_cycle91s_signals
         return evaluate_cycle91s_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE94S:
+        from core.cycle94s_best import evaluate_cycle94s_signals
+        return evaluate_cycle94s_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE86S:
+        from core.cycle86s_best import evaluate_cycle86s_signals
+        return evaluate_cycle86s_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE93S:
+        from core.cycle93s_best import evaluate_cycle93s_signals
+        return evaluate_cycle93s_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE87S:
+        from core.cycle87s_best import evaluate_cycle87s_signals
+        return evaluate_cycle87s_signals(frames, check_time_utc)
     raise ValueError(f"no evaluator for active system {_ACTIVE!r}")
 
 
@@ -843,6 +910,22 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE91S:
         from core.cycle91s_best import select_cycle91s_entries
         return select_cycle91s_entries(signals,
+                                       open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE94S:
+        from core.cycle94s_best import select_cycle94s_entries
+        return select_cycle94s_entries(signals,
+                                       open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE86S:
+        from core.cycle86s_best import select_cycle86s_entries
+        return select_cycle86s_entries(signals,
+                                       open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE93S:
+        from core.cycle93s_best import select_cycle93s_entries
+        return select_cycle93s_entries(signals,
+                                       open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE87S:
+        from core.cycle87s_best import select_cycle87s_entries
+        return select_cycle87s_entries(signals,
                                        open_symbols=open_symbols)
     raise ValueError(f"no selector for active system {_ACTIVE!r}")
 
@@ -1040,6 +1123,14 @@ def active_check_hours():
         return (9, 13, 15)
     if _ACTIVE == SYSTEM_CYCLE91S:
         return (1, 2, 10, 11)
+    if _ACTIVE == SYSTEM_CYCLE94S:
+        return (10, 11, 13, 14)
+    if _ACTIVE == SYSTEM_CYCLE86S:
+        return (11, 12, 16, 17)
+    if _ACTIVE == SYSTEM_CYCLE93S:
+        return (9, 10, 13, 15)
+    if _ACTIVE == SYSTEM_CYCLE87S:
+        return (16, 17, 18, 19)
     return (11, 13, 17)
 
 

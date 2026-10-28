@@ -144,6 +144,65 @@ def _quote_code(sym):
     return sym[3:6]
 
 
+_RCS_CCYS = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD',
+             'CAD', 'CHF']
+
+
+def rcs_context(frames):
+    """Cross-sectional Relative Currency Strength z-scores:
+    build_features_planb5.add_rcs verbatim over the app
+    frames ({sym: Datetime-indexed OHLC frame}). ret24 per
+    symbol; currency strength = mean signed ret24 over the
+    pairs containing the currency; per symbol the base-quote
+    strength difference, normalised by its rolling 120-bar
+    std (min 60). Returns {sym: rcs_z Series}."""
+    import numpy as _np
+    import pandas as _pd
+    rets = {}
+    for sym, f in frames.items():
+        if len(sym) == 6 and f is not None and len(f):
+            rets[sym] = _np.log(f['Close']
+                                / f['Close'].shift(24))
+    if not rets:
+        return {}
+    ref = None
+    for sym in rets:
+        ref = rets[sym].index
+        break
+    aligned = {sym: r.reindex(ref, method=None)
+               for sym, r in rets.items()}
+    strengths = {}
+    for c in _RCS_CCYS:
+        vals, cnt = None, 0
+        for sym, r in aligned.items():
+            b, q = sym[:3], sym[3:]
+            if b == c:
+                vals = r if vals is None else vals.add(
+                    r, fill_value=0.0)
+                cnt += 1
+            elif q == c:
+                vals = (-r) if vals is None else vals.add(
+                    -r, fill_value=0.0)
+                cnt += 1
+        strengths[c] = vals / max(cnt, 1) if vals is not None \
+            else _pd.Series(0.0, index=ref)
+    S = _pd.DataFrame(strengths)
+    S = S.ffill()
+    out = {}
+    for sym, f in frames.items():
+        if f is None or len(f) == 0:
+            continue
+        if len(sym) == 6:
+            diff = S[sym[:3]] - S[sym[3:]]
+        else:
+            diff = S['USD'] - S[[c for c in _RCS_CCYS
+                                 if c != 'USD']].mean(axis=1)
+        d = diff.reindex(f.index, method='ffill')
+        sd = d.rolling(120, min_periods=60).std()
+        out[sym] = d / sd.replace(0.0, _np.nan)
+    return out
+
+
 def cross_context(frames):
     """Extended cross-symbol context (2026-10-28): everything
     b7_context computes (base-currency baskets bm/br + dollar
@@ -277,8 +336,8 @@ class CandidateContext:
                         pv_variants[stem] = (stem, None)
         self.groups = tuple(g for g in
                             ("r4", "planb", "b2cf", "b2x", "b3",
-                             "b4", "b5", "b6v", "b7", "b8", "b9",
-                             "b9c", "pv", "pbc")
+                             "b4", "b5", "b6", "b6v", "b7", "b8",
+                             "b9", "b9c", "pv", "pbc")
                             if g in groups)
         self.symbols = sorted(syms)
         self._pv = pv_variants
@@ -289,6 +348,8 @@ class CandidateContext:
         else:
             self._b7, self._pbctx = {}, {'xs_rank': None,
                                          'dxy_mom': None}
+        self._rcs = rcs_context(self.frames) \
+            if "b6" in groups else {}
         self.feats = {}
         self.ohlc = {}
         for sym in self.symbols:
@@ -313,7 +374,9 @@ class CandidateContext:
             return
         m15 = self.m15.get(sym)
         if m15 is None and ("b9c" in self.groups
-                            or "pbc" in self.groups):
+                            or "pbc" in self.groups
+                            or "b2cf" in self.groups
+                            or "b6" in self.groups):
             self.m15 = ensure_m15(self.m15, (sym,))
             m15 = self.m15.get(sym)
         m30 = m30_from_m15(m15) if m15 is not None else None
@@ -323,7 +386,8 @@ class CandidateContext:
             pv_variants=self._pv if "pv" in self.groups
             else None,
             pbctx=self._pbctx if "pbc" in self.groups
-            else None)
+            else None,
+            rcs=self._rcs.get(sym))
         fr, _ = frame_to_research(h1)
         self.ohlc[sym] = ohlc_from_frame(fr)
 

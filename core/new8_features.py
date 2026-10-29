@@ -962,6 +962,20 @@ def add_b6v_columns(f, sym, m15):
     vol = m['Volume'].astype(float)
     med = vol.rolling(96).median().replace(0.0, np.nan)
     r = (vol / med).dropna()
+    if len(r) == 0:
+        # Live-provider M15 volume can be all-zero / all-NaN
+        # (Twelve Data FX volume): the ratio series is then
+        # undefined everywhere -- NaN columns, exactly as the
+        # insufficient-data branch above. (Fix 2026-10-29:
+        # without this guard the asof indexing below raised
+        # IndexError on live frames and the Mar/Nov/Dec
+        # panels showed 'Calculation error: IndexError'.
+        # Research frames always carry real M15 volume, so
+        # r is never empty there and no replay result
+        # changes.)
+        f['volm_r'] = np.nan
+        f['volm_z'] = np.nan
+        return f
     idx = f.index.to_numpy()
     pos = np.searchsorted(r.index.to_numpy(), idx,
                           side='right') - 1

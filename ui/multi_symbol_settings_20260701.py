@@ -255,7 +255,7 @@ def render_multi_symbol_selectors(
     # Backward compatibility marker only: "Reload Failed Symbols" was removed from
     # the UI because failed symbols are now handled by the unified canonical loader.
     st.markdown("### Three Multi-Symbol Selectors")
-    st.caption("The app is locked to one canonical 20-symbol FX universe. XAUUSD and all other symbols are excluded at the loader boundary.")
+    st.caption("The app is locked to one canonical 28-symbol FX universe. XAUUSD and all other symbols are excluded at the loader boundary.")
     groups["FIRST"] = _render_group_card(state, "FIRST")
     groups["SECOND"] = _render_group_card(state, "SECOND")
     groups["THIRD"] = _render_group_card(state, "THIRD")
@@ -265,7 +265,7 @@ def render_multi_symbol_selectors(
     state[_EMPTY_SELECTION_KEY] = not bool(configured_union)
     try:
         from core.current_result_sync_20260708 import sync_settings_source_of_truth
-        sync_settings_source_of_truth(state, configured_union[:20] or ["AUDCAD"], state.get("timeframe") or state.get("selected_timeframe") or "H4", reason="selectors_render_current_source_of_truth")
+        sync_settings_source_of_truth(state, configured_union[:28] or ["AUDCAD"], state.get("timeframe") or state.get("selected_timeframe") or "H4", reason="selectors_render_current_source_of_truth")
     except Exception as selectors_sync_exc_20260708:
         state["selectors_current_result_sync_error_20260708"] = f"{type(selectors_sync_exc_20260708).__name__}: {selectors_sync_exc_20260708}"
     _persist_groups(state)
@@ -290,7 +290,7 @@ def render_multi_symbol_selectors(
             publish_canonical_universe(state, canonical_selected, timeframe)
             canonical_status = loaded_canonical_status(state, canonical_selected, timeframe)
         except Exception as universe_exc:
-            canonical_selected = configured_union[:20]
+            canonical_selected = configured_union[:28]
             state["canonical_selected_symbols"] = list(canonical_selected)
             state["canonical_selected_symbols_20260705"] = list(canonical_selected)
             canonical_status = {

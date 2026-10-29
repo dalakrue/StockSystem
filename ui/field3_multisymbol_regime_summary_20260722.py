@@ -3418,6 +3418,137 @@ def _latest_entry_window_utc(now_utc, hours=None):
     return None
 
 
+def _month_check_hours_utc(month):
+    """The month's panel check hours (UTC), from the same source the
+    panels themselves use: _combined_check_hours for the ten combined
+    months; the best cycle's CHECK_HOURS for best-only February
+    (cycle85b) and July (cycle78)."""
+    month = int(month)
+    if month in _COMBINED_CFG:
+        return tuple(_combined_check_hours(month))
+    if month == 2:
+        from core.cycle85b_best import CYCLE85B_CHECK_HOURS
+        return tuple(CYCLE85B_CHECK_HOURS)
+    if month == 7:
+        from core.cycle78_best import CYCLE78_CHECK_HOURS
+        return tuple(CYCLE78_CHECK_HOURS)
+    return ()
+
+
+def in_check_window(month, now=None):
+    """Live-evaluation window gate (user order 2026-10-29): True only
+    when `now` is within [check - 15 min, check + 30 min] of one of
+    the month's check times. Outside these windows the month panels
+    must not fetch live data or retry evaluations (the automatic
+    retry was burning Twelve Data credits at non-check hours);
+    inside them the panels behave exactly as before. `now` may be
+    aware, naive (read as UTC), a pandas Timestamp, or None (=
+    current time). Check instants are the panels' UTC check hours on
+    weekdays (the same weekday rule as _latest_entry_window_utc),
+    compared in Asia/Yangon."""
+    import datetime as _dt
+    try:
+        from zoneinfo import ZoneInfo
+        _mmt = ZoneInfo("Asia/Yangon")
+    except Exception:
+        _mmt = _dt.timezone(_dt.timedelta(hours=6, minutes=30))
+    try:
+        hours = _month_check_hours_utc(month)
+    except Exception:
+        return False
+    if not hours:
+        return False
+    if now is None:
+        now_mmt = _dt.datetime.now(_mmt)
+    else:
+        ts = now
+        try:
+            import pandas as _pd
+            if isinstance(ts, _pd.Timestamp):
+                ts = ts.to_pydatetime()
+        except Exception:
+            pass
+        if getattr(ts, "tzinfo", None) is None:
+            ts = ts.replace(tzinfo=_dt.timezone.utc)
+        now_mmt = ts.astimezone(_mmt)
+    now_utc = now_mmt.astimezone(_dt.timezone.utc)
+    for day_off in (-1, 0, 1):
+        day = (now_utc + _dt.timedelta(days=day_off)).date()
+        if day.weekday() >= 5:
+            continue
+        for h in hours:
+            check = _dt.datetime(day.year, day.month, day.day,
+                                 int(h), tzinfo=_dt.timezone.utc)
+            if (check - _dt.timedelta(minutes=15) <= now_utc
+                    <= check + _dt.timedelta(minutes=30)):
+                return True
+    return False
+
+
+def _next_check_window_start_mmt(month, now=None):
+    """MMT label ('Fri 21:15') of the next live-evaluation window
+    start (check - 15 min) strictly after `now`, or '' if none is
+    found within a week."""
+    import datetime as _dt
+    try:
+        from zoneinfo import ZoneInfo
+        _mmt = ZoneInfo("Asia/Yangon")
+    except Exception:
+        _mmt = _dt.timezone(_dt.timedelta(hours=6, minutes=30))
+    try:
+        hours = _month_check_hours_utc(month)
+    except Exception:
+        return ""
+    if not hours:
+        return ""
+    if now is None:
+        now_utc = _dt.datetime.now(_dt.timezone.utc)
+    else:
+        ts = now
+        try:
+            import pandas as _pd
+            if isinstance(ts, _pd.Timestamp):
+                ts = ts.to_pydatetime()
+        except Exception:
+            pass
+        if getattr(ts, "tzinfo", None) is None:
+            ts = ts.replace(tzinfo=_dt.timezone.utc)
+        now_utc = ts.astimezone(_dt.timezone.utc)
+    best = None
+    for day_off in range(0, 9):
+        day = (now_utc + _dt.timedelta(days=day_off)).date()
+        if day.weekday() >= 5:
+            continue
+        for h in hours:
+            start = (_dt.datetime(day.year, day.month, day.day, int(h),
+                                  tzinfo=_dt.timezone.utc)
+                     - _dt.timedelta(minutes=15))
+            if start > now_utc and (best is None or start < best):
+                best = start
+    if best is None:
+        return ""
+    return best.astimezone(_mmt).strftime("%a %H:%M")
+
+
+def _check_window_note(month, now=None):
+    """Small plain note shown on a month panel outside its check
+    window: no live fetch runs, the last stored result (if any) is
+    served, and live evaluation resumes at the next window."""
+    try:
+        labels = sorted({_c22_window_mmt_label(h)
+                         for h in _month_check_hours_utc(month)})
+    except Exception:
+        labels = []
+    nxt = _next_check_window_start_mmt(month, now)
+    resume = (f" Live evaluation resumes at the next check window "
+              f"({nxt} MMT).") if nxt else ""
+    times = f" Check times (MMT): {', '.join(labels)}." if labels else ""
+    return ("Outside check window \u2014 showing the last stored result; "
+            "no live fetch runs outside a check window."
+            + resume + times
+            + " Live window: 15 min before to 30 min after each check.")
+
+
 def _diag_notes(payload):
     """Provider notes from a window evaluation's fetch diagnostics,
     for the data-failure message (fix 2026-10-26): the fetch already
@@ -5060,8 +5191,10 @@ def _render_cycle78_signals_table(st, state):
                 stored_win = None
 
         latest_win = _latest_entry_window_utc(now_utc, hours=_C78_CHECK_HOURS)
+        live_ok = in_check_window(7, now_utc)
         fresh_this_window = False
-        if (latest_win is not None
+        if (live_ok
+                and latest_win is not None
                 and (stored_win is None or stored_win != latest_win
                 or _payload_data_failed(payload))
                 and not _c78_recent_fail(latest_win, state)
@@ -5078,6 +5211,8 @@ def _render_cycle78_signals_table(st, state):
                 _c78_mark_fail(latest_win, state)
 
         st.markdown("### \U0001F3AF Cycle 78 signals")
+        if not live_ok:
+            st.caption(_check_window_note(7, now_utc))
         win_ts = None
         if payload is not None:
             try:
@@ -5384,8 +5519,10 @@ def _render_cycle85_signals_table(st, state):
                 stored_win = None
 
         latest_win = _latest_entry_window_utc(now_utc, hours=_C85_CHECK_HOURS)
+        live_ok = in_check_window(2, now_utc)
         fresh_this_window = False
-        if (latest_win is not None
+        if (live_ok
+                and latest_win is not None
                 and (stored_win is None or stored_win != latest_win
                 or _payload_data_failed(payload))
                 and not _c85_recent_fail(latest_win, state)
@@ -5402,6 +5539,8 @@ def _render_cycle85_signals_table(st, state):
                 _c85_mark_fail(latest_win, state)
 
         st.markdown("### \U0001F3AF Cycle 85 signals")
+        if not live_ok:
+            st.caption(_check_window_note(2, now_utc))
         win_ts = None
         if payload is not None:
             try:
@@ -10480,8 +10619,10 @@ def _render_combined_signals_table(st, state, month):
             except Exception:
                 stored_win = None
         latest_win = _latest_entry_window_utc(now_utc, hours=hours)
+        live_ok = in_check_window(month, now_utc)
         fresh_this_window = False
-        if (latest_win is not None
+        if (live_ok
+                and latest_win is not None
                 and (stored_win is None or stored_win != latest_win
                 or _payload_data_failed(payload))
                 and not _combined_recent_fail(latest_win, state, month)
@@ -10499,6 +10640,8 @@ def _render_combined_signals_table(st, state, month):
 
         st.markdown(f"### \U0001F3AF {cfg['month_name']} COMBINED signals \u2014 "
                     f"Best first, Second-Best only when Best is silent")
+        if not live_ok:
+            st.caption(_check_window_note(month, now_utc))
         win_ts = None
         if payload is not None:
             try:
@@ -10812,6 +10955,8 @@ def _compute_precheck_possible(month, state):
     import pandas as _pd
     try:
         from core.signal_mode import evaluate_combined_entries
+        if not in_check_window(int(month)):
+            return None
         _mname, _sysid, _nn, _code = _MONTH_PANEL_ORDER[int(month) - 1]
         _mod = _il.import_module(f"core.cycle{_nn}_best")
         check_hours = getattr(_mod, f"CYCLE{str(_nn).upper()}_CHECK_HOURS")

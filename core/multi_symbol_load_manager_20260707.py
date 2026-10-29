@@ -33,10 +33,12 @@ CANONICAL_SYMBOL_LOAD_STATUS_KEY = "canonical_symbol_load_status"
 CANONICAL_SYMBOL_CANDLES_KEY = "canonical_symbol_candles"
 CANONICAL_PROVIDER_TRACE_KEY = "canonical_provider_trace"
 CANONICAL_LAST_LOAD_RUN_ID_KEY = "canonical_last_load_run_id"
-# Keep the ranking universe deterministic and bounded.  The UI advertises
-# twenty symbols; limiting at this boundary also prevents accidental extra
-# API requests from legacy selector groups.
-MAX_CANONICAL_SYMBOLS = 20
+# Keep the ranking universe deterministic and bounded to the fixed
+# 28-symbol FX universe (2026-10-29: raised from 20 -- the old cap
+# silently dropped the 8 NEW8 crosses the installed systems trade);
+# the bound also prevents accidental extra API requests from legacy
+# selector groups.
+MAX_CANONICAL_SYMBOLS = 28
 REQUIRE_EXPLICIT_LOAD_KEY = "require_explicit_multi_symbol_load_20260707"
 LOADED_RUN_ACTIVE_KEY = "multi_symbol_loaded_run_active_20260707"
 LAST_LOAD_KEY = "multi_symbol_last_load_20260707"
@@ -87,7 +89,7 @@ def _normalize_symbol(value: Any) -> str:
 
 
 def normalize_symbols(values: Any, *, limit: int | None = None) -> list[str]:
-    """Hard-filter every provider/load boundary to the fixed 20 FX pairs."""
+    """Hard-filter every provider/load boundary to the fixed 28 FX pairs."""
     if isinstance(values, str):
         values = [values]
     normalized = [_normalize_symbol(v) for v in values] if isinstance(values, Sequence) else []

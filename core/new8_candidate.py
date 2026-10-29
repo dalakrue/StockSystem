@@ -337,7 +337,7 @@ class CandidateContext:
         self.groups = tuple(g for g in
                             ("r4", "planb", "b2cf", "b2x", "b3",
                              "b4", "b5", "b6", "b6v", "b7", "b8",
-                             "b9", "b9c", "pv", "pbc")
+                             "b9", "b9c", "pv", "pbc", "pr", "rp")
                             if g in groups)
         self.symbols = sorted(syms)
         self._pv = pv_variants
@@ -739,6 +739,76 @@ class MergedWalkState:
                 self.accepted.append(acc)
                 out.append(acc)
         return out
+
+
+class ReplacedMergedWalkState(MergedWalkState):
+    """MergedWalkState for a REPLACEMENT design (2026-10-29,
+    March P-REPLACE Track A): the candidate claims whole
+    (symbol, check-hour) slots. Incumbent entries at a
+    claimed slot are NOT recorded (the research
+    build_replaced displaced them before its merge), so
+    merge occupancy is judged against the kept incumbent
+    rows only. Candidate picks landing on a reverted slot
+    (the research greedy slot-revert set) are refused.
+    March's validated form has an empty revert set, so the
+    refusal path is structural only."""
+
+    def __init__(self, system, design_names,
+                 claimed_slots=(), reverted_slots=(),
+                 path=None):
+        super().__init__(system, design_names, path=path)
+        self.claimed_slots = {tuple(s) for s in claimed_slots}
+        self.reverted_slots = {tuple(s)
+                               for s in reverted_slots}
+
+    def step(self, ctx, check, incumbent_entries):
+        chk = pd.Timestamp(check)
+        self.refresh_exits(ctx)
+        if incumbent_entries is not None \
+                and len(incumbent_entries):
+            hour = int(chk.hour)
+            keep = [i for i, s in enumerate(
+                incumbent_entries["symbol"])
+                if (str(s), hour) not in self.claimed_slots]
+            if keep:
+                self._record_incumbent(
+                    ctx, check, incumbent_entries.iloc[keep])
+        out = []
+        for name in self.design_names:
+            rows = ctx.rows_at(name, check)
+            pick = self.walks[name].step(check, rows)
+            if pick is None:
+                continue
+            key = (str(pick["symbol"]),
+                   int(pd.Timestamp(pick["check"]).hour))
+            if key in self.reverted_slots:
+                continue
+            if self._merge_accept(pick):
+                acc = dict(pick)
+                acc["exit_final"] = not pick.get(
+                    "provisional_exit", False)
+                acc.pop("provisional_exit", None)
+                self.accepted.append(acc)
+                out.append(acc)
+        return out
+
+
+def load_replaced_state(system, design_names, claimed_slots,
+                        reverted_slots=()):
+    path = default_state_path(system)
+    try:
+        tmp = MergedWalkState.load(path, system, design_names)
+        st = ReplacedMergedWalkState(system, design_names,
+                                     claimed_slots,
+                                     reverted_slots, path=path)
+        st.incumbent_picks = tmp.incumbent_picks
+        st.accepted = tmp.accepted
+        st.walks = tmp.walks
+        return st
+    except Exception:
+        return ReplacedMergedWalkState(
+            system, design_names, claimed_slots,
+            reverted_slots, path=path)
 
 
 def default_state_path(system: str) -> str:

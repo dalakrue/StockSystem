@@ -681,6 +681,13 @@ def add_b3_columns(f, m30):
             .replace(0.0, np.nan)
 
     f['uo'] = 100.0 * (4 * avg(7) + 2 * avg(14) + avg(28)) / 7.0
+    # Efficiency Ratio(10) -- build_features_planb3.build_one
+    # verbatim (added 2026-10-29: the pr/rp transforms read
+    # er10; no earlier app design did).
+    _change = (close - close.shift(10)).abs()
+    _vola = close.diff().abs().rolling(10).sum() \
+        .replace(0.0, np.nan)
+    f['er10'] = _change / _vola
     # TRIX(15) -- build_features_planb3.build_one verbatim
     # (added 2026-10-28 phase 2: the P-VOTE ML_TRIX leg
     # reads it; no earlier design did).
@@ -1718,6 +1725,102 @@ def m30_from_m15(m15):
         columns={r.index.name or 'index': 'Datetime'})
 
 
+def add_pr_columns(f):
+    """P-REGIME (B-10 revival) regime-lane columns -- port
+    of parallel_regime/build_pr_feats.py build_one,
+    verbatim transforms of columns already present (the
+    planb9c superset blocks). Added 2026-10-29 for the
+    December Track A / Plan C installs (designs dec_rg /
+    dec_rgc)."""
+    sign = np.sign
+    f['pr_vol_rank'] = f['atr_rank']
+    f['pr_trend_eff'] = f['er10']
+    f['pr_chop'] = (f['chop61'] - 50.0) / 50.0
+    f['pr_dxy_trend'] = f['b9_dxy_trend']
+    f['pr_dxy_mom'] = f['b7_dxy_mom']
+    f['pr_m15h1_mom'] = f['b9c_m15_mom'] * sign(f['mom24'])
+    f['pr_m15_vol'] = f['b9c_m15_volz']
+    f['pr_vol_trend'] = f['b9_vol_trend']
+    f['pr_basket'] = f['b7_corr_basket']
+    f['pr_basket_rsi'] = f['b7_corr_rsi']
+    f['pr_q_basket'] = f['b8_q_basket']
+    f['pr_rng_exp'] = f['b9_rng_exp']
+    f['pr_atr_pc'] = f['b9_atr_pc']
+    f['pr_vol_basket'] = f['b9_svp12'] + f['b7_corr_rsi']
+    f['pr_vol_dxy'] = f['b9_vol_trend'] + f['b9_dxy_trend']
+    f['pr_mom_acc'] = f['b9_mom_acc']
+    f['pr_rsi_vel'] = f['b9_rsi_vel']
+    f['pr_body'] = f['b9_body_dom']
+    f['pr_wick'] = f['b9_wick_rej']
+    f['pr_nest_reg'] = f['b9_nest_vol'] + f['er10']
+    # --- regime gates (binary 0/1, direction-agnostic) ---
+    trend = f['er10'] > 0.25
+    hivol = f['atr_rank'] > 0.60
+    f['pr_g_thv'] = (trend & hivol).astype(float)
+    f['pr_g_tlv'] = (trend & ~hivol).astype(float)
+    f['pr_g_rhv'] = ((~trend) & (f['chop61'] > 50.0)
+                     & hivol).astype(float)
+    f['pr_g_rlv'] = ((~trend) & ~hivol).astype(float)
+    f['pr_g_dxy'] = ((f['b7_dxy_state'] != 0)
+                     & (f['b9_dxy_own_rsi'].abs() > 0.5)
+                     ).astype(float)
+    hour = f.index.hour
+    f['pr_g_ses'] = (np.isin(hour, [13, 14, 15])
+                     & (f['atr_rank'] > 0.50)
+                     & (f['vol_z'] > 0)).astype(float)
+    f['pr_g_agr'] = ((sign(f['b9c_m15_mom']) == sign(f['mom24']))
+                     & (f['mom24'] != 0)
+                     & (f['b9c_m15_mom'] != 0)).astype(float)
+    return f
+
+
+def add_rp_columns(f):
+    """P-REPLACE lane columns -- port of
+    parallel_replace/build_preplace_feats.py build_one,
+    verbatim transforms of columns already present (the
+    planb9c superset blocks + b2cf). Added 2026-10-29
+    for the March / November P-REPLACE installs
+    (designs mar_rp / nov_rp)."""
+    sign = np.sign
+    f['rp_vol_spread'] = f['b9c_m15_volz'] - f['b9_vol_trend']
+    f['rp_vol_ratio'] = f['b9c_vol_mix'] - f['vx_flow']
+    f['rp_mom_vol'] = f['b9_mom_acc'] + f['b9c_m15_mom']
+    f['rp_rsi_dxy'] = (f['rsi14'] - 50.0) / 50.0 - f['b7_dxy_rsi']
+    f['rp_basket_mom'] = f['b7_corr_basket'] + f['b8_corr_mom_rsi']
+    f['rp_rng_vol'] = f['b9_rng_exp'] + f['b9c_m15_range']
+    f['rp_body_vol'] = f['b9_body_dom'] + f['b9c_m15_body']
+    f['rp_wick_vol'] = f['b9_wick_rej'] - f['b9c_m15_volr']
+    f['rp_dxy_div'] = f['b9_dxy_trend'] - f['b7_corr_dxy']
+    f['rp_q_mom'] = f['b9_base_q_mom'] + f['b8_q_rsi']
+    f['rp_nest_mom'] = f['b9_nest_vol'] + f['b9_mom_acc']
+    f['rp_m15_dev'] = f['cf_m15dev'] + f['b9c_m15_ema']
+    f['rp_h4_m15'] = f['cf_h4dev'] - f['cf_m15dev']
+    f['rp_stoch_dxy'] = f['b9_stoch_vel'] + f['b8_dxy_rsi_mom']
+    f['rp_vol_dxy2'] = f['b8_vdxy'] + f['vx_shock']
+    f['rp_corr_spread'] = f['b8_corr_spread'] - f['b9_q_spread_own']
+    f['rp_atr_vol'] = f['atr_rank'] + f['vol_z']
+    f['rp_er_vol'] = f['er10'] + f['b9_vol_trend']
+    f['rp_pivot_vol'] = f['b9_pivot_dev'] + f['b9_svp12']
+    f['rp_di_vol'] = f['b9_di_diff'] + f['adx_chg']
+    # --- rp gates (binary 0/1, direction-agnostic) ---
+    f['rp_g_vexp'] = ((f['atr_rank'] > 0.50)
+                      & (f['vol_z'] > 0)).astype(float)
+    f['rp_g_m15t'] = ((sign(f['b9c_m15_mom']) == sign(f['mom24']))
+                      & (f['mom24'] != 0) & (f['b9c_m15_mom'] != 0)
+                      & (f['b9c_m15_volz'] > 0)).astype(float)
+    f['rp_g_dxdiv'] = (sign(f['b9_dxy_trend'])
+                       != sign(f['mom24'])).astype(float)
+    f['rp_g_cbrk'] = (f['b8_corr_spread'] > 0).astype(float)
+    hour = f.index.hour
+    f['rp_g_sesv'] = (np.isin(hour, [13, 14, 15])
+                      & (f['b9c_m15_volr'] > 0)).astype(float)
+    f['rp_g_wick'] = ((f['b9_wick_rej'] > 0)
+                      & (f['atr_rank'] <= 0.60)).astype(float)
+    f['rp_g_acc'] = ((f['b9_mom_acc'] > 0)
+                     & (f['er10'] > 0.25)).astype(float)
+    return f
+
+
 def build_symbol_features(sym, h1, groups, m15=None, m30=None,
                           dx_mom=None, b7ctx=None,
                           pv_variants=None, pbctx=None,
@@ -1727,7 +1830,7 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
     h1: app-shape H1 frame (Datetime index, OHLC[V]).
     groups: subset of {'r4', 'planb', 'b2cf', 'b2x', 'b3',
     'b4', 'b5', 'b6', 'b6v', 'b7', 'b8', 'b9', 'b9c', 'pv',
-    'pbc'} on top of the base block (order fixed to the
+    'pbc', 'pr', 'rp'} on top of the base block (order fixed to the
     research chain). m15: Datetime-indexed M15 frame (b2cf,
     b6v, b9c, pbc). m30: research-shape M30 frame (Datetime
     column); derived from m15 when not given. dx_mom: dollar
@@ -1778,4 +1881,8 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
         f = add_pv_columns(f, sym, pv_variants or {})
     if 'pbc' in groups:
         f = add_pbc_columns(f, sym, m15, vol, pbctx)
+    if 'pr' in groups:
+        f = add_pr_columns(f)
+    if 'rp' in groups:
+        f = add_rp_columns(f)
     return f

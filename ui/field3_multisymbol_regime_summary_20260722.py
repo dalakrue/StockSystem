@@ -5570,7 +5570,7 @@ def _evaluate_c86_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle86b_best import evaluate_cycle86b_signals as evaluate_cycle86_signals, select_cycle86b_entries as select_cycle86_entries
+    from core.cycle86c_best import evaluate_cycle86c_signals as evaluate_cycle86_signals, select_cycle86c_entries as select_cycle86_entries
     from core.cycle86_best import fetch_cycle86_m15_frames as _fetch_c86_m15
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
@@ -5694,7 +5694,7 @@ def _render_cycle86_signals_table(st, state):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle86b_best import CYCLE86B_CHECK_HOURS as _C86_CHECK_HOURS
+    from core.cycle86c_best import CYCLE86C_CHECK_HOURS as _C86_CHECK_HOURS
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(_C86_SIG_STATE_KEY)
@@ -9477,9 +9477,9 @@ def _evaluate_c94b_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle94b_best import evaluate_cycle94b_signals
-    from core.cycle94b_best import panel_entries
-    from core.cycle94b_best import fetch_cycle94b_m15_frames as _fetch_c94b_m15
+    from core.cycle94c_best import evaluate_cycle94c_signals as evaluate_cycle94b_signals
+    from core.cycle94c_best import panel_entries
+    from core.cycle94c_best import fetch_cycle94c_m15_frames as _fetch_c94b_m15
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         day = (_pd.Timestamp(day).normalize() if day is not None
@@ -9592,7 +9592,7 @@ def _c94b_mark_fail(window_utc, state):
 
 
 def _render_cycle94b_signals_table(st, state):
-    """Cycle 94B signals table: backfilled + persisted, exactly 1 entry/check.
+    """Cycle 94C signals table: backfilled + persisted, exactly 1 entry/check.
 
     Mirrors the C27 renderer: on EVERY render, computes the
     latest C94B entry window <= now (hours 15/17/18 UTC); if no signals
@@ -9604,7 +9604,7 @@ def _render_cycle94b_signals_table(st, state):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle94b_best import CYCLE94B_CHECK_HOURS as _C94B_CHECK_HOURS
+    from core.cycle94c_best import CYCLE94C_CHECK_HOURS as _C94B_CHECK_HOURS
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(_C94B_SIG_STATE_KEY)
@@ -9625,7 +9625,7 @@ def _render_cycle94b_signals_table(st, state):
                 or _payload_data_failed(payload))
                 and not _c94b_recent_fail(latest_win, state)
                 and _c22_data_loaded(state)):
-            with st.spinner("Evaluating Cycle 94B signals..."):
+            with st.spinner("Evaluating Cycle 94C signals..."):
                 new_payload = _evaluate_c94b_window(
                     state, int(latest_win.hour), day=latest_win.normalize())
             if new_payload is not None:
@@ -9636,7 +9636,7 @@ def _render_cycle94b_signals_table(st, state):
             else:
                 _c94b_mark_fail(latest_win, state)
 
-        st.markdown("### \U0001F3AF Cycle 94B signals")
+        st.markdown("### \U0001F3AF Cycle 94C signals")
         win_ts = None
         if payload is not None:
             try:
@@ -9655,7 +9655,7 @@ def _render_cycle94b_signals_table(st, state):
                 errs = diag.get("live_errors") or []
                 detail = (f" Provider notes: {'; '.join(errs)}" if errs else "")
                 st.warning(
-                    f"\u26a0\ufe0f Last Cycle 94B evaluation built 0 price frames "
+                    f"\u26a0\ufe0f Last Cycle 94C evaluation built 0 price frames "
                     f"(local cache {diag.get('cache', 0)}/{_C22_N_FETCH}, live {diag.get('live', 0)}/{_C22_N_FETCH})."
                     f"{detail} Retrying automatically.")
             return None
@@ -9708,20 +9708,20 @@ def _render_cycle94b_signals_table(st, state):
                 # User order 2026-10-22 (round 2): bare text must NEVER
                 # replace the table -- one status line, then the full
                 # ranking of every evaluated symbol below.
-                st.info("No Cycle 94B equations fired in this window \u2014 "
+                st.info("No Cycle 94C equations fired in this window \u2014 "
                         "every evaluated symbol is ranked in the table below.")
             else:
                 _last_entry = state.get(_C94B_SIG_STATE_KEY + ":last_entry")
                 if (isinstance(_last_entry, dict)
                         and isinstance(_last_entry.get("signals"), _pd.DataFrame)
                         and not _last_entry["signals"].empty):
-                    st.info("No Cycle 94B equations fired in this window \u2014 "
+                    st.info("No Cycle 94C equations fired in this window \u2014 "
                             "showing the last entry (Window "
                             f"{_last_entry.get('window_mmt', '\u2014')} MMT):")
                     st.dataframe(_last_entry["signals"],
                                  use_container_width=True, hide_index=True)
                 else:
-                    st.info("No Cycle 94B equations fired in this window.")
+                    st.info("No Cycle 94C equations fired in this window.")
         else:
             st.table(_entry_row_colors(disp))
         if _has_ranking:
@@ -9733,7 +9733,7 @@ def _render_cycle94b_signals_table(st, state):
 
 
 def render_cycle94b_download_buttons(st, payload):
-    """CSV + Excel downloads for the displayed Cycle 94B signals."""
+    """CSV + Excel downloads for the displayed Cycle 94C signals."""
     try:
         import pandas as _pd
         if not isinstance(payload, dict):
@@ -9752,11 +9752,11 @@ def render_cycle94b_download_buttons(st, payload):
         try:
             csv = export.to_csv(index=False, encoding="utf-8")
         except Exception as exc:
-            st.error(f"Cycle 94B CSV could not be prepared: {type(exc).__name__}: {exc}")
+            st.error(f"Cycle 94C CSV could not be prepared: {type(exc).__name__}: {exc}")
             csv = None
         if csv is not None:
             st.download_button(
-                label="\U0001F4E5 Download Cycle 94B signals CSV",
+                label="\U0001F4E5 Download Cycle 94C signals CSV",
                 data=csv,
                 file_name=f"{fname_base}.csv",
                 mime="text/csv",
@@ -9768,7 +9768,7 @@ def render_cycle94b_download_buttons(st, payload):
             with _pd.ExcelWriter(bio, engine="openpyxl") as _xw:
                 export.to_excel(_xw, index=False, sheet_name="Cycle94B")
             st.download_button(
-                label="\U0001F4E5 Download Cycle 94B signals Excel",
+                label="\U0001F4E5 Download Cycle 94C signals Excel",
                 data=bio.getvalue(),
                 file_name=f"{fname_base}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -10166,8 +10166,8 @@ _COMBINED_CFG = {
     3: {
         "sysid": "cycle86bcombined",
         "month_name": "March",
-        "best_id": "cycle86b",
-        "best_label": "Cycle 86B (BRIEF22 C01 veto IMPROVED)",
+        "best_id": "cycle86c",
+        "best_label": "Cycle 86C (86B + P-REPLACE C06 slot replacement IMPROVED)",
         "second_id": "cycle86s",
         "second_label": "Cycle 86S (Plan B-6 SB-REDO R17, phase-2 install 2026-10-28)",
         "hours_mod": "core.cycle86s_best",
@@ -10214,8 +10214,8 @@ _COMBINED_CFG = {
     11: {
         "sysid": "cycle93pcombined",
         "month_name": "November",
-        "best_id": "cycle93q",
-        "best_label": "Cycle 93Q (93P + P-BRANCH Plan C C10 IMPROVED)",
+        "best_id": "cycle93r",
+        "best_label": "Cycle 93R (93Q + P-REPLACE C04 IMPROVED)",
         "second_id": "cycle93s",
         "second_label": "Cycle 93S (P-BRANCH Track B R12, phase-2 install 2026-10-28)",
         "hours_mod": "core.cycle93s_best",
@@ -10230,8 +10230,8 @@ _COMBINED_CFG = {
     12: {
         "sysid": "cycle94combined",
         "month_name": "December",
-        "best_id": "cycle94b",
-        "best_label": "Cycle 94B (BRIEF21 C20a IMPROVED)",
+        "best_id": "cycle94c",
+        "best_label": "Cycle 94C (94B + P-REGIME Track A + Plan C IMPROVED)",
         "second_id": "cycle94s",
         "second_label": "Cycle 94S (Plan B-6 SB-REDO R18, phase-2 install 2026-10-28)",
         "hours_mod": "core.cycle94s_best",
@@ -10961,7 +10961,7 @@ _SIGNAL_PANELS = {
                 "download": render_cycle86_download_buttons,
                 "state_key": _C86_SIG_STATE_KEY, "age_key": _C86_SIG_AGE_KEY,
                 "diag_key": _C86_SIG_DIAG_KEY, "fail_key": _C86_SIG_FAIL_KEY,
-                "label": "Cycle 86B (C86-24 + BRIEF22 C01) \u2014 March system"},
+                "label": "Cycle 86C (C86-24 + BRIEF22 C01 + P-REPLACE C06) \u2014 March system"},
     "cycle86bcombined": {"render": _render_mar_combined_signals_table,
                 "download": render_mar_combined_download_buttons,
                 "state_key": _COMBINED_CFG[3]["state_key"], "age_key": _COMBINED_CFG[3]["age_key"],

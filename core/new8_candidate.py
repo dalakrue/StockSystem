@@ -337,7 +337,8 @@ class CandidateContext:
         self.groups = tuple(g for g in
                             ("r4", "planb", "b2cf", "b2x", "b3",
                              "b4", "b5", "b6", "b6v", "b7", "b8",
-                             "b9", "b9c", "pv", "pbc", "pr", "rp")
+                             "b9", "b9c", "pv", "pbc", "pr", "rp",
+                             "b12", "b12c")
                             if g in groups)
         self.symbols = sorted(syms)
         self._pv = pv_variants
@@ -462,6 +463,9 @@ class CandidateContext:
                                   pip, max_hold=hold, cost=2.5)
                 out[eq["id"]] = dict(
                     check=chk, symbol=sym, direction=direction,
+                    d1_state=(float(row["d1_state"])
+                              if "d1_state" in feat.columns
+                              else None),
                     entry_px=float(r["entry_px"][0]),
                     exit_px=float(r["exit_px"][0]),
                     tp_pips_used=tp, sl_pips_used=sl,

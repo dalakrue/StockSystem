@@ -5380,7 +5380,7 @@ def _evaluate_c85_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle85b_best import evaluate_cycle85b_signals as evaluate_cycle85_signals, select_cycle85b_entries as select_cycle85_entries
+    from core.cycle85c_best import evaluate_cycle85c_signals as evaluate_cycle85_signals, select_cycle85c_entries as select_cycle85_entries
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         day = (_pd.Timestamp(day).normalize() if day is not None
@@ -5504,7 +5504,7 @@ def _render_cycle85_signals_table(st, state):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle85b_best import CYCLE85B_CHECK_HOURS as _C85_CHECK_HOURS
+    from core.cycle85c_best import CYCLE85C_CHECK_HOURS as _C85_CHECK_HOURS
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(_C85_SIG_STATE_KEY)
@@ -9616,9 +9616,9 @@ def _evaluate_c94b_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle94c_best import evaluate_cycle94c_signals as evaluate_cycle94b_signals
-    from core.cycle94c_best import panel_entries
-    from core.cycle94c_best import fetch_cycle94c_m15_frames as _fetch_c94b_m15
+    from core.cycle94d_best import evaluate_cycle94d_signals as evaluate_cycle94b_signals
+    from core.cycle94d_best import panel_entries
+    from core.cycle94d_best import fetch_cycle94d_m15_frames as _fetch_c94b_m15
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         day = (_pd.Timestamp(day).normalize() if day is not None
@@ -10369,8 +10369,8 @@ _COMBINED_CFG = {
     12: {
         "sysid": "cycle94combined",
         "month_name": "December",
-        "best_id": "cycle94c",
-        "best_label": "Cycle 94C (94B + P-REGIME Track A + Plan C IMPROVED)",
+        "best_id": "cycle94d",
+        "best_label": "Cycle 94D (94C + PC03 veto + refill + PLANB12C partner IMPROVED, R2 D19)",
         "second_id": "cycle94s",
         "second_label": "Cycle 94S (Plan B-6 SB-REDO R18, phase-2 install 2026-10-28)",
         "hours_mod": "core.cycle94s_best",
@@ -10433,8 +10433,8 @@ _COMBINED_CFG = {
     10: {
         "sysid": "cycle92combined",
         "month_name": "October",
-        "best_id": "cycle92",
-        "best_label": "Cycle 92 (C92-24 + C155 dual-pick)",
+        "best_id": "cycle92c",
+        "best_label": "Cycle 92C (C92-24 + C155 dual-pick + PLANB9 C09 partner IMPROVED, R2 C14)",
         "second_id": "cycle92e",
         "second_label": "Cycle 92E (NEW8 E07 second best)",
         "hours_mod": "core.cycle92_best",
@@ -11083,7 +11083,7 @@ _MONTH_PANEL_ORDER = [
     # (core.cycle<nn>_best / CYCLE<NN>_CHECK_HOURS) used by the
     # check-time reminders.
     ("January", "cycle60bcombined", "60b", "C60B+C60-03"),
-    ("February", "cycle85b", "85b", "C85B+C19"),
+    ("February", "cycle85b", "85c", "C85C+A16"),
     ("March", "cycle86bcombined", "86b", "C86B+C01"),
     ("April", "cycle87bcombined", "87b", "C87B+C87-24"),
     ("May", "cycle88ncombined", "88n", "C88N+C88-03"),
@@ -11091,9 +11091,9 @@ _MONTH_PANEL_ORDER = [
     ("July", "cycle78", 78, "C78-34"),
     ("August", "cycle67combined", 67, "C67-04+C67P"),
     ("September", "cycle91combined", "91n", "C91N+C287"),
-    ("October", "cycle92combined", 92, "C92-24+C92E"),
+    ("October", "cycle92combined", "92c", "C92C+C92E"),
     ("November", "cycle93pcombined", "93p", "C93P+C93N"),
-    ("December", "cycle94combined", "94b", "C94B+C274"),
+    ("December", "cycle94combined", "94d", "C94D+C94S"),
 ]
 
 _SIGNAL_PANELS = {

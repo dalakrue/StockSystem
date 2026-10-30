@@ -333,7 +333,6 @@ def make_coolv():
     return vf
 
 
-# ========================================================== merge --
 def build_combined(inc, cand):
     """validate_new8.build_combined verbatim: incumbent +
     candidate picks under incumbent-priority occupancy.
@@ -387,11 +386,17 @@ class DesignWalk:
     path): the walk's own symbol occupancy from its recorded
     picks, plus the design veto (coolv for the Nov partner)."""
 
-    def __init__(self, equations, veto=None):
+    def __init__(self, equations, veto=None, veto_fn=None):
         self.equations = list(equations)
         self.open_exit = {}
         self.picks = []
-        self.veto_fn = make_coolv() if veto == 'coolv' else None
+        # Jul port (additive): an explicit veto_fn (built by
+        # the caller from make_m15v / make_adx25v / make_dxv /
+        # make_d1v) takes precedence; 'coolv' and the inline
+        # 'd1v' rule are unchanged for existing designs.
+        self.veto_fn = veto_fn if veto_fn is not None else (
+            make_coolv() if veto == 'coolv' else None)
+        self.veto_name = veto
 
     def step(self, check, rows_at_check):
         """rows_at_check: {(eq_id): tab row dict} for this
@@ -416,6 +421,17 @@ class DesignWalk:
             if self.veto_fn is not None \
                     and self.veto_fn(e, tr, ent_t):
                 continue
+            if self.veto_fn is None and self.veto_name == 'd1v':
+                # mine_planb._agree('d1_state') verbatim: veto
+                # when the symbol's daily state at the signal
+                # candle disagrees with the trade direction
+                # (NaN state -> no veto). The tab row carries
+                # the state via CandidateContext.rows_at.
+                v = tr.get('d1_state')
+                if v is not None and np.isfinite(v):
+                    d = 1 if tr['direction'] == 'BUY' else -1
+                    if not (d * float(v) > 0):
+                        continue
             row = dict(
                 check=chk, symbol=e['symbol'],
                 direction=tr['direction'], strategy=e['id'],

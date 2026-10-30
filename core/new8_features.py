@@ -1835,6 +1835,109 @@ def add_rp_columns(f):
     return f
 
 
+# ============================================================ b12 --
+def add_b12_columns(f):
+    """build_features_planb12.build_one verbatim (PLAN B-12
+    Track A columns; transforms of columns already present --
+    the planb9c superset blocks). Added 2026-10-30 for the
+    December D19 partner install (design dec_b12c)."""
+    hr = pd.Series(f.index.hour, index=f.index).astype(float)
+    dow = pd.Series(f.index.dayofweek, index=f.index).astype(float)
+    us = ((hr >= 13) & (hr < 21)).astype(float)
+    eu = ((hr >= 8) & (hr < 13)).astype(float)
+    f['b12_h4_trend'] = f['h4_mom'] - f['d1_mom']
+    f['b12_h4_dev'] = f['cf_h4dev'] - f['cf_m15dev']
+    f['b12_d1_trend'] = f['d1_mom'] + 0.5 * f['h4_mom']
+    f['b12_d1_pos'] = f['don_p'] - f['don48_p']
+    f['b12_sess_us_mom'] = f['mom24'] * (us * 1.0 + (1 - us) * -0.5)
+    f['b12_sess_eu_vol'] = f['vol_z'] * (eu * 1.0 + (1 - eu) * -0.5) \
+        + f['b9c_m15_volz'] * eu
+    f['b12_dow_mom'] = f['mom24'] * (dow - 2.0) / 2.0
+    f['b12_dow_vol'] = f['vol_z'] * (dow - 2.0) / 2.0
+    f['b12_m15_seq_mom'] = f['b9c_m15_mom'] + f['b9c_m15_ema']
+    f['b12_m15_seq_body'] = f['b9c_m15_body'] * (f['b9c_m15_range'] - 0.5) * 2.0
+    f['b12_m15_seq_vol'] = f['b9c_m15_volz'] + f['volm_z']
+    f['b12_sprd_vol'] = f['bb_bw'] - f['atr_rank'] / 100.0
+    f['b12_sprd_shock'] = f['vx_shock'] + f['bb_bw']
+    f['b12_vol_sess'] = f['vol_z'] + f['b9c_m15_volz'] * (us + eu)
+    f['b12_vol_h4'] = f['b9_vol_trend'] + f['b9c_vol_mix']
+    f['b12_corr_h4'] = f['b8_corr_mom_rsi'] + f['h4_mom']
+    f['b12_corr_d1'] = f['b7_corr_basket'] + f['d1_mom']
+    f['b12_dxy_ctx'] = f['b9_dxy_trend'] + f['b7_dxy_mom']
+    f['b12_corr_sess'] = f['b9_q_spread_own'] + f['b12_sess_us_mom']
+    f['b12_nest_ctx'] = f['b12_h4_trend'] + f['b12_d1_trend'] \
+        + f['b12_m15_seq_mom']
+
+    def state(a, b):
+        s = pd.Series(0.0, index=f.index)
+        s[(a > 0) & (b > 0)] = 1.0
+        s[(a < 0) & (b < 0)] = -1.0
+        return s
+    f['b12_ctx_state'] = state(f['b12_h4_trend'], f['b12_d1_trend'])
+    f['b12_sess_state'] = state(f['b12_sess_us_mom'], f['b12_vol_sess'])
+    f['b12_m15_state'] = state(f['b12_m15_seq_mom'],
+                               f['b12_m15_seq_body'])
+    al = pd.Series(0.0, index=f.index)
+    agree = (f['b12_ctx_state'] != 0) \
+        & (f['b12_ctx_state'] == f['b12_sess_state']) \
+        & (f['b12_ctx_state'] == f['b12_m15_state'])
+    al[agree] = f['b12_ctx_state'][agree]
+    f['b12_all_state12'] = al
+    return f
+
+
+def add_b12c_columns(f):
+    """build_features_planb12c.build_one verbatim (PLAN B-12
+    Plan C M15-heavy columns)."""
+    hr = pd.Series(f.index.hour, index=f.index).astype(float)
+    us = ((hr >= 13) & (hr < 21)).astype(float)
+    f['b12c_m15_seq3'] = f['b9c_m15_mom'] - f['b9c_m15_ema']
+    f['b12c_m15_volseq'] = f['b9c_m15_volr'] + 2.0 * f['b9c_m15_volz']
+    f['b12c_m15_rngseq'] = (f['b9c_m15_range'] - 0.5) * 2.0 \
+        + f['b9c_m15_ema']
+    f['b12c_m15_bodseq'] = f['b9c_m15_body'] + f['b12_m15_seq_body']
+    f['b12c_m15_h4align'] = f['b9c_m15_ema'] + f['b12_h4_trend']
+    f['b12c_vol_mix2'] = f['b9c_vol_mix'] + 2.0 * f['b9c_m15_volz']
+    f['b12c_m15_sessvol'] = f['b9c_m15_volz'] * (1.0 + us) + f['volm_z']
+    f['b12c_m15_sprd'] = f['b12_sprd_vol'] + f['b9c_m15_volr']
+    return f
+
+
+def pc03_m15_features(m15):
+    """Wave-3b feats_m15 (run_pc3_wave3b.py) PC03 subset,
+    verbatim formulas on an M15 OHLCV frame (Datetime index):
+    mom4 / mom96 in % and vol_z of log1p volume (rolling 672).
+    The value on M15 bar t uses bars up to and including t;
+    the PC03 signal value for a check is read at
+    sig_t = check - 90 min with a pad (last bar <= sig_t)
+    lookup -- the research convention."""
+    c = m15['Close'].astype(float)
+    v = m15['Volume'].astype(float)
+    out = pd.DataFrame(index=m15.index)
+    out['pc03_mom4'] = (c / c.shift(4) - 1) * 100
+    out['pc03_mom96'] = (c / c.shift(96) - 1) * 100
+    lv = np.log1p(v.where(v > 0))
+    out['pc03_vol_z'] = (lv - lv.rolling(672, min_periods=100).mean()) \
+        / lv.rolling(672, min_periods=100).std()
+    return out
+
+
+def pc03_keep(pc03_frame, check, direction):
+    """PC03 mask for one pick: aligned (direction-signed)
+    M15 mom4 > -0.15 & aligned mom96 > -0.8 & vol_z > -1.0
+    at sig_t = check - 90 min. NaN -> vetoed (the research
+    mask fills NaN with False)."""
+    sig_t = pd.Timestamp(check) - pd.Timedelta(minutes=90)
+    i = pc03_frame.index.get_indexer([sig_t], method='pad')[0]
+    if i < 0:
+        return False
+    r = pc03_frame.iloc[i]
+    s = 1.0 if direction == 'BUY' else -1.0
+    vz = r['pc03_vol_z']
+    vz = 0.0 if pd.isna(vz) else float(vz)
+    return bool(s * float(r['pc03_mom4']) > -0.15
+                and s * float(r['pc03_mom96']) > -0.8
+                and vz > -1.0)
 def build_symbol_features(sym, h1, groups, m15=None, m30=None,
                           dx_mom=None, b7ctx=None,
                           pv_variants=None, pbctx=None,
@@ -1844,7 +1947,7 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
     h1: app-shape H1 frame (Datetime index, OHLC[V]).
     groups: subset of {'r4', 'planb', 'b2cf', 'b2x', 'b3',
     'b4', 'b5', 'b6', 'b6v', 'b7', 'b8', 'b9', 'b9c', 'pv',
-    'pbc', 'pr', 'rp'} on top of the base block (order fixed to the
+    'pbc', 'pr', 'rp', 'b12', 'b12c'} on top of the base block (order fixed to the
     research chain). m15: Datetime-indexed M15 frame (b2cf,
     b6v, b9c, pbc). m30: research-shape M30 frame (Datetime
     column); derived from m15 when not given. dx_mom: dollar
@@ -1899,4 +2002,8 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
         f = add_pr_columns(f)
     if 'rp' in groups:
         f = add_rp_columns(f)
+    if 'b12' in groups:
+        f = add_b12_columns(f)
+    if 'b12c' in groups:
+        f = add_b12c_columns(f)
     return f

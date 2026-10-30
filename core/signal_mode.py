@@ -64,6 +64,7 @@ SYSTEM_CYCLE87 = "cycle87"   # C87-24 -- April system
 SYSTEM_CYCLE88 = "cycle88"   # C88-03 -- May system
 SYSTEM_CYCLE89 = "cycle89"   # C89-21 -- June system
 SYSTEM_CYCLE78 = "cycle78"   # C78-34 -- July system
+SYSTEM_CYCLE78D = "cycle78d"   # R2 Jul D3 (pruned cycle78 + PLANB cand1 C18 fills + B04 cascade fills) -- July IMPROVED system (2026-10-30 install; over cycle78)
 SYSTEM_CYCLE67 = "cycle67"   # C67-04 -- August system
 SYSTEM_CYCLE91 = "cycle91"   # C91-15 -- September system
 SYSTEM_CYCLE92 = "cycle92"   # C92-24 -- October system
@@ -111,7 +112,7 @@ MONTH_SYSTEMS = {
     4: SYSTEM_CYCLE87D,   # April -- R2 C19 IMPROVED (2026-10-30 install)
     5: SYSTEM_CYCLE88N,   # May -- NEW8 E07 IMPROVED (2026-10-27)
     6: SYSTEM_CYCLE89P,   # June -- NEW8 Plan B-9 C10 IMPROVED (2026-10-28 update)
-    7: SYSTEM_CYCLE78,   # July
+    7: SYSTEM_CYCLE78D,   # July -- R2 D3 IMPROVED (2026-10-30 install)
     8: SYSTEM_CYCLE67,   # August
     9: SYSTEM_CYCLE91P,   # September -- NEW8 Plan B-9 C02+C06 IMPROVED (2026-10-28 update)
     10: SYSTEM_CYCLE92C,   # October -- R2 C14 IMPROVED (2026-10-30 install)
@@ -130,6 +131,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE88: 66,   # C88-03 -- May
     SYSTEM_CYCLE89: 84,   # C89-21 -- June
     SYSTEM_CYCLE78: 103,   # C78-34 -- July
+    SYSTEM_CYCLE78D: 103,   # R2 D3 July improved (month N carried from cycle78)
     SYSTEM_CYCLE67: 121,   # C67-04 -- August
     SYSTEM_CYCLE91: 83,   # C91-15 -- September
     SYSTEM_CYCLE92: 83,   # C92-24 -- October
@@ -182,6 +184,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE88: 22.0,   # C88-03 -- May (66 / 3)
     SYSTEM_CYCLE89: 28.0,   # C89-21 -- June (84 / 3)
     SYSTEM_CYCLE78: 34.333333333333336,   # C78-34 -- July (103 / 3)
+    SYSTEM_CYCLE78D: 34.333333333333336,   # R2 D3 July improved (103 / 3)
     SYSTEM_CYCLE67: 40.333333333333336,   # C67-04 -- August (121 / 3)
     SYSTEM_CYCLE91: 27.666666666666668,   # C91-15 -- September (83 / 3)
     SYSTEM_CYCLE92: 27.666666666666668,   # C92-24 -- October (83 / 3)
@@ -274,7 +277,7 @@ def set_active_system(name: str) -> str:
     one of the two recorded second-best systems added 2026-10-25)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
                          f"monthly systems, the recorded second-best "
                          f"systems and the BRIEF21 C20a improved systems "
@@ -366,6 +369,22 @@ def describe_active() -> str:
                 "checks, fails only check 8 which C66-08 itself fails; "
                 "LCT middle PASS, Muse's-decision promotion, replaced "
                 "C66-08)")
+    if _ACTIVE == SYSTEM_CYCLE78D:
+        return ("cycle78d (R2 D3 IMPROVED) -- July "
+                "system: cycle78 stream with 4 legs "
+                "pruned (FB_AUDUSD_h17_0, FB_EURUSD_h15_0, "
+                "FB_USDJPY_h15_2, the USDCAD momB carrier) "
+                "+ PLANB cand1 fills at silent checks "
+                "(C18 layer) + the B04 second-best "
+                "cascade fills (14 pool designs) -- "
+                "@2.5-pip 641 picks: DISC leftover "
+                "89.11%, AUDIT leftover 77.01% (incumbent "
+                "64.97%; LCT P 100% / q05 80.05%, MC flag "
+                "TRUE DD p95 172.54 vs cap 188.51, PBO "
+                "20% / DSR 1.0; app replay EXACT 641/641, "
+                "2026-10-30). July's second-best slot is "
+                "folded into this best form (B04); no "
+                "separate second system")
     if _ACTIVE == SYSTEM_CYCLE67:
         return ("cycle67 (C67-04): C55-15 core frozen (hours 6/16/17 "
                 "delegate to cycle55) + 8 fresh supplement legs at new "
@@ -813,6 +832,12 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
         return evaluate_cycle78_signals(
             frames, check_time_utc,
             m15_frames=fetch_cycle78_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE78D:
+        from core.cycle78d_best import (evaluate_cycle78d_signals,
+                                        fetch_cycle78d_m15_frames)
+        return evaluate_cycle78d_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle78d_m15_frames())
     if _ACTIVE == SYSTEM_CYCLE67:
         from core.cycle67_best import evaluate_cycle67_signals
         return evaluate_cycle67_signals(frames, check_time_utc)
@@ -996,6 +1021,9 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE78:
         from core.cycle78_best import select_cycle78_entries
         return select_cycle78_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE78D:
+        from core.cycle78d_best import select_cycle78d_entries
+        return select_cycle78d_entries(signals, open_symbols=open_symbols)
     if _ACTIVE == SYSTEM_CYCLE67:
         from core.cycle67_best import select_cycle67_entries
         return select_cycle67_entries(signals, open_symbols=open_symbols)
@@ -1196,7 +1224,8 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE94D,
                            SYSTEM_CYCLE86D,
                            SYSTEM_CYCLE87D,
-                           SYSTEM_CYCLE85D):
+                           SYSTEM_CYCLE85D,
+                           SYSTEM_CYCLE78D):
             # Ledger-aware systems: the full entries for a check
             # include stateful legs (BRIEF21 C20a re-entries, or
             # the NEW8 merged-walk candidate picks), which only
@@ -1294,6 +1323,8 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_CYCLE89:
         return (1, 15, 18)
     if _ACTIVE == SYSTEM_CYCLE78:
+        return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE78D:
         return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE67:
         return (1, 6, 16, 17, 18)

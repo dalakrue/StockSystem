@@ -333,6 +333,141 @@ def make_coolv():
     return vf
 
 
+# ------------------------------------- Jul veto ports (R2) --
+def wilder_adx14(h, l, c, p=14):
+    """mine_jas.wilder_adx verbatim: Wilder ADX14 on H1 arrays."""
+    h = np.asarray(h, dtype=float)
+    l = np.asarray(l, dtype=float)
+    c = np.asarray(c, dtype=float)
+    n = len(c)
+    pc = np.concatenate([[c[0]], c[:-1]])
+    tr = np.maximum(h - l, np.maximum(np.abs(h - pc),
+                                      np.abs(l - pc)))
+    up = np.concatenate([[0.0], np.diff(h)])
+    dn = np.concatenate([[0.0], -np.diff(l)])
+    pdm = np.where((up > dn) & (up > 0), up, 0.0)
+    mdm = np.where((dn > up) & (dn > 0), dn, 0.0)
+
+    def smooth(x):
+        out = np.full(n, np.nan)
+        if n <= p:
+            return out
+        out[p - 1] = x[:p].sum()
+        for i in range(p, n):
+            out[i] = out[i - 1] - out[i - 1] / p + x[i]
+        return out
+
+    str_ = smooth(tr)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        pdi = 100.0 * smooth(pdm) / str_
+        mdi = 100.0 * smooth(mdm) / str_
+        dx = 100.0 * np.abs(pdi - mdi) / (pdi + mdi)
+    dx = np.where(np.isfinite(dx), dx, np.nan)
+    adx = np.full(n, np.nan)
+    first = 2 * p - 2
+    if n > first:
+        seg = dx[p - 1:first + 1]
+        if np.isfinite(seg).all():
+            adx[first] = float(np.mean(seg))
+            for i in range(first + 1, n):
+                if np.isfinite(dx[i]) and np.isfinite(adx[i - 1]):
+                    adx[i] = (adx[i - 1] * (p - 1) + dx[i]) / p
+    return adx
+
+
+def make_m15v(m15_close):
+    """mine_jas 'm15' veto verbatim (VetoCtx.m15_dir_val +
+    make_veto('m15')): veto when the close-EMA20 of the last
+    completed M15 bar at ent_t is unavailable or disagrees
+    with the trade direction. m15_close: {sym: (ts_ns int64
+    array, close array)}."""
+    ema20 = {}
+    for s, (ts, c) in m15_close.items():
+        ema20[s] = pd.Series(np.asarray(c, dtype=float)) \
+            .ewm(span=20, adjust=False).mean().to_numpy()
+    cache = {}
+
+    def vf(eq, tr, ent_t):
+        sym = eq['symbol']
+        k = (sym, pd.Timestamp(ent_t))
+        if k not in cache:
+            ts, c = m15_close[sym]
+            e = int(np.searchsorted(ts, k[1].value))
+            if e < 1:
+                cache[k] = None
+            else:
+                val = float(c[e - 1] - ema20[sym][e - 1])
+                cache[k] = val if np.isfinite(val) else None
+        val = cache[k]
+        if val is None:
+            return True
+        d = 1.0 if tr['direction'] == 'BUY' else -1.0
+        return not (d * val > 0)
+    return vf
+
+
+def make_adx25v(adx_map, threshold):
+    """mine_jas 'adx25' veto verbatim: Wilder ADX14 on the H1
+    frame at sig_t = ent_t - 60min, exact-index lookup; veto
+    if adx < threshold (NaN / missing passes). adx_map:
+    {sym: (DatetimeIndex, adx array)}."""
+    cache = {}
+
+    def vf(eq, tr, ent_t):
+        sym = eq['symbol']
+        sig_t = pd.Timestamp(ent_t) - pd.Timedelta(minutes=60)
+        k = (sym, sig_t)
+        if k not in cache:
+            idx, adx = adx_map[sym]
+            loc = idx.get_indexer([sig_t])[0]
+            cache[k] = float('nan') if loc < 0 else float(adx[loc])
+        av = cache[k]
+        if threshold is None or not np.isfinite(threshold) \
+                or not np.isfinite(av):
+            return False
+        return bool(av < threshold)
+    return vf
+
+
+def make_dxv(dx_mom):
+    """mine_round4 make_component('dxv') verbatim: dollar
+    mom24 agreement at check-90min (exact lookup), DOLLARIDX
+    exempt, NaN passes. dx_mom: mom24 Series (Datetime index)
+    of the dollar frame."""
+    def vf(eq, tr, ent_t):
+        if eq['symbol'] == 'DOLLARIDX':
+            return False
+        t = pd.Timestamp(tr['check']) - pd.Timedelta(minutes=90)
+        loc = dx_mom.index.get_indexer([t])[0]
+        v = float('nan') if loc < 0 else float(dx_mom.iloc[loc])
+        if not np.isfinite(v):
+            return False
+        d = 1 if tr['direction'] == 'BUY' else -1
+        return not (d * v > 0)
+    return vf
+
+
+def make_d1v(feats):
+    """mine_planb._agree('d1_state') verbatim as a batch-walk
+    veto: the symbol's d1_state at check-90min (exact lookup
+    in the feature frame), NaN passes. feats: {sym: feature
+    frame carrying 'd1_state'}. (The panel path applies the
+    same rule inline in DesignWalk.step from rows_at.)"""
+    def vf(eq, tr, ent_t):
+        f = feats[eq['symbol']]
+        t = pd.Timestamp(tr['check']) - pd.Timedelta(minutes=90)
+        loc = f.index.get_indexer([t])[0]
+        v = float('nan') if loc < 0 else float(f['d1_state'].iloc[loc])
+        if not np.isfinite(v):
+            return False
+        d = 1 if tr['direction'] == 'BUY' else -1
+        return not (d * v > 0)
+    return vf
+
+
+# ========================================================== merge --
+
+
 def build_combined(inc, cand):
     """validate_new8.build_combined verbatim: incumbent +
     candidate picks under incumbent-priority occupancy.

@@ -3430,8 +3430,8 @@ def _month_check_hours_utc(month):
         from core.cycle85b_best import CYCLE85B_CHECK_HOURS
         return tuple(CYCLE85B_CHECK_HOURS)
     if month == 7:
-        from core.cycle78_best import CYCLE78_CHECK_HOURS
-        return tuple(CYCLE78_CHECK_HOURS)
+        from core.cycle78d_best import CYCLE78D_CHECK_HOURS
+        return tuple(CYCLE78D_CHECK_HOURS)
     return ()
 
 
@@ -5052,8 +5052,8 @@ def _evaluate_c78_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle78_best import evaluate_cycle78_signals, select_cycle78_entries
-    from core.cycle78_best import fetch_cycle78_m15_frames as _fetch_c78_m15
+    from core.cycle78d_best import evaluate_cycle78d_signals as evaluate_cycle78_signals, select_cycle78d_entries as select_cycle78_entries
+    from core.cycle78d_best import fetch_cycle78d_m15_frames as _fetch_c78_m15
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         day = (_pd.Timestamp(day).normalize() if day is not None

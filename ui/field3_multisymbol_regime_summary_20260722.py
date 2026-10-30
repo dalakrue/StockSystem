@@ -5709,7 +5709,7 @@ def _evaluate_c86_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle86c_best import evaluate_cycle86c_signals as evaluate_cycle86_signals, select_cycle86c_entries as select_cycle86_entries
+    from core.cycle86d_best import evaluate_cycle86d_signals as evaluate_cycle86_signals, select_cycle86d_entries as select_cycle86_entries
     from core.cycle86_best import fetch_cycle86_m15_frames as _fetch_c86_m15
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
@@ -5833,7 +5833,7 @@ def _render_cycle86_signals_table(st, state):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle86c_best import CYCLE86C_CHECK_HOURS as _C86_CHECK_HOURS
+    from core.cycle86d_best import CYCLE86D_CHECK_HOURS as _C86_CHECK_HOURS
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(_C86_SIG_STATE_KEY)
@@ -10305,8 +10305,8 @@ _COMBINED_CFG = {
     3: {
         "sysid": "cycle86bcombined",
         "month_name": "March",
-        "best_id": "cycle86c",
-        "best_label": "Cycle 86C (86B + P-REPLACE C06 slot replacement IMPROVED)",
+        "best_id": "cycle86d",
+        "best_label": "Cycle 86D (86C + PC14 veto + EURAUD slot veto + refill IMPROVED, R2 M18)",
         "second_id": "cycle86s",
         "second_label": "Cycle 86S (Plan B-6 SB-REDO R17, phase-2 install 2026-10-28)",
         "hours_mod": "core.cycle86s_best",
@@ -10321,8 +10321,8 @@ _COMBINED_CFG = {
     4: {
         "sysid": "cycle87bcombined",
         "month_name": "April",
-        "best_id": "cycle87c",
-        "best_label": "Cycle 87C (87B + Plan B-2 Q09 non-dollar + P-VOTE C01 IMPROVED)",
+        "best_id": "cycle87d",
+        "best_label": "Cycle 87D (87C + FB veto + refill + PLANB9C partner IMPROVED, R2 C19)",
         "second_id": "cycle87s",
         "second_label": "Cycle 87S (P-VOTE Track B fallback R13, phase-2 install 2026-10-28)",
         "hours_mod": "core.cycle87s_best",
@@ -11106,7 +11106,7 @@ _SIGNAL_PANELS = {
                 "download": render_cycle86_download_buttons,
                 "state_key": _C86_SIG_STATE_KEY, "age_key": _C86_SIG_AGE_KEY,
                 "diag_key": _C86_SIG_DIAG_KEY, "fail_key": _C86_SIG_FAIL_KEY,
-                "label": "Cycle 86C (C86-24 + BRIEF22 C01 + P-REPLACE C06) \u2014 March system"},
+                "label": "Cycle 86D (C86-24 + R2 M18 PC14 veto) \u2014 March system"},
     "cycle86bcombined": {"render": _render_mar_combined_signals_table,
                 "download": render_mar_combined_download_buttons,
                 "state_key": _COMBINED_CFG[3]["state_key"], "age_key": _COMBINED_CFG[3]["age_key"],

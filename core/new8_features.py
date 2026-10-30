@@ -1938,6 +1938,51 @@ def pc03_keep(pc03_frame, check, direction):
     return bool(s * float(r['pc03_mom4']) > -0.15
                 and s * float(r['pc03_mom96']) > -0.8
                 and vz > -1.0)
+
+
+def pc14_m15_features(m15):
+    """Mar Plan C feats_m15 (run_mar_planC_s1.py) PC14 subset,
+    verbatim formulas on an M15 OHLCV frame (Datetime index):
+    bb = (close - SMA20) / (2 * SD20) (sample SD), rpos =
+    (close - LL20) / (HH20 - LL20), mom16 in %. The value on
+    M15 bar t uses bars up to and including t; the PC14
+    signal value for a check is read at sig_t = check -
+    90 min with a pad (last bar <= sig_t) lookup -- the
+    research convention."""
+    c = m15['Close'].astype(float)
+    h = m15['High'].astype(float)
+    l = m15['Low'].astype(float)
+    out = pd.DataFrame(index=m15.index)
+    sma = c.rolling(20).mean()
+    sd = c.rolling(20).std()
+    out['pc14_bb'] = (c - sma) / (2 * sd.replace(0, np.nan))
+    hh = h.rolling(20).max()
+    ll = l.rolling(20).min()
+    out['pc14_rpos'] = (c - ll) / (hh - ll).replace(0, np.nan)
+    out['pc14_mom16'] = (c / c.shift(16) - 1) * 100
+    return out
+
+
+def pc14_keep(pc14_frame, check, direction):
+    """PC14_bb_rpos mask for one pick (Mar Plan C / R2 M18):
+    aligned (direction-signed) M15 BB z <= 1.0 & aligned
+    range position (signed (rpos - 0.5) * 2) <= 0.85 &
+    aligned mom16 > -0.35 at sig_t = check - 90 min.
+    NaN -> vetoed (the research mask comparisons are False
+    on NaN)."""
+    sig_t = pd.Timestamp(check) - pd.Timedelta(minutes=90)
+    i = pc14_frame.index.get_indexer([sig_t], method='pad')[0]
+    if i < 0:
+        return False
+    r = pc14_frame.iloc[i]
+    s = 1.0 if direction == 'BUY' else -1.0
+    return bool(s * float(r['pc14_bb']) <= 1.0
+                and s * (float(r['pc14_rpos']) - 0.5) * 2 <= 0.85
+                and s * float(r['pc14_mom16']) > -0.35)
+
+
+
+
 def build_symbol_features(sym, h1, groups, m15=None, m30=None,
                           dx_mom=None, b7ctx=None,
                           pv_variants=None, pbctx=None,

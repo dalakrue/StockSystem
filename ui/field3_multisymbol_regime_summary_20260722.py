@@ -5380,7 +5380,7 @@ def _evaluate_c85_window(state, hour_utc, day=None):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle85c_best import evaluate_cycle85c_signals as evaluate_cycle85_signals, select_cycle85c_entries as select_cycle85_entries
+    from core.cycle85d_best import evaluate_cycle85d_signals as evaluate_cycle85_signals, select_cycle85d_entries as select_cycle85_entries
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         day = (_pd.Timestamp(day).normalize() if day is not None
@@ -5504,7 +5504,7 @@ def _render_cycle85_signals_table(st, state):
     """
     import datetime as _dt
     import pandas as _pd
-    from core.cycle85c_best import CYCLE85C_CHECK_HOURS as _C85_CHECK_HOURS
+    from core.cycle85d_best import CYCLE85D_CHECK_HOURS as _C85_CHECK_HOURS
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(_C85_SIG_STATE_KEY)

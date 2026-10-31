@@ -103,6 +103,7 @@ SYSTEM_CYCLE94C = "cycle94c"   # P-REGIME Track A C07 + Plan C C07 -- December I
 SYSTEM_CYCLE85C = "cycle85c"   # R2 Plan A A16 (FB veto + PLANB P38 partner) -- February IMPROVED system (2026-10-30 install; over cycle85b)
 SYSTEM_CYCLE85D = "cycle85d"   # R2 Feb A16+X12 combined (85c + X12 cascade second-priority fills) -- February IMPROVED system (2026-10-30 install; over cycle85c)
 SYSTEM_CYCLE85E = "cycle85e"   # R3 Feb C01 (85d + CC03-NEW8 cascade layer) -- February IMPROVED system (2026-10-31 install; over cycle85d)
+SYSTEM_CYCLE85F = "cycle85f"   # RISK6 Feb C18_FCAP_t0.60_INC (85e stream + EURUSD atr_pct>=0.60 filter + R2D11 cap stack) -- February IMPROVED system (2026-11-01 install, user standing conditional order; VALIDATED under the relaxed re-screen standard, LCT P 70.0 boundary; February has no second-best)
 SYSTEM_CYCLE92C = "cycle92c"   # R2 Oct C14 (PLANB9 C09 partner) -- October IMPROVED system (2026-10-30 install; over cycle92+92e)
 SYSTEM_CYCLE94D = "cycle94d"   # R2 Dec D19 (PC03 veto + dec_rg/dec_rgc refill + PLANB12C partner) -- December IMPROVED system (2026-10-30 install; over cycle94c)
 SYSTEM_CYCLE94E = "cycle94e"   # R3 Dec P15 (94d + PLANB4 cand1 partner cascade) -- December IMPROVED system (2026-10-31 install; over cycle94d)
@@ -114,7 +115,7 @@ SYSTEM_CYCLE87E = "cycle87e"   # R3 Apr R01 (87d minus the negative mom_EURAUD s
 
 MONTH_SYSTEMS = {
     1: SYSTEM_CYCLE60B,   # January -- BRIEF23 C20_STACK IMPROVED (2026-10-26)
-    2: SYSTEM_CYCLE85E,   # February -- R3 C01 (CC03-NEW8 cascade) IMPROVED (2026-10-31 install)
+    2: SYSTEM_CYCLE85F,   # February -- RISK6 C18 FCAP IMPROVED (2026-11-01 install)
     3: SYSTEM_CYCLE86E,   # March -- R3 D10 (dual veto + cool1) IMPROVED (2026-10-31 install)
     4: SYSTEM_CYCLE87E,   # April -- R3 R01 IMPROVED (2026-10-31 install)
     5: SYSTEM_CYCLE88N,   # May -- NEW8 E07 IMPROVED (2026-10-27)
@@ -174,6 +175,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE85C: 104,   # R2 A16 February improved (as C85-23)
     SYSTEM_CYCLE85D: 104,   # R2 A16+X12 February improved (month N carried from cycle85c)
     SYSTEM_CYCLE85E: 104,   # R3 C01 February improved (month N carried from cycle85d)
+    SYSTEM_CYCLE85F: 104,   # RISK6 C18 February improved (month N carried from cycle85e)
     SYSTEM_CYCLE92C: 83,   # R2 C14 October improved (as C92-24)
     SYSTEM_CYCLE94D: 105,   # R2 D19 December improved (as C94-23)
     SYSTEM_CYCLE94E: 105,   # R3 P15 December improved (month N carried from cycle94d)
@@ -234,6 +236,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE85C: 34.666666666666664,   # R2 A16 February improved (104 / 3)
     SYSTEM_CYCLE85D: 34.666666666666664,   # R2 A16+X12 February improved (104 / 3)
     SYSTEM_CYCLE85E: 34.666666666666664,   # R3 C01 February improved (104 / 3)
+    SYSTEM_CYCLE85F: 34.666666666666664,   # RISK6 C18 February improved (104 / 3)
     SYSTEM_CYCLE92C: 27.666666666666668,   # R2 C14 October improved (83 / 3)
     SYSTEM_CYCLE94D: 35.0,   # R2 D19 December improved (105 / 3)
     SYSTEM_CYCLE94E: 35.0,   # R3 P15 December improved (105 / 3)
@@ -298,7 +301,7 @@ def set_active_system(name: str) -> str:
     one of the two recorded second-best systems added 2026-10-25)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
                          f"monthly systems, the recorded second-best "
                          f"systems and the BRIEF21 C20a improved systems "
@@ -736,6 +739,27 @@ def describe_active() -> str:
                 "EXACT: 14 walks, X12 576/576, combined "
                 "631/631 research form, 2026-10-30). "
                 "February has no second-best system")
+    if _ACTIVE == SYSTEM_CYCLE85F:
+        return ("cycle85f (RISK6 C18 IMPROVED) -- February "
+                "system: cycle85e stream (713 picks) + the "
+                "C18 FCAP layer: drop EURUSD picks with "
+                "signal-candle atr_pct >= 0.60 (February's "
+                "DISC full-stop complex), then the R2D11 "
+                "state-conditional cap (total 5 weighted, "
+                "cluster <= 3 high-vol / <= 4 otherwise) "
+                "-- @2.5: 684 picks, DISC leftover 92.52% "
+                "(incumbent 90.51), AUDIT leftover 42.50% "
+                "(incumbent 38.11); ES5 -32.64; MC middle "
+                "PASS DD p95 185.75 (section-9 margin "
+                "16.79 -> 24.40); LCT P 70.0% / q05 82.98% "
+                "-- passes the user's relaxed re-screen "
+                "line exactly, below the frozen middle; "
+                "DSR 1.0 / PBO 0.0 (family-9); decay "
+                "WEAKENED = incumbent class; VALIDATED "
+                "2026-11-01 (replay exact 684/684) and "
+                "installed on the user's standing "
+                "conditional order. February has no "
+                "second-best system")
     if _ACTIVE == SYSTEM_CYCLE85E:
         return ("cycle85e (R3 C01 IMPROVED) -- February "
                 "system: cycle85d (A16+X12 combined, 623 "
@@ -1111,6 +1135,9 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE85E:
         from core.cycle85e_best import evaluate_cycle85e_signals
         return evaluate_cycle85e_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE85F:
+        from core.cycle85f_best import evaluate_cycle85f_signals
+        return evaluate_cycle85f_signals(frames, check_time_utc)
     if _ACTIVE == SYSTEM_CYCLE92C:
         from core.cycle92c_best import evaluate_cycle92c_signals
         return evaluate_cycle92c_signals(frames, check_time_utc)
@@ -1308,6 +1335,10 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
         from core.cycle85e_best import select_cycle85e_entries
         return select_cycle85e_entries(signals,
                                        open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE85F:
+        from core.cycle85f_best import select_cycle85f_entries
+        return select_cycle85f_entries(signals,
+                                       open_symbols=open_symbols)
     if _ACTIVE == SYSTEM_CYCLE92C:
         from core.cycle92c_best import select_cycle92c_entries
         return select_cycle92c_entries(signals,
@@ -1425,6 +1456,7 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE85D,
                            SYSTEM_CYCLE94E,
                            SYSTEM_CYCLE94F,
+                           SYSTEM_CYCLE85F,
                            SYSTEM_CYCLE87E,
                            SYSTEM_CYCLE78D):
             # Ledger-aware systems: the full entries for a check
@@ -1594,6 +1626,8 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_CYCLE85C:
         return (11, 13, 16)
     if _ACTIVE == SYSTEM_CYCLE85D:
+        return (11, 13, 16)
+    if _ACTIVE == SYSTEM_CYCLE85F:
         return (11, 13, 16)
     if _ACTIVE == SYSTEM_CYCLE92C:
         return (15, 17, 18)

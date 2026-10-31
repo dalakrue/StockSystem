@@ -89,6 +89,7 @@ SYSTEM_CYCLE67P = "cycle67p"   # NEW8 Plan-B P07 -- August SECOND-BEST system
 SYSTEM_CYCLE87C = "cycle87c"   # Plan B-2 Q09 (non-dollar) + P-VOTE C01 -- April IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE89P = "cycle89p"   # NEW8 Plan B-9 C10 -- June IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE91P = "cycle91p"   # NEW8 Plan B-9 C02 + Plan C C06 -- September IMPROVED system (2026-10-28 update)
+SYSTEM_CYCLE91Q = "cycle91q"   # R3 Sep R04 (drop 2 DISC-negative FB equations + 7-design pool cascade refill) -- September IMPROVED system (2026-10-31 install; over cycle91p)
 SYSTEM_CYCLE93Q = "cycle93q"   # P-BRANCH Plan C C10 -- November IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE91S = "cycle91s"   # NEW8 Plan B-9 Track B R14 -- September SECOND-BEST system (2026-10-28 update, user waiver)
 SYSTEM_CYCLE94S = "cycle94s"   # NEW8 Plan B-6 SB-REDO R18 -- December SECOND-BEST system (2026-10-28 phase 2, user order)
@@ -118,7 +119,7 @@ MONTH_SYSTEMS = {
     6: SYSTEM_CYCLE89P,   # June -- NEW8 Plan B-9 C10 IMPROVED (2026-10-28 update)
     7: SYSTEM_CYCLE78D,   # July -- R2 D3 IMPROVED (2026-10-30 install)
     8: SYSTEM_CYCLE67,   # August
-    9: SYSTEM_CYCLE91P,   # September -- NEW8 Plan B-9 C02+C06 IMPROVED (2026-10-28 update)
+    9: SYSTEM_CYCLE91Q,   # September -- R3 R04 IMPROVED (2026-10-31 install)
     10: SYSTEM_CYCLE92C,   # October -- R2 C14 IMPROVED (2026-10-30 install)
     11: SYSTEM_CYCLE93R,   # November -- P-REPLACE Track A C04 IMPROVED (2026-10-29 update)
     12: SYSTEM_CYCLE94E,   # December -- R3 P15 (PLANB4 partner) IMPROVED (2026-10-31 install)
@@ -157,6 +158,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE87C: 104,   # B-2 Q09 + P-VOTE April improved (as C87-24)
     SYSTEM_CYCLE89P: 84,   # NEW8 Plan B-9 June improved (as C89-21)
     SYSTEM_CYCLE91P: 83,   # NEW8 Plan B-9 September improved (as C91-15)
+    SYSTEM_CYCLE91Q: 83,   # R3 R04 September improved (month N carried from cycle91p)
     SYSTEM_CYCLE93Q: 83,   # P-BRANCH Plan C November improved (as C93-24)
     SYSTEM_CYCLE91S: 83,   # NEW8 Plan B-9 Track B September second best (as C91-15)
     SYSTEM_CYCLE94S: 105,   # NEW8 Plan B-6 SB-REDO December second best (as C94-23)
@@ -214,6 +216,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE87C: 34.666666666666664,   # B-2 Q09 + P-VOTE April improved (104 / 3)
     SYSTEM_CYCLE89P: 28.0,   # NEW8 Plan B-9 June improved (84 / 3)
     SYSTEM_CYCLE91P: 27.666666666666668,   # NEW8 Plan B-9 September improved (83 / 3)
+    SYSTEM_CYCLE91Q: 27.666666666666668,   # R3 R04 September improved (83 / 3)
     SYSTEM_CYCLE93Q: 27.666666666666668,   # P-BRANCH Plan C November improved (83 / 3)
     SYSTEM_CYCLE91S: 27.666666666666668,   # NEW8 Plan B-9 Track B September second best (83 / 3)
     SYSTEM_CYCLE94S: 35.0,   # NEW8 Plan B-6 SB-REDO December second best (105 / 3)
@@ -289,7 +292,7 @@ def set_active_system(name: str) -> str:
     one of the two recorded second-best systems added 2026-10-25)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
                          f"monthly systems, the recorded second-best "
                          f"systems and the BRIEF21 C20a improved systems "
@@ -615,6 +618,24 @@ def describe_active() -> str:
                 "September's second priority in the combined "
                 "layer is the Plan B-9 Track B design R14 "
                 "(cycle91s, user waiver 2026-10-28)")
+    if _ACTIVE == SYSTEM_CYCLE91Q:
+        return ("cycle91q (R3 R04 IMPROVE) -- "
+                "September system: cycle91p with the "
+                "two discovery-negative FB equations "
+                "dropped (FB_NZDUSD_h11_1, "
+                "FB_GBPJPY_h10_2), refilled by the "
+                "seven-design pool cascade (30 "
+                "fills) -- @2.5 combined 680 picks: "
+                "discovery leftover 73.83%, audit "
+                "leftover 72.40% (incumbent 68.60% / "
+                "69.49%; LCT-middle 88.35% / 65.96%, "
+                "MC PASS, PBO 20% / DSR 0.9999 "
+                "family-22, decay PASS; app replay "
+                "EXACT 2026-10-31 slim gate: all 7 "
+                "pool walks bit-exact, drop control "
+                "650/650, combined 680/680). "
+                "September's second priority in the "
+                "combined layer remains cycle91s")
     if _ACTIVE == SYSTEM_CYCLE93Q:
         return ("cycle93q (P-BRANCH Plan C C10 IMPROVED) "
                 "-- November system: cycle93p + the "
@@ -1024,6 +1045,9 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE91P:
         from core.cycle91p_best import evaluate_cycle91p_signals
         return evaluate_cycle91p_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE91Q:
+        from core.cycle91q_best import evaluate_cycle91q_signals
+        return evaluate_cycle91q_signals(frames, check_time_utc)
     if _ACTIVE == SYSTEM_CYCLE93Q:
         from core.cycle93q_best import evaluate_cycle93q_signals
         return evaluate_cycle93q_signals(frames, check_time_utc)
@@ -1203,6 +1227,10 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
         from core.cycle91p_best import select_cycle91p_entries
         return select_cycle91p_entries(signals,
                                        open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE91Q:
+        from core.cycle91q_best import select_cycle91q_entries
+        return select_cycle91q_entries(signals,
+                                       open_symbols=open_symbols)
     if _ACTIVE == SYSTEM_CYCLE93Q:
         from core.cycle93q_best import select_cycle93q_entries
         return select_cycle93q_entries(signals,
@@ -1330,6 +1358,7 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE87C,
                            SYSTEM_CYCLE89P,
                            SYSTEM_CYCLE91P,
+                           SYSTEM_CYCLE91Q,
                            SYSTEM_CYCLE93Q,
                            SYSTEM_CYCLE86C,
                            SYSTEM_CYCLE93R,
@@ -1485,6 +1514,8 @@ def active_check_hours():
         return (1, 15, 18)
     if _ACTIVE == SYSTEM_CYCLE91P:
         return (1, 10, 11)
+    if _ACTIVE == SYSTEM_CYCLE91Q:
+        return (1, 2, 10, 11)
     if _ACTIVE == SYSTEM_CYCLE93Q:
         return (9, 13, 15)
     if _ACTIVE == SYSTEM_CYCLE91S:

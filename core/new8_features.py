@@ -713,6 +713,22 @@ def add_b3_columns(f, m30):
     s4 = np.sign(np.where(np.isnan(f['cf_h4dev'].to_numpy()),
                           0.0, f['cf_h4dev'].to_numpy()))
     f['cf2_stack'] = s15 + s30 + s4
+    # ---- cf_stack (build_features_planb2; ported here
+    # 2026-10-31 for sep_b2sb_r15, whose CONF equations
+    # read it -- in the shipped builder it existed only
+    # inside the b6 block. Formula verbatim from the b6
+    # block's port: sign(cf_m15dev) with NaN -> 0, plus
+    # the m30 / h4 states with NaN -> 0.)
+    def _col_s(name):
+        if name in f:
+            return f[name]
+        return pd.Series(np.nan, index=f.index)
+    _m15s = np.sign(np.where(
+        np.isnan(_col_s('cf_m15dev').to_numpy()), 0.0,
+        _col_s('cf_m15dev').to_numpy()))
+    f['cf_stack'] = _m15s \
+        + _col_s('m30_state').fillna(0.0).to_numpy() \
+        + _col_s('h4_state').fillna(0.0).to_numpy()
     return f
 
 

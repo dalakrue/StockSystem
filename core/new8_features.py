@@ -774,6 +774,22 @@ def add_b4_columns(f):
     s_d1 = np.sign(np.where(np.isnan(dev_at), 0.0, dev_at))
     f['cf3_stack'] = _sgn('cf_m15dev') + _sgn('cf_m30dev') \
         + _sgn('cf_h4dev') + s_d1
+    # ---- remaining PLANB4 columns (build_features_planb4
+    # verbatim; added 2026-10-31 for the Dec C08 candidate,
+    # whose MIX3 equations read them -- the B-4 partner
+    # design does not, so the original port omitted them.
+    # qqe / aroon_d are the b6 block's identical ports.)
+    rsi_w = _wilder_rsi_b6(close, 14)
+    f['qqe'] = _ema(_ema(rsi_w, 5), 5)
+    shi25 = _bars_since_extreme_b6(high, 25, True)
+    slo25 = _bars_since_extreme_b6(low, 25, False)
+    f['aroon_d'] = (25.0 - shi25) / 25.0 * 100.0 \
+        - (25.0 - slo25) / 25.0 * 100.0
+    f['alli_d'] = (close.ewm(alpha=1.0 / 5, adjust=False)
+                   .mean()
+                   - close.ewm(alpha=1.0 / 13, adjust=False)
+                   .mean()) / atr
+    f['aroon_state'] = np.where(f['aroon_d'] > 0, 1.0, -1.0)
     return f
 
 

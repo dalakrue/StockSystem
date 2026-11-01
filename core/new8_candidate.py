@@ -338,7 +338,7 @@ class CandidateContext:
                             ("r4", "planb", "b2cf", "b2x", "b3",
                              "b4", "b5", "b6", "b6v", "b7", "b8",
                              "b9", "b9c", "pv", "pbc", "pr", "rp",
-                             "b12", "b12c")
+                             "b12", "b12c", "b13", "b13c")
                             if g in groups)
         self.symbols = sorted(syms)
         self._pv = pv_variants

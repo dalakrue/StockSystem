@@ -2015,6 +2015,76 @@ def pc14_keep(pc14_frame, check, direction):
 
 
 
+def add_b13_columns(f):
+    """build_features_planb13.build_one verbatim, Track A part
+    (PLAN B-13 interaction / divergence / volume-weighted
+    transforms of the planb12c superset columns). Added
+    2026-10-30 for the B-13 port + re-judge lane; parity vs
+    the research pickles is audited in
+    work_b13/port_parity_b13.py."""
+    hr = pd.Series(f.index.hour, index=f.index).astype(float)
+    dow = pd.Series(f.index.dayofweek, index=f.index).astype(float)
+    us = ((hr >= 13) & (hr < 21)).astype(float)
+    f['b13_vxmom'] = f['vol_z'] * f['mom24']
+    f['b13_vxrsi'] = f['volm_z'] * (f['rsi14'] - 50.0) / 50.0
+    f['b13_m15div'] = f['b9c_m15_mom'] - f['m30_mom']
+    f['b13_h4div'] = f['h4_mom'] - f['b9c_m15_mom']
+    f['b13_rngvol'] = f['bb_bw'] * f['vol_z']
+    f['b13_adxvol'] = f['adx14'] * f['vol_z'] / 100.0
+    f['b13_dxyvol'] = f['b9_dxy_trend'] * f['vol_z']
+    f['b13_corrvol'] = f['b8_corr_mom_rsi'] * f['volm_z']
+    f['b13_clvvol'] = f['cf_m15dev'] * f['vol_z']
+    f['b13_sessrng'] = f['b12_sprd_vol'] * (us * 1.0 + (1 - us) * -0.5)
+    f['b13_macdvol'] = f['macd_h'] * f['vol_z']
+    f['b13_emavol'] = f['ema_dev'] * f['volm_z']
+    f['b13_stochmom'] = f['stoch_k'] * f['mom24'] / 100.0
+    f['b13_wickvol'] = f['b9_wick_rej'] * f['vol_z']
+    f['b13_bodyvol'] = f['ha_body'] * f['vol_z']
+    f['b13_atrmom'] = f['atr_rank'] * f['mom24'] / 100.0
+    f['b13_vwapvol'] = f['vwap_dev'] * f['vol_z']
+    f['b13_mfivol'] = f['volm_z'] * (f['mfi14'] - 50.0) / 50.0
+    f['b13_nest13'] = f['b13_vxmom'] + f['b13_h4div'] \
+        + f['b13_m15div']
+    f['b13_dowrng'] = f['b12_sprd_shock'] * (dow - 2.0) / 2.0
+
+    def state(a, b):
+        s = pd.Series(0.0, index=f.index)
+        s[(a > 0) & (b > 0)] = 1.0
+        s[(a < 0) & (b < 0)] = -1.0
+        return s
+    f['b13_vx_state'] = state(f['b13_vxmom'], f['b13_h4div'])
+    f['b13_div_state'] = state(f['b13_m15div'], f['b13_h4div'])
+    f['b13_vol_state13'] = state(f['b13_vxmom'], f['b13_macdvol'])
+    al = pd.Series(0.0, index=f.index)
+    agree = ((f['b13_vx_state'] != 0)
+             & (f['b13_vx_state'] == f['b13_div_state'])
+             & (f['b13_vx_state'] == f['b13_vol_state13']))
+    al[agree] = f['b13_vx_state'][agree]
+    f['b13_all_state13'] = al
+    return f
+
+
+def add_b13c_columns(f):
+    """build_features_planb13.build_one verbatim, Plan C part
+    (PLAN B-13 M15-heavy columns; M15 volume weighted
+    heavier)."""
+    hr = pd.Series(f.index.hour, index=f.index).astype(float)
+    us = ((hr >= 13) & (hr < 21)).astype(float)
+    eu = ((hr >= 8) & (hr < 13)).astype(float)
+    f['b13c_m15vx'] = f['b9c_m15_volz'] * f['b9c_m15_mom']
+    f['b13c_m15rngvol'] = f['b9c_m15_range'] * f['b9c_m15_volz']
+    f['b13c_m15bodyvol'] = f['b9c_m15_body'] * f['b9c_m15_volr']
+    f['b13c_m15rsivol'] = (f['b9c_m15_rsi'] - 50.0) / 50.0 \
+        * f['b9c_m15_volz']
+    f['b13c_m15h1div'] = f['b9c_m15_ema'] - f['ema_dev']
+    f['b13c_volmix3'] = f['b9c_vol_mix'] + 2.0 * f['b9c_m15_volz'] \
+        - f['vol_z']
+    f['b13c_m15sessvol'] = f['b9c_m15_volz'] * (us + eu) \
+        + f['b9c_m15_volr']
+    f['b13c_m15sprd'] = f['b12c_m15_sprd'] * f['b9c_m15_volz']
+    return f
+
+
 def build_symbol_features(sym, h1, groups, m15=None, m30=None,
                           dx_mom=None, b7ctx=None,
                           pv_variants=None, pbctx=None,
@@ -2083,4 +2153,8 @@ def build_symbol_features(sym, h1, groups, m15=None, m30=None,
         f = add_b12_columns(f)
     if 'b12c' in groups:
         f = add_b12c_columns(f)
+    if 'b13' in groups:
+        f = add_b13_columns(f)
+    if 'b13c' in groups:
+        f = add_b13c_columns(f)
     return f

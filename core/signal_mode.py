@@ -273,7 +273,7 @@ SYSTEM_BEST_N = {
 # BRIEF23 C20_STACK improved system (cycle60b).
 MONTH_SECOND_BEST = {
     1: SYSTEM_CYCLE60,   # January -- old C60-03 behind C20_STACK
-    3: SYSTEM_CYCLE86S,   # March -- Plan B-6 SB-REDO R17 behind C01 (2026-10-28 phase 2, user order; slot was empty)
+    # (March slot EMPTIED 2026-11-01: cycle86s REMOVED by user decision -- the second-best lane proved it harmful on the shipped streams (combined AUDIT -66.44 vs 86f alone +543.84); March is 86f best-only.)
     5: SYSTEM_CYCLE88,   # May -- old C88-03 behind NEW8 E07 (2026-10-27)
     6: SYSTEM_CYCLE89,   # June -- old C89-21 behind NEW8 P07 (2026-10-27)
     8: SYSTEM_CYCLE67P,   # August -- NEW8 P07 standalone (2026-10-27)

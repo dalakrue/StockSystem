@@ -729,6 +729,31 @@ def add_b3_columns(f, m30):
     f['cf_stack'] = _m15s \
         + _col_s('m30_state').fillna(0.0).to_numpy() \
         + _col_s('h4_state').fillna(0.0).to_numpy()
+    # ---- DPO(20) / Vortex(14) / linear slope(20)
+    # (build_features_planb3.build_one verbatim; added
+    # 2026-11-01 for the Plan E pool port: the Jan PLANB3
+    # pool designs condition on dpo20 / vortex_state /
+    # linslope; no earlier app design did).
+    f['dpo20'] = (close.shift(11) - close.rolling(20).mean()) / atr
+    vm_p = (high - low.shift(1)).abs()
+    vm_m = (low - high.shift(1)).abs()
+    tr1 = pd.concat([high - low, (high - prev_close).abs(),
+                     (low - prev_close).abs()], axis=1).max(axis=1)
+    vip = vm_p.rolling(14).sum() / tr1.rolling(14).sum() \
+        .replace(0.0, np.nan)
+    vim = vm_m.rolling(14).sum() / tr1.rolling(14).sum() \
+        .replace(0.0, np.nan)
+    f['vortex_d'] = vip - vim
+    f['vortex_state'] = np.where(f['vortex_d'] > 0, 1.0, -1.0)
+    _x20 = np.arange(20)
+
+    def _slope20(v):
+        if np.isnan(v).any():
+            return np.nan
+        return np.polyfit(_x20, v, 1)[0]
+
+    f['linslope'] = close.rolling(20).apply(_slope20, raw=True) \
+        * 20.0 / atr
     return f
 
 
@@ -811,7 +836,9 @@ def add_b4_columns(f):
 
 def add_b5_columns(f):
     """build_features_planb5 verbatim for the one column the
-    Plan B-7 design chain needs: atr_r = atr14 / EWM100(TR)."""
+    Plan B-7 design chain needs: atr_r = atr14 / EWM100(TR).
+    rsi_pct added 2026-11-01 (Plan E pool port: the Jan
+    PLANB5 partner design conditions on it)."""
     close, high, low = f['Close'], f['High'], f['Low']
     atr = f['atr14']
     tr = pd.concat([high - low, (high - close.shift(1)).abs(),
@@ -819,7 +846,30 @@ def add_b5_columns(f):
                    axis=1).max(axis=1)
     atr100 = tr.ewm(span=100, adjust=False).mean()
     f['atr_r'] = atr / atr100.replace(0.0, np.nan)
+    f['rsi_pct'] = _pct_rank_b5(f['rsi14'], 500)
     return f
+
+
+def _pct_rank_b5(x, w=500):
+    """build_features_planb5._pct_rank verbatim: rolling
+    percentile rank (0-100) of the current value within the
+    trailing w bars, full windows only."""
+    from numpy.lib.stride_tricks import sliding_window_view
+    v = np.asarray(x, dtype=float)
+    n = len(v)
+    out = np.full(n, np.nan)
+    if n < w:
+        return pd.Series(out, index=x.index)
+    W = sliding_window_view(v, w)
+    cur = v[w - 1:]
+    for a in range(0, len(cur), 4096):
+        b = min(len(cur), a + 4096)
+        blk = W[a:b]
+        ok = ~np.isnan(blk).any(axis=1)
+        pct = np.where(ok, (blk <= cur[a:b][:, None]).mean(axis=1)
+                       * 100.0, np.nan)
+        out[w - 1 + a:w - 1 + b] = pct
+    return pd.Series(out, index=x.index)
 
 
 def _bars_since_extreme_b6(x, n, want_max):
@@ -977,6 +1027,21 @@ def add_b6_columns(f, rcs_z=None):
     f['nx_vol'] = _col('vol_z') + atr_r
     f['nx_sq'] = f['sqz_dur'] / 30.0 + f['ker20']
     f['nx_hk'] = _col('hull_dev') + _col('kama_dev')
+    # ---- remaining build_features_planb6 nested columns
+    # (verbatim; added 2026-11-01 for the Plan E pool port:
+    # the Jan PLANB6 / PLANB6SB / PLANB6SB2 pool designs
+    # condition on nx_qs / nx_tw / nx_mom_state /
+    # nx_reg_state; no earlier app design did).
+    f['nx_qs'] = (f['qqe'] - 50.0) / 50.0 \
+        + (_col('stc') - 50.0) / 50.0
+    f['nx_tw'] = _col('tsi_diff') + _col('wt_diff')
+    _qs = f['nx_qs']
+    f['nx_mom_state'] = np.where(_qs > 0.25, 1.0,
+                                 np.where(_qs < -0.25, -1.0, 0.0))
+    _trend = (f['hurst100'] > 0.5) & (f['ker20'] > 0.3)
+    _chop = (f['hurst100'] < 0.5) & (f['ker20'] < 0.3)
+    f['nx_reg_state'] = np.where(_trend, 1.0,
+                                 np.where(_chop, -1.0, 0.0))
     return f
 
 

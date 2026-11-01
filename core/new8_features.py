@@ -695,6 +695,17 @@ def add_b3_columns(f, m30):
     _e2 = _ema(_e1, 15)
     _e3 = _ema(_e2, 15)
     f['trix15'] = 100.0 * _e3.pct_change()
+    # trix_state + chop61 -- build_features_planb3 verbatim
+    # (added 2026-11-01 for the Plan E April pool port: the
+    # planb3-family designs read them).
+    f['trix_state'] = np.where(f['trix15'] > 0, 1.0, -1.0)
+    _tr1 = pd.concat([high - low, (high - prev_close).abs(),
+                      (low - prev_close).abs()], axis=1).max(axis=1)
+    _hh = high.rolling(14).max()
+    _ll = low.rolling(14).min()
+    _rng = (_hh - _ll).replace(0.0, np.nan)
+    f['chop61'] = 100.0 * np.log10(_tr1.rolling(14).sum()
+                                   / _rng) / np.log10(14.0)
     if m30 is not None:
         m30i = m30.set_index('Datetime')
         m30c = m30i['Close']

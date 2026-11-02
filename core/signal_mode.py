@@ -101,6 +101,7 @@ SYSTEM_CYCLE87S = "cycle87s"   # NEW8 P-VOTE Track B fallback R13 -- April SECON
 SYSTEM_CYCLE86C = "cycle86c"   # P-REPLACE Track A C06 -- March IMPROVED system (2026-10-29 update; slot REPLACEMENT over cycle86b+86s)
 SYSTEM_CYCLE93R = "cycle93r"   # P-REPLACE Track A C04 -- November IMPROVED system (2026-10-29 update; over cycle93q+93s)
 SYSTEM_CYCLE93T = "cycle93t"   # NOV40 R2D11_COMBO (93r combined + B16_FMR_t30 merge + state-conditional cap) -- November IMPROVED system (2026-10-31 install, user conditional order; second-best slot emptied)
+SYSTEM_CYCLE93U = "cycle93u"   # SL-FIX R2 T20 FULLSTACK (93t stream + WIDEVOL filter + dollar stop caps $15 base / $10 CHF / $10 EURNZD) -- November IMPROVED system (2026-11-02 install, user order; VALIDATED port-exact, record work_nov_slfix2/results/T20_VALIDATION.md; second-best slot stays empty)
 SYSTEM_CYCLE94C = "cycle94c"   # P-REGIME Track A C07 + Plan C C07 -- December IMPROVED system (2026-10-29 update; over cycle94b+94s)
 SYSTEM_CYCLE85C = "cycle85c"   # R2 Plan A A16 (FB veto + PLANB P38 partner) -- February IMPROVED system (2026-10-30 install; over cycle85b)
 SYSTEM_CYCLE85D = "cycle85d"   # R2 Feb A16+X12 combined (85c + X12 cascade second-priority fills) -- February IMPROVED system (2026-10-30 install; over cycle85c)
@@ -129,7 +130,7 @@ MONTH_SYSTEMS = {
     8: SYSTEM_CYCLE67,   # August
     9: SYSTEM_CYCLE91R,   # September -- B-13 OfficeAlt IMPROVE HUGE (2026-11-01 install)
     10: SYSTEM_CYCLE92C,   # October -- R2 C14 IMPROVED (2026-10-30 install)
-    11: SYSTEM_CYCLE93T,   # November -- NOV40 R2D11_COMBO IMPROVED (2026-10-31 install)
+    11: SYSTEM_CYCLE93U,   # November -- SL-FIX R2 T20 FULLSTACK IMPROVED (2026-11-02 install)
     12: SYSTEM_CYCLE94G,   # December -- Plan E E03 ACCEPT (2026-11-01 install)
 }
 
@@ -178,6 +179,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE86C: 86,   # P-REPLACE Track A March improved (as C86-24)
     SYSTEM_CYCLE93R: 83,   # P-REPLACE Track A November improved (as C93-24)
     SYSTEM_CYCLE93T: 83,   # NOV40 R2D11 November improved (month N carried from cycle93r)
+    SYSTEM_CYCLE93U: 100,   # SL-FIX R2 T20 November improved (own sizing-grid pass at N=100)
     SYSTEM_CYCLE94C: 105,   # P-REGIME Track A + Plan C December improved (as C94-23)
     SYSTEM_CYCLE85C: 104,   # R2 A16 February improved (as C85-23)
     SYSTEM_CYCLE85D: 104,   # R2 A16+X12 February improved (month N carried from cycle85c)
@@ -244,6 +246,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE86C: 28.666666666666668,   # P-REPLACE Track A March improved (86 / 3)
     SYSTEM_CYCLE93R: 27.666666666666668,   # P-REPLACE Track A November improved (83 / 3)
     SYSTEM_CYCLE93T: 27.666666666666668,   # NOV40 R2D11 November improved (83 / 3)
+    SYSTEM_CYCLE93U: 33.333333333333336,   # SL-FIX R2 T20 November improved (100 / 3)
     SYSTEM_CYCLE94C: 35.0,   # P-REGIME Track A + Plan C December improved (105 / 3)
     SYSTEM_CYCLE85C: 34.666666666666664,   # R2 A16 February improved (104 / 3)
     SYSTEM_CYCLE85D: 34.666666666666664,   # R2 A16+X12 February improved (104 / 3)
@@ -734,6 +737,20 @@ def describe_active() -> str:
                 "nov40/INSTALL_R2D11.md). "
                 "November has NO second best: the cycle93s "
                 "flow is inside this form")
+    if _ACTIVE == SYSTEM_CYCLE93U:
+        return ("cycle93u (SL-FIX R2 T20 FULLSTACK "
+                "IMPROVED) -- November system: the cycle93t "
+                "form stream settled through a WIDEVOL "
+                "entry filter plus DOLLAR stop caps ($15 "
+                "base, $10 on CHF symbols, $10 on EURNZD "
+                "equations) -- @2.5-pip discovery leftover "
+                "60.00%, audit leftover 38.21% (MC PASS, "
+                "DSR 1.0 / PBO 0.0%; cluster survival: "
+                "worst stop $15.00, equity $20.00 after 4 "
+                "injected full stops, stops-to-death 5; "
+                "VALIDATED port-exact 2026-11-02, record "
+                "work_nov_slfix2/results/T20_VALIDATION.md). "
+                "November has NO second best")
     if _ACTIVE == SYSTEM_CYCLE94C:
         return ("cycle94c (P-REGIME Track A C07 + Plan "
                 "C C07 IMPROVED) -- December system: "
@@ -1228,6 +1245,9 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE93T:
         from core.cycle93t_best import evaluate_cycle93t_signals
         return evaluate_cycle93t_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE93U:
+        from core.cycle93u_best import evaluate_cycle93u_signals
+        return evaluate_cycle93u_signals(frames, check_time_utc)
     if _ACTIVE == SYSTEM_CYCLE94C:
         from core.cycle94c_best import evaluate_cycle94c_signals
         return evaluate_cycle94c_signals(frames, check_time_utc)
@@ -1440,6 +1460,10 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
         from core.cycle93t_best import select_cycle93t_entries
         return select_cycle93t_entries(signals,
                                        open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE93U:
+        from core.cycle93u_best import select_cycle93u_entries
+        return select_cycle93u_entries(signals,
+                                       open_symbols=open_symbols)
     if _ACTIVE == SYSTEM_CYCLE94C:
         from core.cycle94c_best import select_cycle94c_entries
         return select_cycle94c_entries(signals,
@@ -1581,6 +1605,7 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE86C,
                            SYSTEM_CYCLE93R,
                            SYSTEM_CYCLE93T,
+                           SYSTEM_CYCLE93U,
                            SYSTEM_CYCLE94C,
                            SYSTEM_CYCLE85C,
                            SYSTEM_CYCLE92C,

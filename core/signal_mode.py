@@ -133,7 +133,7 @@ SYSTEM_CYCLE87E = "cycle87e"   # R3 Apr R01 (87d minus the negative mom_EURAUD s
 
 MONTH_SYSTEMS = {
     1: SYSTEM_CYCLE60D,   # January -- DIFFWAY W1 VALIDATED (2026-11-03 install)
-    2: SYSTEM_CYCLE85I,   # February -- 10CYC-R2 R9 VALIDATED (2026-11-04 install; 2 checks (13,16) UTC)
+    2: SYSTEM_CYCLE85G,   # February -- REVERTED by user ruling 2026-11-04: 85i (2-check form) marked DID NOT IMPROVE, entries/day under his 2.5 line; 85g 3-check form (11,13,16) UTC restored; record work_r2_validate/results/FEB_RULING_20261104.md
     3: SYSTEM_CYCLE86G,   # March -- SL4-10CYC D5 VALIDATED (2026-11-03 install)
     4: SYSTEM_CYCLE87H,   # April -- 10CYC-R2 R1 VALIDATED (2026-11-04 install; declared pool basis)
     5: SYSTEM_CYCLE88N,   # May -- NEW8 E07 IMPROVED (2026-10-27)

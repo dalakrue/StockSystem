@@ -81,6 +81,7 @@ SYSTEM_CYCLE89 = "cycle89"   # C89-21 -- June system
 SYSTEM_CYCLE78 = "cycle78"   # C78-34 -- July system
 SYSTEM_CYCLE78D = "cycle78d"   # R2 Jul D3 (pruned cycle78 + PLANB cand1 C18 fills + B04 cascade fills) -- July IMPROVED system (2026-10-30 install; over cycle78)
 SYSTEM_CYCLE78E = "cycle78e"   # Plan E Jul E09 (78d stream + CONS3 consensus fills over 20 pool walks in 9 families + CCAP 100 symbol-day cap) -- July IMPROVED system (2026-11-01 install, validate-and-replace order; VALIDATED IMPROVE, see work_r5_20cyc/results/jul_planE_FINAL_VALIDATION.md)
+SYSTEM_CYCLE78F = "cycle78f"   # RR 1:1 R18C08 (78e stream + exposure-skip 6% + 12h currency loss-cooldown, cap 1xTP) -- July IMPROVED system (2026-11-06 install, user order; VALIDATED under the LOWERED STANDARD, record work_rr1_lowered_validate/results/jul_R18C08_VALIDATION.md)
 SYSTEM_CYCLE67 = "cycle67"   # C67-04 -- August system
 SYSTEM_CYCLE91 = "cycle91"   # C91-15 -- September system
 SYSTEM_CYCLE92 = "cycle92"   # C92-24 -- October system
@@ -107,6 +108,7 @@ SYSTEM_CYCLE67P = "cycle67p"   # NEW8 Plan-B P07 -- August SECOND-BEST system
 SYSTEM_CYCLE87C = "cycle87c"   # Plan B-2 Q09 (non-dollar) + P-VOTE C01 -- April IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE89P = "cycle89p"   # NEW8 Plan B-9 C10 -- June IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE89Q = "cycle89q"   # RR 1:1 R18C14 (89p stream + exposure-skip 6% + worst-10-day excision + 12h currency loss-cooldown, cap 1xTP) -- June IMPROVED system (2026-11-05 install, user order; VALIDATED, record work_rr1_validate/results/jun_VALIDATION.md)
+SYSTEM_CYCLE89R = "cycle89r"   # RR 1:1 R11C01 (89p stream + exposure-skip 6%, cap 1xTP) -- June IMPROVED system (2026-11-06 install, user order; VALIDATED under the LOWERED STANDARD, record work_rr1_lowered_validate/results/jun_R11C01_VALIDATION.md)
 SYSTEM_CYCLE91P = "cycle91p"   # NEW8 Plan B-9 C02 + Plan C C06 -- September IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE91R = "cycle91r"   # B-13 Sep OfficeAlt (91q stream minus the 10 UTC office-hour slot + sep_b13o02 fills at the 18 UTC slot) -- September IMPROVE HUGE system (2026-11-01 install, validate-and-replace programme Step 4; second-best cycle91s kept)
 SYSTEM_CYCLE91T = "cycle91t"   # RR 1:1 R18C02 (91r stream + exposure-skip 8% + worst-10-day excision, cap 1xTP) -- September IMPROVED system (2026-11-05 install, user order; VALIDATED, record work_rr1_validate/results/sep_VALIDATION.md; second-best cycle91s kept)
@@ -157,8 +159,8 @@ MONTH_SYSTEMS = {
     3: SYSTEM_CYCLE86H,   # March -- FIX-BLOCKED S18-M1 VALIDATED (2026-11-04 install)
     4: SYSTEM_CYCLE87J,   # April -- RR 1:1 R20C09 VALIDATED (2026-11-05 install)
     5: SYSTEM_CYCLE88N,   # May -- NEW8 E07 IMPROVED (2026-10-27)
-    6: SYSTEM_CYCLE89Q,   # June -- RR 1:1 R18C14 VALIDATED (2026-11-05 install)
-    7: SYSTEM_CYCLE78E,   # July -- Plan E E09 IMPROVED (2026-11-01 install)
+    6: SYSTEM_CYCLE89R,   # June -- RR 1:1 R11C01 VALIDATED under the LOWERED STANDARD (2026-11-06 install)
+    7: SYSTEM_CYCLE78F,   # July -- RR 1:1 R18C08 VALIDATED under the LOWERED STANDARD (2026-11-06 install)
     8: SYSTEM_CYCLE67,   # August
     9: SYSTEM_CYCLE91T,   # September -- RR 1:1 R18C02 VALIDATED (2026-11-05 install)
     10: SYSTEM_CYCLE92C,   # October -- R2 C14 IMPROVED (2026-10-30 install)
@@ -179,6 +181,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE78: 103,   # C78-34 -- July
     SYSTEM_CYCLE78D: 103,   # R2 D3 July improved (month N carried from cycle78)
     SYSTEM_CYCLE78E: 103,   # Plan E E09 July improved (month N carried; own sizing grid pass N=100, at 103 peak margin 57.99%)
+    SYSTEM_CYCLE78F: 103,   # RR 1:1 July validated, lowered standard (month N carried)
     SYSTEM_CYCLE67: 121,   # C67-04 -- August
     SYSTEM_CYCLE91: 83,   # C91-15 -- September
     SYSTEM_CYCLE92: 83,   # C92-24 -- October
@@ -202,6 +205,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE87C: 104,   # B-2 Q09 + P-VOTE April improved (as C87-24)
     SYSTEM_CYCLE89P: 84,   # NEW8 Plan B-9 June improved (as C89-21)
     SYSTEM_CYCLE89Q: 84,   # RR 1:1 June validated (as 89p; month N carried)
+    SYSTEM_CYCLE89R: 84,   # RR 1:1 June validated, lowered standard (month N carried)
     SYSTEM_CYCLE91P: 83,   # NEW8 Plan B-9 September improved (as C91-15)
     SYSTEM_CYCLE91Q: 83,   # R3 R04 September improved (month N carried from cycle91p)
     SYSTEM_CYCLE91R: 83,   # B-13 OfficeAlt September (month N carried from cycle91q)
@@ -263,6 +267,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE78: 34.333333333333336,   # C78-34 -- July (103 / 3)
     SYSTEM_CYCLE78D: 34.333333333333336,   # R2 D3 July improved (103 / 3)
     SYSTEM_CYCLE78E: 34.333333333333336,   # Plan E E09 July improved (103 / 3)
+    SYSTEM_CYCLE78F: 34.333333333333336,   # RR 1:1 July validated, lowered standard (103 / 3)
     SYSTEM_CYCLE67: 40.333333333333336,   # C67-04 -- August (121 / 3)
     SYSTEM_CYCLE91: 27.666666666666668,   # C91-15 -- September (83 / 3)
     SYSTEM_CYCLE92: 27.666666666666668,   # C92-24 -- October (83 / 3)
@@ -286,6 +291,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE87C: 34.666666666666664,   # B-2 Q09 + P-VOTE April improved (104 / 3)
     SYSTEM_CYCLE89P: 28.0,   # NEW8 Plan B-9 June improved (84 / 3)
     SYSTEM_CYCLE89Q: 28.0,   # RR 1:1 June validated (84 / 3)
+    SYSTEM_CYCLE89R: 28.0,   # RR 1:1 June validated, lowered standard (84 / 3)
     SYSTEM_CYCLE91P: 27.666666666666668,   # NEW8 Plan B-9 September improved (83 / 3)
     SYSTEM_CYCLE91Q: 27.666666666666668,   # R3 R04 September improved (83 / 3)
     SYSTEM_CYCLE91R: 27.666666666666668,   # B-13 OfficeAlt September (83 / 3)
@@ -360,7 +366,7 @@ def set_active_system(name: str) -> str:
     systems only; best-only since the 2026-11-06 update)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE91T,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE91T, SYSTEM_CYCLE89R, SYSTEM_CYCLE78F,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
                          f"monthly best systems remain: "
                          f"{sorted(MONTH_SYSTEMS.values())}")
@@ -450,6 +456,20 @@ def describe_active() -> str:
                 "checks, fails only check 8 which C66-08 itself fails; "
                 "LCT middle PASS, Muse's-decision promotion, replaced "
                 "C66-08)")
+    if _ACTIVE == SYSTEM_CYCLE78F:
+        return ("cycle78f (RR 1:1 R18C08 VALIDATED "
+                "under the LOWERED STANDARD, user order "
+                "2026-11-06) -- July system: the "
+                "cycle78e stream settled through a 6% "
+                "exposure-skip and a 12h currency "
+                "loss-cooldown, stops capped at 1xTP -- "
+                "path-basis EC22 failed {13_lct, "
+                "14_leftover} only, AUDIT win 70.41 at "
+                "the 70.0 floor, S9 PASS, Gate A "
+                "bit-exact, sizing peak 37.64% <= 60% "
+                "(lowered absolute arm); record "
+                "work_rr1_lowered_validate/results/"
+                "jul_R18C08_VALIDATION.md")
     if _ACTIVE == SYSTEM_CYCLE78E:
         return ("cycle78e (Plan E E09 IMPROVE) -- July "
                 "system: cycle78d stream + CONS3 "
@@ -720,6 +740,20 @@ def describe_active() -> str:
                 "replay EXACT 2026-10-28). The old C89-21 "
                 "(cycle89) is June's second priority in the "
                 "combined layer")
+    if _ACTIVE == SYSTEM_CYCLE89R:
+        return ("cycle89r (RR 1:1 R11C01 VALIDATED "
+                "under the LOWERED STANDARD, user order "
+                "2026-11-06) -- June system: the "
+                "cycle89p stream settled through a 6% "
+                "exposure-skip, stops capped at 1xTP -- "
+                "path-basis EC22 failed {13_lct, "
+                "14_leftover} only, AUDIT win 75.79 at "
+                "the 70.0 floor, S9 PASS, Gate A "
+                "bit-exact, sizing peak 58.75% <= 60% "
+                "(lowered absolute arm; incumbent 89q "
+                "peak was 66.03%); record "
+                "work_rr1_lowered_validate/results/"
+                "jun_R11C01_VALIDATION.md")
     if _ACTIVE == SYSTEM_CYCLE89Q:
         return ("cycle89q (RR 1:1 R18C14 "
                 "VALIDATED) -- June system: the "
@@ -1443,6 +1477,12 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
         return evaluate_cycle78_signals(
             frames, check_time_utc,
             m15_frames=fetch_cycle78_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE78F:
+        from core.cycle78f_best import (evaluate_cycle78f_signals,
+                                        fetch_cycle78f_m15_frames)
+        return evaluate_cycle78f_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle78f_m15_frames())
     if _ACTIVE == SYSTEM_CYCLE78E:
         from core.cycle78e_best import (evaluate_cycle78e_signals,
                                         fetch_cycle78e_m15_frames)
@@ -1566,6 +1606,9 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE89Q:
         from core.cycle89q_best import evaluate_cycle89q_signals
         return evaluate_cycle89q_signals(frames, check_time_utc)
+    if _ACTIVE == SYSTEM_CYCLE89R:
+        from core.cycle89r_best import evaluate_cycle89r_signals
+        return evaluate_cycle89r_signals(frames, check_time_utc)
     if _ACTIVE == SYSTEM_CYCLE91P:
         from core.cycle91p_best import evaluate_cycle91p_signals
         return evaluate_cycle91p_signals(frames, check_time_utc)
@@ -1737,6 +1780,9 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE78E:
         from core.cycle78e_best import select_cycle78e_entries
         return select_cycle78e_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE78F:
+        from core.cycle78f_best import select_cycle78f_entries
+        return select_cycle78f_entries(signals, open_symbols=open_symbols)
     if _ACTIVE == SYSTEM_CYCLE78D:
         from core.cycle78d_best import select_cycle78d_entries
         return select_cycle78d_entries(signals, open_symbols=open_symbols)
@@ -1827,6 +1873,10 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE89Q:
         from core.cycle89q_best import select_cycle89q_entries
         return select_cycle89q_entries(signals,
+                                       open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE89R:
+        from core.cycle89r_best import select_cycle89r_entries
+        return select_cycle89r_entries(signals,
                                        open_symbols=open_symbols)
     if _ACTIVE == SYSTEM_CYCLE91P:
         from core.cycle91p_best import select_cycle91p_entries
@@ -2086,7 +2136,8 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE86H,
                            SYSTEM_CYCLE87E,
                            SYSTEM_CYCLE78D,
-                           SYSTEM_CYCLE78E):
+                           SYSTEM_CYCLE78E,
+                           SYSTEM_CYCLE78F):
             # Ledger-aware systems: the full entries for a check
             # include stateful legs (BRIEF21 C20a re-entries, or
             # the NEW8 merged-walk candidate picks), which only
@@ -2176,6 +2227,8 @@ def active_check_hours():
         return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE78E:
         return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE78F:
+        return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE67:
         return (1, 6, 16, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE91:
@@ -2221,6 +2274,8 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_CYCLE89P:
         return (1, 15, 18)
     if _ACTIVE == SYSTEM_CYCLE89Q:
+        return (1, 15, 18)
+    if _ACTIVE == SYSTEM_CYCLE89R:
         return (1, 15, 18)
     if _ACTIVE == SYSTEM_CYCLE91P:
         return (1, 10, 11)

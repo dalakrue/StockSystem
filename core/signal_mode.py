@@ -50,6 +50,21 @@ P07 standalone). February and April are HELD BY USER ORDER:
 their NEW8 layers use the Dukascopy dollar index, which the
 user will fix himself -- February stays cycle85 best-only
 and April stays cycle87b/cycle87 exactly as shipped.
+
+2026-11-06 change (user order; path-fix programme Rounds
+17-24 update): SECOND-BEST REMOVED ENTIRELY. The
+MONTH_SECOND_BEST registry is deleted, the combined
+fallback in evaluate_combined_entries() is gone (the
+function keeps its name/signature and now always returns
+the month's BEST selection, source 'BEST'), and
+month_combined_info() returns (best, None). The app is
+best-only: the 12 MONTH_SYSTEMS cycles are the only live
+signal systems. No cycle installs in this update: of the
+programme's standing forms only June's (R20 C08) reached
+VALIDATED, and it is not live-installable without
+approximation (its candidate surface is a research-lane
+stream with no live app generator) -- June stays on
+cycle89q; all other months keep their current cycles.
 """
 from __future__ import annotations
 
@@ -316,31 +331,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE87E: 34.666666666666664,   # R3 R01 April improved (104 / 3)
 }
 
-# Months that carry a second-priority system in the combined
-# layer. September: cycle287 (2026-10-25 waiver). November
-# (user order 2026-10-26): the OLD incumbent system cycle93 is
-# second priority behind the promoted BRIEF21 C20a improved
-# system. December (user order 2026-10-27, 12-system rebuild):
-# cycle274 is December's combined fallback behind cycle94b
-# (replacing cycle94). January (user order 2026-10-26): the OLD
-# C60-03 (cycle60) is second priority behind the promoted
-# BRIEF23 C20_STACK improved system (cycle60b).
-MONTH_SECOND_BEST = {
-    # (January slot EMPTIED 2026-11-03: cycle60c internalises the combined 60b+60 stream -- the cycle60 flow is inside the form; running it alongside would double-fire.)
-    # (March slot EMPTIED 2026-11-01: cycle86s REMOVED by user decision -- the second-best lane proved it harmful on the shipped streams (combined AUDIT -66.44 vs 86f alone +543.84); March is 86f best-only.)
-    5: SYSTEM_CYCLE88,   # May -- old C88-03 behind NEW8 E07 (2026-10-27)
-    6: SYSTEM_CYCLE89,   # June -- old C89-21 behind NEW8 P07 (2026-10-27)
-    8: SYSTEM_CYCLE67P,   # August -- NEW8 P07 standalone (2026-10-27)
-    9: SYSTEM_CYCLE91S,   # September -- Plan B-9 Track B R14 behind cycle91p (2026-10-28 update, user waiver; replaces cycle287)
-    10: SYSTEM_CYCLE92E,   # October -- NEW8 E07 standalone (2026-10-27)
-    # (November slot EMPTIED 2026-10-31: cycle93t is the full combined stream -- the cycle93s flow is inside the form; running 93s alongside would double-fire. Feb/Jul best-only precedent.)
-    # (December slot EMPTIED 2026-11-03: cycle94h internalises the combined 94g+94s stream -- the cycle94s flow is inside the form; running it alongside would double-fire.)
-    # (12-system rebuild 2026-10-27: user confirmed cycle274 is
-    # December's kept second best, replacing cycle94 as fallback.
-    # 29-symbol build 2026-10-27: November's second best becomes
-    # cycle93b -- the NEW8 B-4 combined system's incumbent --
-    # replacing cycle93.)
-}
+# SECOND-BEST REMOVED (user order, path-fix programme update 2026-11-06): the app is BEST-ONLY. There is no second-best registry, no combined fallback and no second-best panel; every month signals from its MONTH_SYSTEMS best cycle alone.
 
 
 def best_n_for_system(name=None):
@@ -365,16 +356,14 @@ _ACTIVE = MONTH_SYSTEMS[_datetime.datetime.now(_datetime.timezone.utc).month]
 
 
 def set_active_system(name: str) -> str:
-    """Switch live-signal system (the 12 standing monthly systems, or
-    one of the two recorded second-best systems added 2026-10-25)."""
+    """Switch live-signal system (the 12 standing monthly best
+    systems only; best-only since the 2026-11-06 update)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE287, SYSTEM_CYCLE274, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE91T,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE91T,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
-                         f"monthly systems, the recorded second-best "
-                         f"systems and the BRIEF21 C20a improved systems "
-                         f"remain: {sorted(MONTH_SYSTEMS.values())} + "
-                         f"{sorted(MONTH_SECOND_BEST.values())}")
+                         f"monthly best systems remain: "
+                         f"{sorted(MONTH_SYSTEMS.values())}")
     _ACTIVE = n
     return _ACTIVE
 
@@ -2134,43 +2123,30 @@ def _tag_combined(entries, system_name, is_second_best):
 def evaluate_combined_entries(month, frames, check_time_utc, open_symbols=()):
     """Combined best-first entries for one month at one check time.
 
-    Returns (entries_df, source) where source is 'BEST' or
-    'SECOND_BEST'. The month's BEST system (MONTH_SYSTEMS[month]) is
-    evaluated and selected first; if its selection is non-empty it
-    is returned tagged source='BEST' and the second-best system is
-    NEVER evaluated. Only when the best selection is empty is the
-    month's second-best system (MONTH_SECOND_BEST[month], if any)
-    evaluated and selected; its selection (possibly empty) is
-    returned tagged source='SECOND_BEST'. For months with no in-app
-    second best, an empty best selection returns (empty, 'BEST').
-    Every returned row carries source_system and is_second_best
-    columns."""
+    Returns (entries_df, source) with source always 'BEST'
+    (name kept for call-site compatibility). BEST-ONLY since the
+    2026-11-06 update: the month's BEST system
+    (MONTH_SYSTEMS[month]) is evaluated and its selection (possibly
+    empty) is returned; no second-best system exists or is ever
+    evaluated. Every returned row carries source_system and
+    is_second_best (always False) columns."""
     month = int(month)
     if month not in MONTH_SYSTEMS:
         raise ValueError(f"unknown month {month!r}; expected 1..12")
     best = MONTH_SYSTEMS[month]
     best_entries = _evaluate_and_select_for(
         best, frames, check_time_utc, open_symbols=open_symbols)
-    # Missing feature data is not a true silent BEST check. Do not choose the
-    # second system when the first could not finish its own calculation.
-    if best_entries.attrs.get("status"):
-        return _tag_combined(best_entries, best, False), "BEST"
-    if len(best_entries) > 0:
-        return _tag_combined(best_entries, best, False), "BEST"
-    second = MONTH_SECOND_BEST.get(month)
-    if second is None:
-        return _tag_combined(best_entries, best, False), "BEST"
-    second_entries = _evaluate_and_select_for(
-        second, frames, check_time_utc, open_symbols=open_symbols)
-    return _tag_combined(second_entries, second, True), "SECOND_BEST"
+    # BEST-ONLY (2026-11-06 update): no second-best fallback exists;
+    # an empty or incomplete best selection is returned as-is.
+    return _tag_combined(best_entries, best, False), "BEST"
 
 
 def month_combined_info(month):
-    """(best_system, second_best_system_or_None) for a month number."""
+    """(best_system, None) for a month number (best-only since 2026-11-06)."""
     month = int(month)
     if month not in MONTH_SYSTEMS:
         raise ValueError(f"unknown month {month!r}; expected 1..12")
-    return MONTH_SYSTEMS[month], MONTH_SECOND_BEST.get(month)
+    return MONTH_SYSTEMS[month], None
 
 
 def active_check_hours():

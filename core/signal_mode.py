@@ -84,6 +84,7 @@ SYSTEM_CYCLE78E = "cycle78e"   # Plan E Jul E09 (78d stream + CONS3 consensus fi
 SYSTEM_CYCLE78F = "cycle78f"   # RR 1:1 R18C08 (78e stream + exposure-skip 6% + 12h currency loss-cooldown, cap 1xTP) -- July IMPROVED system (2026-11-06 install, user order; VALIDATED under the LOWERED STANDARD, record work_rr1_lowered_validate/results/jul_R18C08_VALIDATION.md)
 SYSTEM_CYCLE78G = "cycle78g"   # RR 1:1 NEW-COMBO R2 C04 (78e panel surface, KW base = R18C14 winner set + partner2u/admG unions + trx25/celxS excisions + lockout -60 + exposure-skip 5.8%, cap 1xTP) -- July IMPROVED system (2026-11-06 install, user order; VALIDATED under the LOWERED STANDARD, record work_rr1_newcombo_r2/validate/jul/VALIDATION.md)
 SYSTEM_CYCLE67 = "cycle67"   # C67-04 -- August system
+SYSTEM_CYCLE67Q = "cycle67q"   # RR 1:1 R20C08 (67 stream; exposure-skip 6% + hour-1 excision + windowed week repair) -- August COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 4-check form + office rows + 20_dsr)
 SYSTEM_CYCLE91 = "cycle91"   # C91-15 -- September system
 SYSTEM_CYCLE92 = "cycle92"   # C92-24 -- October system
 SYSTEM_CYCLE93 = "cycle93"   # C93-24 -- November system
@@ -98,8 +99,10 @@ SYSTEM_CYCLE94B = "cycle94b"   # BRIEF21 C20a -- December IMPROVED system
 SYSTEM_CYCLE60B = "cycle60b"   # BRIEF23 C20_STACK -- January IMPROVED system
 SYSTEM_CYCLE60C = "cycle60c"
 SYSTEM_CYCLE60D = "cycle60d"   # DIFFWAY W1 (60c stream + design excision mom_AUDUSD_h13 + stop cap 4xTP, EXACT basis) -- January RISK-REDUCTION IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_diffway_validate/results/jan_VALIDATION.md; second-best slot stays emptied -- combined stream internalised)   # ROBUSTNESS-FIX D21-RC (60b+60 combined stream + exposure-skip 10% + stop cap 5xTP) -- January IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/jan_VALIDATION.md; second-best slot emptied -- combined stream internalised)
+SYSTEM_CYCLE60E = "cycle60e"   # RR 1:1 R18C12 (60c stream, 60d reference set; partner/readmit union + exposure-skip 5% + 4%) -- January COMPOSITION install (2026-11-06, user order: system-wide RR 1:1 replacement; NEAREST, not a validation pass -- blocked by 15_epd + 20_dsr; record work_rr1_system_replace/RECEIPT.md)
 SYSTEM_CYCLE87B = "cycle87b"   # BRIEF21 C20a -- April IMPROVED system
 SYSTEM_CYCLE88N = "cycle88n"   # NEW8 Round-4 E07 -- May IMPROVED system
+SYSTEM_CYCLE88O = "cycle88o"   # RR 1:1 R11C01 (88n reference set + cycle88 second stream; exposure-skip 6%) -- May COMPOSITION install (2026-11-06, user order; only buildable May 1:1 form, zero mined rows; NEAREST -- blocked by check-count + EC22 13/14/15)
 SYSTEM_CYCLE89N = "cycle89n"   # NEW8 Plan-B P07 -- June IMPROVED system
 SYSTEM_CYCLE91N = "cycle91n"   # NEW8 D26 + Plan-B P07 -- September IMPROVED system
 SYSTEM_CYCLE93N = "cycle93n"   # NEW8 Plan B-4 partner C16 -- November IMPROVED system
@@ -128,14 +131,17 @@ SYSTEM_CYCLE93U = "cycle93u"   # SL-FIX R2 T20 FULLSTACK (93t stream + WIDEVOL f
 SYSTEM_CYCLE93W = "cycle93w"   # ROBUSTNESS-FIX D21-RC (93u stream + exposure-skip 10% + stop cap 5xTP) -- November IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/nov_VALIDATION.md; second-best slot stays empty)
 SYSTEM_CYCLE93X = "cycle93x"   # NOV20-SL4 N09 (93w stream + exposure-skip 7.5% + stop cap 4xTP) -- November IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_nov20_sl4/results/n09_VALIDATION.md; second-best slot stays empty)
 SYSTEM_CYCLE93AA = "cycle93aa"   # 10CYC-R2 R1 (93x stream + exposure-skip 6%) -- November IMPROVED system (2026-11-04 install, user order; VALIDATED, record work_r2_validate/results/nov_VALIDATION.md; second-best slot stays empty)
+SYSTEM_CYCLE93AC = "cycle93ac"   # RR 1:1 R11C01 (93aa stream, office-excised; exposure-skip 6%) -- November COMPOSITION install (2026-11-06, user order; only buildable November 1:1 form, zero mined rows; NEAREST -- blocked by check-count alone)
 SYSTEM_CYCLE94C = "cycle94c"   # P-REGIME Track A C07 + Plan C C07 -- December IMPROVED system (2026-10-29 update; over cycle94b+94s)
 SYSTEM_CYCLE85C = "cycle85c"   # R2 Plan A A16 (FB veto + PLANB P38 partner) -- February IMPROVED system (2026-10-30 install; over cycle85b)
 SYSTEM_CYCLE85D = "cycle85d"   # R2 Feb A16+X12 combined (85c + X12 cascade second-priority fills) -- February IMPROVED system (2026-10-30 install; over cycle85c)
 SYSTEM_CYCLE85E = "cycle85e"   # R3 Feb C01 (85d + CC03-NEW8 cascade layer) -- February IMPROVED system (2026-10-31 install; over cycle85d)
 SYSTEM_CYCLE85F = "cycle85f"   # RISK6 Feb C18_FCAP_t0.60_INC (85e stream + EURUSD atr_pct>=0.60 filter + R2D11 cap stack) -- February IMPROVED system (2026-11-01 install, user standing conditional order; VALIDATED under the relaxed re-screen standard, LCT P 70.0 boundary; February has no second-best)
 SYSTEM_CYCLE85G = "cycle85g"   # ROBUSTNESS-FIX D21-RC (85f stream + exposure-skip 10% + stop cap 5xTP) -- February IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/feb_VALIDATION.md; February has no second-best)
+SYSTEM_CYCLE85J = "cycle85j"   # RR 1:1 R18C12 (85e panel, 85g reference set; exposure-skip 6% + 4%) -- February COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 8_weeks + 20_dsr + S9)
 SYSTEM_CYCLE85I = "cycle85i"   # 10CYC-R2 R9 (85g stream walked on the full (11,13,16) grid, the UTC-11 check never delivered, stop cap 4xTP) -- February IMPROVED system (2026-11-04 install, user order; VALIDATED, record work_r2_validate/results/feb_VALIDATION.md; February has no second-best; CHECK HOURS CHANGE to (13, 16) UTC = 19:30/22:30 MMT)
 SYSTEM_CYCLE92C = "cycle92c"   # R2 Oct C14 (PLANB9 C09 partner) -- October IMPROVED system (2026-10-30 install; over cycle92+92e)
+SYSTEM_CYCLE92D = "cycle92d"   # RR 1:1 R18C12 (92c stream; exposure-skip 6% + 4%) -- October COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 8_weeks ALONE)
 SYSTEM_CYCLE94D = "cycle94d"   # R2 Dec D19 (PC03 veto + dec_rg/dec_rgc refill + PLANB12C partner) -- December IMPROVED system (2026-10-30 install; over cycle94c)
 SYSTEM_CYCLE94E = "cycle94e"   # R3 Dec P15 (94d + PLANB4 cand1 partner cascade) -- December IMPROVED system (2026-10-31 install; over cycle94d)
 SYSTEM_CYCLE94F = "cycle94f"   # RISK6 Dec C15_FCAP_MERGED (94e stream + 18-design curated partner merge + high-vol EURJPY/EURUSD filter + R2D11 cap stack) -- December IMPROVED system (2026-11-01 install, user standing conditional order; second-best cycle94s kept)
@@ -147,27 +153,29 @@ SYSTEM_CYCLE87J = "cycle87j"   # RR 1:1 R20C09 (87i stream + 12h currency loss-c
 SYSTEM_CYCLE94G = "cycle94g"   # Plan E Dec E03 (94f stream + PCOL {GBPJPY,USDJPY} cap + CONS3 fills over 48 pool designs) -- December ACCEPT system (2026-11-01 install, validate-and-replace programme; second-best cycle94s kept)
 SYSTEM_CYCLE94H = "cycle94h"   # ROBUSTNESS-FIX D21-RC (94g+94s combined stream + exposure-skip 10% + stop cap 5xTP) -- December IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/dec_VALIDATION.md; second-best slot emptied -- combined stream internalised)
 SYSTEM_CYCLE94I = "cycle94i"   # RISKOPT5 C2 (94h stream + cluster-skip 12h + stop cap 4xTP) -- December IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_riskopt5_validate/results/dec_VALIDATION.md; second-best slot stays empty -- combined stream internalised)
+SYSTEM_CYCLE94J = "cycle94j"   # RR 1:1 R18C14 (94e panel, 94i reference set; partner/readmit union + exposure-skip 6% + week lockout + 12h loss-cooldown) -- December COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 8_weeks + 20_dsr)
 SYSTEM_CYCLE86D = "cycle86d"   # R2 Mar M18 (PC14 M15 veto + EURAUD h12 b6v slot veto + mar_rp refill) -- March IMPROVED system (2026-10-30 install; over cycle86c)
 SYSTEM_CYCLE86E = "cycle86e"   # R3 Mar D10 (86d + dual veto + cool1) -- March IMPROVED system (2026-10-31 install; over cycle86d)
 SYSTEM_CYCLE86F = "cycle86f"   # RISK6 Mar C10_EXC (86e construction with FB_EURGBP_h16_2 excised at the input; refill 20 vs 8) -- March IMPROVED system (2026-11-01 install, user standing conditional order; VALIDATED under the relaxed re-screen standard, LCT P 71.41; second-best cycle86s kept)
 SYSTEM_CYCLE86G = "cycle86g"
 SYSTEM_CYCLE86H = "cycle86h"   # FIX-BLOCKED Mar S18-M1 (partner-add>=1 + drop hour 12 with month-final-day exemption + stop cap 4xTP over cycle86g) -- March IMPROVED system (2026-11-04 install, user order; VALIDATED, record work_fix_blocked/results/mar_m1_VALIDATION.md; March best-only, no second slot)   # SL4-10CYC D5 (86f stream + exposure-skip 12.5% + stop cap 4xTP, EXACT basis rebuilt 527/527) -- March IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_sl4_validate/results/mar_VALIDATION.md; March best-only, no second slot)
+SYSTEM_CYCLE86I = "cycle86i"   # RR 1:1 R19C03 (86c panel, 86h reference set; exposure-skip 10% + worst-5-day/worst-3-trade excision) -- March COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 4-check form + 8_weeks + 20_dsr)
 SYSTEM_CYCLE87D = "cycle87d"   # R2 Apr C19 (FB_NZDUSD_h17_0 veto + q09/pvote/pvsb refill + PLANB9C partner) -- April IMPROVED system (2026-10-30 install; over cycle87c)
 SYSTEM_CYCLE87E = "cycle87e"   # R3 Apr R01 (87d minus the negative mom_EURAUD strategy + 6-design pool cascade refill) -- April IMPROVED system (2026-10-31 install; over cycle87d)
 
 MONTH_SYSTEMS = {
-    1: SYSTEM_CYCLE60D,   # January -- DIFFWAY W1 VALIDATED (2026-11-03 install)
-    2: SYSTEM_CYCLE85G,   # February -- REVERTED by user ruling 2026-11-04: 85i (2-check form) marked DID NOT IMPROVE, entries/day under his 2.5 line; 85g 3-check form (11,13,16) UTC restored; record work_r2_validate/results/FEB_RULING_20261104.md
-    3: SYSTEM_CYCLE86H,   # March -- FIX-BLOCKED S18-M1 VALIDATED (2026-11-04 install)
+    1: SYSTEM_CYCLE60E,   # January -- RR 1:1 R18C12 COMPOSITION install (2026-11-06)
+    2: SYSTEM_CYCLE85J,   # February -- RR 1:1 R18C12 COMPOSITION install (2026-11-06)
+    3: SYSTEM_CYCLE86I,   # March -- RR 1:1 R19C03 COMPOSITION install (2026-11-06)
     4: SYSTEM_CYCLE87J,   # April -- RR 1:1 R20C09 VALIDATED (2026-11-05 install)
-    5: SYSTEM_CYCLE88N,   # May -- NEW8 E07 IMPROVED (2026-10-27)
+    5: SYSTEM_CYCLE88O,   # May -- RR 1:1 R11C01 COMPOSITION install (2026-11-06)
     6: SYSTEM_CYCLE89R,   # June -- RR 1:1 R11C01 VALIDATED under the LOWERED STANDARD (2026-11-06 install)
     7: SYSTEM_CYCLE78G,   # July -- RR 1:1 NEW-COMBO R2 C04 VALIDATED under the LOWERED STANDARD (2026-11-06 install)
-    8: SYSTEM_CYCLE67,   # August
+    8: SYSTEM_CYCLE67Q,   # August -- RR 1:1 R20C08 COMPOSITION install (2026-11-06)
     9: SYSTEM_CYCLE91U,   # September -- RR 1:1 NEW-COMBO R4 C05 VALIDATED under the LOWERED STANDARD (2026-11-06 install; hours (1, 11, 18) UTC)
-    10: SYSTEM_CYCLE92C,   # October -- R2 C14 IMPROVED (2026-10-30 install)
-    11: SYSTEM_CYCLE93AA,   # November -- 10CYC-R2 R1 VALIDATED (2026-11-04 install)
-    12: SYSTEM_CYCLE94I,   # December -- RISKOPT5 C2 VALIDATED (2026-11-03 install)
+    10: SYSTEM_CYCLE92D,   # October -- RR 1:1 R18C12 COMPOSITION install (2026-11-06)
+    11: SYSTEM_CYCLE93AC,   # November -- RR 1:1 R11C01 COMPOSITION install (2026-11-06)
+    12: SYSTEM_CYCLE94J,   # December -- RR 1:1 R18C14 COMPOSITION install (2026-11-06)
 }
 
 # Original verified Best N per system (full values, pre-division).
@@ -186,6 +194,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE78F: 103,   # RR 1:1 July validated, lowered standard (month N carried)
     SYSTEM_CYCLE78G: 103,   # RR 1:1 NEW-COMBO July validated under the LOWERED STANDARD (month N carried)
     SYSTEM_CYCLE67: 121,   # C67-04 -- August
+    SYSTEM_CYCLE67Q: 121,   # RR 1:1 August composition install (as 67; month N carried)
     SYSTEM_CYCLE91: 83,   # C91-15 -- September
     SYSTEM_CYCLE92: 83,   # C92-24 -- October
     SYSTEM_CYCLE93: 83,   # C93-24 -- November
@@ -197,8 +206,10 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE60B: 83,   # BRIEF23 C20_STACK January improved (as C60-03; no winner-specific Best N recorded)
     SYSTEM_CYCLE60C: 83,   # ROBUSTNESS-FIX D21-RC January validated (as C60_STACK; month N carried)
     SYSTEM_CYCLE60D: 83,   # DIFFWAY W1 January validated (as 60c; month N carried)
+    SYSTEM_CYCLE60E: 83,   # RR 1:1 January composition install (as 60d; month N carried)
     SYSTEM_CYCLE87B: 104,   # BRIEF21 C20a April improved (as C87-24)
     SYSTEM_CYCLE88N: 66,   # NEW8 E07 May improved (as C88-03)
+    SYSTEM_CYCLE88O: 66,   # RR 1:1 May composition install (as 88n; month N carried)
     SYSTEM_CYCLE89N: 84,   # NEW8 P07 June improved (as C89-21)
     SYSTEM_CYCLE91N: 83,   # NEW8 D26+P07 September improved (as C91-15)
     SYSTEM_CYCLE93N: 83,   # NEW8 B-4 partner November improved (as C93-24)
@@ -227,20 +238,24 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE93W: 100,   # ROBUSTNESS-FIX D21-RC November validated (as 93u; month N carried)
     SYSTEM_CYCLE93X: 100,   # NOV20-SL4 N09 November validated (as 93w; month N carried)
     SYSTEM_CYCLE93AA: 100,   # 10CYC-R2 R1 November validated (as 93x; month N carried)
+    SYSTEM_CYCLE93AC: 100,   # RR 1:1 November composition install (as 93aa; month N carried)
     SYSTEM_CYCLE94C: 105,   # P-REGIME Track A + Plan C December improved (as C94-23)
     SYSTEM_CYCLE85C: 104,   # R2 A16 February improved (as C85-23)
     SYSTEM_CYCLE85D: 104,   # R2 A16+X12 February improved (month N carried from cycle85c)
     SYSTEM_CYCLE85E: 104,   # R3 C01 February improved (month N carried from cycle85d)
     SYSTEM_CYCLE85F: 104,   # RISK6 C18 February improved (month N carried from cycle85e)
     SYSTEM_CYCLE85G: 104,   # ROBUSTNESS-FIX D21-RC February validated (as 85f; month N carried)
+    SYSTEM_CYCLE85J: 104,   # RR 1:1 February composition install (as 85g; month N carried)
     SYSTEM_CYCLE85I: 104,   # 10CYC-R2 R9 February validated (as 85g; month N carried)
     SYSTEM_CYCLE92C: 83,   # R2 C14 October improved (as C92-24)
+    SYSTEM_CYCLE92D: 83,   # RR 1:1 October composition install (as 92c; month N carried)
     SYSTEM_CYCLE94D: 105,   # R2 D19 December improved (as C94-23)
     SYSTEM_CYCLE94E: 105,   # R3 P15 December improved (month N carried from cycle94d)
     SYSTEM_CYCLE94F: 105,   # RISK6 C15 December improved (month N carried from cycle94e)
     SYSTEM_CYCLE94G: 150,   # Plan E E03 December accepted (own sizing-grid pass)
     SYSTEM_CYCLE94H: 150,   # ROBUSTNESS-FIX D21-RC December validated (as 94g; month N carried)
     SYSTEM_CYCLE94I: 150,   # RISKOPT5 C2 December validated (as 94h; month N carried)
+    SYSTEM_CYCLE94J: 150,   # RR 1:1 December composition install (as 94i; month N carried)
     SYSTEM_CYCLE87F: 150,   # Plan E E04 April accepted (own sizing-grid pass)
     SYSTEM_CYCLE87G: 150,   # SL4-10CYC D6 April validated (as 87f; month N carried)
     SYSTEM_CYCLE87H: 150,   # 10CYC-R2 R1 April validated (as 87g; month N carried)
@@ -251,6 +266,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE86F: 86,   # RISK6 C10 March improved (month N carried from cycle86e)
     SYSTEM_CYCLE86G: 86,   # SL4-10CYC D5 March validated (as 86f; month N carried)
     SYSTEM_CYCLE86H: 86,   # FIX-BLOCKED S18-M1 March validated (as 86g; month N carried)
+    SYSTEM_CYCLE86I: 86,   # RR 1:1 March composition install (as 86h; month N carried)
     SYSTEM_CYCLE87D: 104,   # R2 C19 April improved (month N carried from cycle87c)
     SYSTEM_CYCLE87E: 104,   # R3 R01 April improved (month N carried from cycle87d)
 }
@@ -274,6 +290,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE78F: 34.333333333333336,   # RR 1:1 July validated, lowered standard (103 / 3)
     SYSTEM_CYCLE78G: 34.333333333333336,   # RR 1:1 NEW-COMBO July validated under the LOWERED STANDARD (103 / 3)
     SYSTEM_CYCLE67: 40.333333333333336,   # C67-04 -- August (121 / 3)
+    SYSTEM_CYCLE67Q: 40.333333333333336,   # RR 1:1 August composition install (121 / 3)
     SYSTEM_CYCLE91: 27.666666666666668,   # C91-15 -- September (83 / 3)
     SYSTEM_CYCLE92: 27.666666666666668,   # C92-24 -- October (83 / 3)
     SYSTEM_CYCLE93: 27.666666666666668,   # C93-24 -- November (83 / 3)
@@ -285,8 +302,10 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE60B: 27.666666666666668,   # BRIEF23 C20_STACK January improved (83 / 3)
     SYSTEM_CYCLE60C: 27.666666666666668,   # ROBUSTNESS-FIX D21-RC January validated (83 / 3)
     SYSTEM_CYCLE60D: 27.666666666666668,   # DIFFWAY W1 January validated (83 / 3)
+    SYSTEM_CYCLE60E: 27.666666666666668,   # RR 1:1 January composition install (83 / 3)
     SYSTEM_CYCLE87B: 34.666666666666664,   # BRIEF21 C20a April improved (104 / 3)
     SYSTEM_CYCLE88N: 22.0,   # NEW8 E07 May improved (66 / 3)
+    SYSTEM_CYCLE88O: 22.0,   # RR 1:1 May composition install (66 / 3)
     SYSTEM_CYCLE89N: 28.0,   # NEW8 P07 June improved (84 / 3)
     SYSTEM_CYCLE91N: 27.666666666666668,   # NEW8 D26+P07 September improved (83 / 3)
     SYSTEM_CYCLE93N: 27.666666666666668,   # NEW8 B-4 partner November improved (83 / 3)
@@ -315,20 +334,24 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE93W: 33.333333333333336,   # ROBUSTNESS-FIX D21-RC November validated (100 / 3)
     SYSTEM_CYCLE93X: 33.333333333333336,   # NOV20-SL4 N09 November validated (100 / 3)
     SYSTEM_CYCLE93AA: 33.333333333333336,   # 10CYC-R2 R1 November validated (100 / 3)
+    SYSTEM_CYCLE93AC: 33.333333333333336,   # RR 1:1 November composition install (100 / 3)
     SYSTEM_CYCLE94C: 35.0,   # P-REGIME Track A + Plan C December improved (105 / 3)
     SYSTEM_CYCLE85C: 34.666666666666664,   # R2 A16 February improved (104 / 3)
     SYSTEM_CYCLE85D: 34.666666666666664,   # R2 A16+X12 February improved (104 / 3)
     SYSTEM_CYCLE85E: 34.666666666666664,   # R3 C01 February improved (104 / 3)
     SYSTEM_CYCLE85F: 34.666666666666664,   # RISK6 C18 February improved (104 / 3)
     SYSTEM_CYCLE85G: 34.666666666666664,   # ROBUSTNESS-FIX D21-RC February validated (104 / 3)
+    SYSTEM_CYCLE85J: 34.666666666666664,   # RR 1:1 February composition install (104 / 3)
     SYSTEM_CYCLE85I: 34.666666666666664,   # 10CYC-R2 R9 February validated (104 / 3)
     SYSTEM_CYCLE92C: 27.666666666666668,   # R2 C14 October improved (83 / 3)
+    SYSTEM_CYCLE92D: 27.666666666666668,   # RR 1:1 October composition install (83 / 3)
     SYSTEM_CYCLE94D: 35.0,   # R2 D19 December improved (105 / 3)
     SYSTEM_CYCLE94E: 35.0,   # R3 P15 December improved (105 / 3)
     SYSTEM_CYCLE94F: 35.0,   # RISK6 C15 December improved (105 / 3)
     SYSTEM_CYCLE94G: 50.0,   # Plan E E03 December accepted (150 / 3)
     SYSTEM_CYCLE94H: 50.0,   # ROBUSTNESS-FIX D21-RC December validated (150 / 3)
     SYSTEM_CYCLE94I: 50.0,   # RISKOPT5 C2 December validated (150 / 3)
+    SYSTEM_CYCLE94J: 50.0,   # RR 1:1 December composition install (150 / 3)
     SYSTEM_CYCLE87F: 50.0,   # Plan E E04 April accepted (150 / 3)
     SYSTEM_CYCLE87G: 50.0,   # SL4-10CYC D6 April validated (150 / 3)
     SYSTEM_CYCLE87H: 50.0,   # 10CYC-R2 R1 April validated (150 / 3)
@@ -339,6 +362,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE86F: 28.666666666666668,   # RISK6 C10 March improved (86 / 3)
     SYSTEM_CYCLE86G: 28.666666666666668,   # SL4-10CYC D5 March validated (86 / 3)
     SYSTEM_CYCLE86H: 28.666666666666668,   # FIX-BLOCKED S18-M1 March validated (86 / 3)
+    SYSTEM_CYCLE86I: 28.666666666666668,   # RR 1:1 March composition install (86 / 3)
     SYSTEM_CYCLE87D: 34.666666666666664,   # R2 C19 April improved (104 / 3)
     SYSTEM_CYCLE87E: 34.666666666666664,   # R3 R01 April improved (104 / 3)
 }

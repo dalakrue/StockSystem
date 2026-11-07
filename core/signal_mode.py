@@ -83,6 +83,10 @@ SYSTEM_CYCLE78D = "cycle78d"   # R2 Jul D3 (pruned cycle78 + PLANB cand1 C18 fil
 SYSTEM_CYCLE78E = "cycle78e"   # Plan E Jul E09 (78d stream + CONS3 consensus fills over 20 pool walks in 9 families + CCAP 100 symbol-day cap) -- July IMPROVED system (2026-11-01 install, validate-and-replace order; VALIDATED IMPROVE, see work_r5_20cyc/results/jul_planE_FINAL_VALIDATION.md)
 SYSTEM_CYCLE78F = "cycle78f"   # RR 1:1 R18C08 (78e stream + exposure-skip 6% + 12h currency loss-cooldown, cap 1xTP) -- July IMPROVED system (2026-11-06 install, user order; VALIDATED under the LOWERED STANDARD, record work_rr1_lowered_validate/results/jul_R18C08_VALIDATION.md)
 SYSTEM_CYCLE78G = "cycle78g"   # RR 1:1 NEW-COMBO R2 C04 (78e panel surface, KW base = R18C14 winner set + partner2u/admG unions + trx25/celxS excisions + lockout -60 + exposure-skip 5.8%, cap 1xTP) -- July IMPROVED system (2026-11-06 install, user order; VALIDATED under the LOWERED STANDARD, record work_rr1_newcombo_r2/validate/jul/VALIDATION.md)
+# RR 1:1 chain R18C07, VALIDATED at the FULL STANDARD
+# (2026-11-07 best-validated install; sizing arm
+# re-graded under the 2026-11-07 live-rules sizing law)
+SYSTEM_CYCLE78H = "cycle78h"
 SYSTEM_CYCLE67 = "cycle67"   # C67-04 -- August system
 SYSTEM_CYCLE67Q = "cycle67q"   # RR 1:1 R20C08 (67 stream; exposure-skip 6% + hour-1 excision + windowed week repair) -- August COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 4-check form + office rows + 20_dsr)
 SYSTEM_CYCLE91 = "cycle91"   # C91-15 -- September system
@@ -100,6 +104,10 @@ SYSTEM_CYCLE60B = "cycle60b"   # BRIEF23 C20_STACK -- January IMPROVED system
 SYSTEM_CYCLE60C = "cycle60c"
 SYSTEM_CYCLE60D = "cycle60d"   # DIFFWAY W1 (60c stream + design excision mom_AUDUSD_h13 + stop cap 4xTP, EXACT basis) -- January RISK-REDUCTION IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_diffway_validate/results/jan_VALIDATION.md; second-best slot stays emptied -- combined stream internalised)   # ROBUSTNESS-FIX D21-RC (60b+60 combined stream + exposure-skip 10% + stop cap 5xTP) -- January IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/jan_VALIDATION.md; second-best slot emptied -- combined stream internalised)
 SYSTEM_CYCLE60E = "cycle60e"   # RR 1:1 R18C12 (60c stream, 60d reference set; partner/readmit union + exposure-skip 5% + 4%) -- January COMPOSITION install (2026-11-06, user order: system-wide RR 1:1 replacement; NEAREST, not a validation pass -- blocked by 15_epd + 20_dsr; record work_rr1_system_replace/RECEIPT.md)
+# RR 1:1 norm R9 C07, VALIDATED under the LOWERED
+# STANDARD (2026-11-07 best-validated install; sizing
+# arm re-graded under the live-rules sizing law)
+SYSTEM_CYCLE60F = "cycle60f"
 SYSTEM_CYCLE87B = "cycle87b"   # BRIEF21 C20a -- April IMPROVED system
 SYSTEM_CYCLE88N = "cycle88n"   # NEW8 Round-4 E07 -- May IMPROVED system
 SYSTEM_CYCLE88O = "cycle88o"   # RR 1:1 R11C01 (88n reference set + cycle88 second stream; exposure-skip 6%) -- May COMPOSITION install (2026-11-06, user order; only buildable May 1:1 form, zero mined rows; NEAREST -- blocked by check-count + EC22 13/14/15)
@@ -139,9 +147,17 @@ SYSTEM_CYCLE85E = "cycle85e"   # R3 Feb C01 (85d + CC03-NEW8 cascade layer) -- F
 SYSTEM_CYCLE85F = "cycle85f"   # RISK6 Feb C18_FCAP_t0.60_INC (85e stream + EURUSD atr_pct>=0.60 filter + R2D11 cap stack) -- February IMPROVED system (2026-11-01 install, user standing conditional order; VALIDATED under the relaxed re-screen standard, LCT P 70.0 boundary; February has no second-best)
 SYSTEM_CYCLE85G = "cycle85g"   # ROBUSTNESS-FIX D21-RC (85f stream + exposure-skip 10% + stop cap 5xTP) -- February IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/feb_VALIDATION.md; February has no second-best)
 SYSTEM_CYCLE85J = "cycle85j"   # RR 1:1 R18C12 (85e panel, 85g reference set; exposure-skip 6% + 4%) -- February COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 8_weeks + 20_dsr + S9)
+# RR 1:1 norm R8 C07, VALIDATED under the LOWERED
+# STANDARD (2026-11-07 best-validated install; sizing
+# arm re-graded under the live-rules sizing law)
+SYSTEM_CYCLE85K = "cycle85k"
 SYSTEM_CYCLE85I = "cycle85i"   # 10CYC-R2 R9 (85g stream walked on the full (11,13,16) grid, the UTC-11 check never delivered, stop cap 4xTP) -- February IMPROVED system (2026-11-04 install, user order; VALIDATED, record work_r2_validate/results/feb_VALIDATION.md; February has no second-best; CHECK HOURS CHANGE to (13, 16) UTC = 19:30/22:30 MMT)
 SYSTEM_CYCLE92C = "cycle92c"   # R2 Oct C14 (PLANB9 C09 partner) -- October IMPROVED system (2026-10-30 install; over cycle92+92e)
 SYSTEM_CYCLE92D = "cycle92d"   # RR 1:1 R18C12 (92c stream; exposure-skip 6% + 4%) -- October COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 8_weeks ALONE)
+# RR 1:1 NEW-COMBO R1 C04, VALIDATED at the FULL
+# STANDARD (2026-11-07 best-validated install; sizing
+# arm re-graded under the live-rules sizing law)
+SYSTEM_CYCLE92F = "cycle92f"
 SYSTEM_CYCLE94D = "cycle94d"   # R2 Dec D19 (PC03 veto + dec_rg/dec_rgc refill + PLANB12C partner) -- December IMPROVED system (2026-10-30 install; over cycle94c)
 SYSTEM_CYCLE94E = "cycle94e"   # R3 Dec P15 (94d + PLANB4 cand1 partner cascade) -- December IMPROVED system (2026-10-31 install; over cycle94d)
 SYSTEM_CYCLE94F = "cycle94f"   # RISK6 Dec C15_FCAP_MERGED (94e stream + 18-design curated partner merge + high-vol EURJPY/EURUSD filter + R2D11 cap stack) -- December IMPROVED system (2026-11-01 install, user standing conditional order; second-best cycle94s kept)
@@ -154,6 +170,10 @@ SYSTEM_CYCLE94G = "cycle94g"   # Plan E Dec E03 (94f stream + PCOL {GBPJPY,USDJP
 SYSTEM_CYCLE94H = "cycle94h"   # ROBUSTNESS-FIX D21-RC (94g+94s combined stream + exposure-skip 10% + stop cap 5xTP) -- December IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/dec_VALIDATION.md; second-best slot emptied -- combined stream internalised)
 SYSTEM_CYCLE94I = "cycle94i"   # RISKOPT5 C2 (94h stream + cluster-skip 12h + stop cap 4xTP) -- December IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_riskopt5_validate/results/dec_VALIDATION.md; second-best slot stays empty -- combined stream internalised)
 SYSTEM_CYCLE94J = "cycle94j"   # RR 1:1 R18C14 (94e panel, 94i reference set; partner/readmit union + exposure-skip 6% + week lockout + 12h loss-cooldown) -- December COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 8_weeks + 20_dsr)
+# RR 1:1 norm R8 C07, VALIDATED under the LOWERED
+# STANDARD (2026-11-07 best-validated install; sizing
+# arm re-graded under the live-rules sizing law)
+SYSTEM_CYCLE94K = "cycle94k"
 SYSTEM_CYCLE86D = "cycle86d"   # R2 Mar M18 (PC14 M15 veto + EURAUD h12 b6v slot veto + mar_rp refill) -- March IMPROVED system (2026-10-30 install; over cycle86c)
 SYSTEM_CYCLE86E = "cycle86e"   # R3 Mar D10 (86d + dual veto + cool1) -- March IMPROVED system (2026-10-31 install; over cycle86d)
 SYSTEM_CYCLE86F = "cycle86f"   # RISK6 Mar C10_EXC (86e construction with FB_EURGBP_h16_2 excised at the input; refill 20 vs 8) -- March IMPROVED system (2026-11-01 install, user standing conditional order; VALIDATED under the relaxed re-screen standard, LCT P 71.41; second-best cycle86s kept)
@@ -164,18 +184,18 @@ SYSTEM_CYCLE87D = "cycle87d"   # R2 Apr C19 (FB_NZDUSD_h17_0 veto + q09/pvote/pv
 SYSTEM_CYCLE87E = "cycle87e"   # R3 Apr R01 (87d minus the negative mom_EURAUD strategy + 6-design pool cascade refill) -- April IMPROVED system (2026-10-31 install; over cycle87d)
 
 MONTH_SYSTEMS = {
-    1: SYSTEM_CYCLE60E,   # January -- RR 1:1 R18C12 COMPOSITION install (2026-11-06)
-    2: SYSTEM_CYCLE85J,   # February -- RR 1:1 R18C12 COMPOSITION install (2026-11-06)
+    1: SYSTEM_CYCLE60F,   # January -- RR 1:1 norm R9 C07 VALIDATED under the LOWERED STANDARD (2026-11-07 install; live-rules sizing re-grade)
+    2: SYSTEM_CYCLE85K,   # February -- RR 1:1 norm R8 C07 VALIDATED under the LOWERED STANDARD (2026-11-07 install; live-rules sizing re-grade)
     3: SYSTEM_CYCLE86I,   # March -- RR 1:1 R19C03 COMPOSITION install (2026-11-06)
     4: SYSTEM_CYCLE87J,   # April -- RR 1:1 R20C09 VALIDATED (2026-11-05 install)
     5: SYSTEM_CYCLE88O,   # May -- RR 1:1 R11C01 COMPOSITION install (2026-11-06)
     6: SYSTEM_CYCLE89R,   # June -- RR 1:1 R11C01 VALIDATED under the LOWERED STANDARD (2026-11-06 install)
-    7: SYSTEM_CYCLE78G,   # July -- RR 1:1 NEW-COMBO R2 C04 VALIDATED under the LOWERED STANDARD (2026-11-06 install)
+    7: SYSTEM_CYCLE78H,   # July -- RR 1:1 chain R18C07 VALIDATED under the FULL STANDARD (2026-11-07 install; live-rules sizing re-grade)
     8: SYSTEM_CYCLE67Q,   # August -- RR 1:1 R20C08 COMPOSITION install (2026-11-06)
     9: SYSTEM_CYCLE91U,   # September -- RR 1:1 NEW-COMBO R4 C05 VALIDATED under the LOWERED STANDARD (2026-11-06 install; hours (1, 11, 18) UTC)
-    10: SYSTEM_CYCLE92D,   # October -- RR 1:1 R18C12 COMPOSITION install (2026-11-06)
+    10: SYSTEM_CYCLE92F,   # October -- RR 1:1 NEW-COMBO R1 C04 VALIDATED under the FULL STANDARD (2026-11-07 install; live-rules sizing re-grade)
     11: SYSTEM_CYCLE93AC,   # November -- RR 1:1 R11C01 COMPOSITION install (2026-11-06)
-    12: SYSTEM_CYCLE94J,   # December -- RR 1:1 R18C14 COMPOSITION install (2026-11-06)
+    12: SYSTEM_CYCLE94K,   # December -- RR 1:1 norm R8 C07 VALIDATED under the LOWERED STANDARD (2026-11-07 install; live-rules sizing re-grade)
 }
 
 # Original verified Best N per system (full values, pre-division).
@@ -193,6 +213,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE78E: 103,   # Plan E E09 July improved (month N carried; own sizing grid pass N=100, at 103 peak margin 57.99%)
     SYSTEM_CYCLE78F: 103,   # RR 1:1 July validated, lowered standard (month N carried)
     SYSTEM_CYCLE78G: 103,   # RR 1:1 NEW-COMBO July validated under the LOWERED STANDARD (month N carried)
+    SYSTEM_CYCLE78H: 103,
     SYSTEM_CYCLE67: 121,   # C67-04 -- August
     SYSTEM_CYCLE67Q: 121,   # RR 1:1 August composition install (as 67; month N carried)
     SYSTEM_CYCLE91: 83,   # C91-15 -- September
@@ -207,6 +228,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE60C: 83,   # ROBUSTNESS-FIX D21-RC January validated (as C60_STACK; month N carried)
     SYSTEM_CYCLE60D: 83,   # DIFFWAY W1 January validated (as 60c; month N carried)
     SYSTEM_CYCLE60E: 83,   # RR 1:1 January composition install (as 60d; month N carried)
+    SYSTEM_CYCLE60F: 83,
     SYSTEM_CYCLE87B: 104,   # BRIEF21 C20a April improved (as C87-24)
     SYSTEM_CYCLE88N: 66,   # NEW8 E07 May improved (as C88-03)
     SYSTEM_CYCLE88O: 66,   # RR 1:1 May composition install (as 88n; month N carried)
@@ -246,9 +268,11 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE85F: 104,   # RISK6 C18 February improved (month N carried from cycle85e)
     SYSTEM_CYCLE85G: 104,   # ROBUSTNESS-FIX D21-RC February validated (as 85f; month N carried)
     SYSTEM_CYCLE85J: 104,   # RR 1:1 February composition install (as 85g; month N carried)
+    SYSTEM_CYCLE85K: 104,
     SYSTEM_CYCLE85I: 104,   # 10CYC-R2 R9 February validated (as 85g; month N carried)
     SYSTEM_CYCLE92C: 83,   # R2 C14 October improved (as C92-24)
     SYSTEM_CYCLE92D: 83,   # RR 1:1 October composition install (as 92c; month N carried)
+    SYSTEM_CYCLE92F: 83,
     SYSTEM_CYCLE94D: 105,   # R2 D19 December improved (as C94-23)
     SYSTEM_CYCLE94E: 105,   # R3 P15 December improved (month N carried from cycle94d)
     SYSTEM_CYCLE94F: 105,   # RISK6 C15 December improved (month N carried from cycle94e)
@@ -256,6 +280,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE94H: 150,   # ROBUSTNESS-FIX D21-RC December validated (as 94g; month N carried)
     SYSTEM_CYCLE94I: 150,   # RISKOPT5 C2 December validated (as 94h; month N carried)
     SYSTEM_CYCLE94J: 150,   # RR 1:1 December composition install (as 94i; month N carried)
+    SYSTEM_CYCLE94K: 150,
     SYSTEM_CYCLE87F: 150,   # Plan E E04 April accepted (own sizing-grid pass)
     SYSTEM_CYCLE87G: 150,   # SL4-10CYC D6 April validated (as 87f; month N carried)
     SYSTEM_CYCLE87H: 150,   # 10CYC-R2 R1 April validated (as 87g; month N carried)
@@ -289,6 +314,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE78E: 34.333333333333336,   # Plan E E09 July improved (103 / 3)
     SYSTEM_CYCLE78F: 34.333333333333336,   # RR 1:1 July validated, lowered standard (103 / 3)
     SYSTEM_CYCLE78G: 34.333333333333336,   # RR 1:1 NEW-COMBO July validated under the LOWERED STANDARD (103 / 3)
+    SYSTEM_CYCLE78H: 34.333333333333336,
     SYSTEM_CYCLE67: 40.333333333333336,   # C67-04 -- August (121 / 3)
     SYSTEM_CYCLE67Q: 40.333333333333336,   # RR 1:1 August composition install (121 / 3)
     SYSTEM_CYCLE91: 27.666666666666668,   # C91-15 -- September (83 / 3)
@@ -303,6 +329,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE60C: 27.666666666666668,   # ROBUSTNESS-FIX D21-RC January validated (83 / 3)
     SYSTEM_CYCLE60D: 27.666666666666668,   # DIFFWAY W1 January validated (83 / 3)
     SYSTEM_CYCLE60E: 27.666666666666668,   # RR 1:1 January composition install (83 / 3)
+    SYSTEM_CYCLE60F: 27.666666666666668,
     SYSTEM_CYCLE87B: 34.666666666666664,   # BRIEF21 C20a April improved (104 / 3)
     SYSTEM_CYCLE88N: 22.0,   # NEW8 E07 May improved (66 / 3)
     SYSTEM_CYCLE88O: 22.0,   # RR 1:1 May composition install (66 / 3)
@@ -342,9 +369,11 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE85F: 34.666666666666664,   # RISK6 C18 February improved (104 / 3)
     SYSTEM_CYCLE85G: 34.666666666666664,   # ROBUSTNESS-FIX D21-RC February validated (104 / 3)
     SYSTEM_CYCLE85J: 34.666666666666664,   # RR 1:1 February composition install (104 / 3)
+    SYSTEM_CYCLE85K: 34.666666666666664,
     SYSTEM_CYCLE85I: 34.666666666666664,   # 10CYC-R2 R9 February validated (104 / 3)
     SYSTEM_CYCLE92C: 27.666666666666668,   # R2 C14 October improved (83 / 3)
     SYSTEM_CYCLE92D: 27.666666666666668,   # RR 1:1 October composition install (83 / 3)
+    SYSTEM_CYCLE92F: 27.666666666666668,
     SYSTEM_CYCLE94D: 35.0,   # R2 D19 December improved (105 / 3)
     SYSTEM_CYCLE94E: 35.0,   # R3 P15 December improved (105 / 3)
     SYSTEM_CYCLE94F: 35.0,   # RISK6 C15 December improved (105 / 3)
@@ -352,6 +381,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE94H: 50.0,   # ROBUSTNESS-FIX D21-RC December validated (150 / 3)
     SYSTEM_CYCLE94I: 50.0,   # RISKOPT5 C2 December validated (150 / 3)
     SYSTEM_CYCLE94J: 50.0,   # RR 1:1 December composition install (150 / 3)
+    SYSTEM_CYCLE94K: 50.0,
     SYSTEM_CYCLE87F: 50.0,   # Plan E E04 April accepted (150 / 3)
     SYSTEM_CYCLE87G: 50.0,   # SL4-10CYC D6 April validated (150 / 3)
     SYSTEM_CYCLE87H: 50.0,   # 10CYC-R2 R1 April validated (150 / 3)
@@ -396,7 +426,7 @@ def set_active_system(name: str) -> str:
     systems only; best-only since the 2026-11-06 update)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE91T, SYSTEM_CYCLE89R, SYSTEM_CYCLE78F, SYSTEM_CYCLE78G, SYSTEM_CYCLE91U,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE91T, SYSTEM_CYCLE89R, SYSTEM_CYCLE78F, SYSTEM_CYCLE78G, SYSTEM_CYCLE91U, SYSTEM_CYCLE60F, SYSTEM_CYCLE85K, SYSTEM_CYCLE78H, SYSTEM_CYCLE92F, SYSTEM_CYCLE94K,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
                          f"monthly best systems remain: "
                          f"{sorted(MONTH_SYSTEMS.values())}")
@@ -518,6 +548,75 @@ def describe_active() -> str:
                 "<= 60% (lowered absolute arm); record "
                 "work_rr1_newcombo_r2/validate/jul/"
                 "VALIDATION.md")
+    if _ACTIVE == SYSTEM_CYCLE78H:
+        return ("cycle78h (RR 1:1 chain R18C07 VALIDATED "
+                "under the FULL STANDARD, sizing arm "
+                "re-graded under the 2026-11-07 live-rules "
+                "sizing law, user order 2026-11-07) -- July "
+                "system: the cycle78e stream settled through "
+                "R11C01 -> R18C07 (6% exposure-skip, then 6h "
+                "loss-cooldown), stops capped at 1xTP -- "
+                "path-basis EC22 failed {13_lct, 14_leftover} "
+                "only (tolerated carve-out), AUDIT +371.65 "
+                "win 70.71, DSR 1.0, S9 PASS, Gate A bit-exact "
+                "(kept 484), live-rules sizing peak 2.33% "
+                "(incumbent 3.72%); record "
+                "work_rr1_second_validate/results/"
+                "jul_VALIDATION.md")
+    if _ACTIVE == SYSTEM_CYCLE60F:
+        return ("cycle60f (RR 1:1 norm R9 C07 VALIDATED "
+                "under the LOWERED STANDARD, sizing arm "
+                "re-graded under the 2026-11-07 live-rules "
+                "sizing law, user order 2026-11-07) -- January "
+                "system: the cycle60c panel surface settled "
+                "through the R9 C07 chain (KW base = R18C12 "
+                "winner set, adm70 union, wkx6/celx "
+                "excisions, daycap 6, skip 4.8%), stops capped "
+                "at 1xTP -- AUDIT +311.59 win 80.23, battery "
+                "PASS under the lowered standard, S9 PASS, "
+                "Gate A bit-exact (kept 396), live-rules "
+                "sizing peak 1.31%; record work_rr1_norm_r9/"
+                "validate/jan/VALIDATION.md")
+    if _ACTIVE == SYSTEM_CYCLE85K:
+        return ("cycle85k (RR 1:1 norm R8 C07 VALIDATED "
+                "under the LOWERED STANDARD, sizing arm "
+                "re-graded under the 2026-11-07 live-rules "
+                "sizing law, user order 2026-11-07) -- February "
+                "system: the cycle85e panel surface settled "
+                "through the R8 C07 chain (KW base = R18C12 "
+                "winner set, admG union, dyx12/trx30 "
+                "excisions, daily_lockout 4, skip 3.7%), stops "
+                "capped at 1xTP -- AUDIT +474.44 win 79.07, "
+                "Gate A bit-exact (kept 361), live-rules "
+                "sizing peak 1.36%; record work_rr1_norm_r8/"
+                "validate/feb/VALIDATION.md")
+    if _ACTIVE == SYSTEM_CYCLE92F:
+        return ("cycle92f (RR 1:1 NEW-COMBO R1 C04 "
+                "VALIDATED under the FULL STANDARD, sizing "
+                "arm re-graded under the 2026-11-07 live-rules "
+                "sizing law, user order 2026-11-07) -- October "
+                "system: the cycle92c stream surface settled "
+                "through the R1 C04 chain (KW base = R18C12 "
+                "winner set, adm60 union, trx15/wkx2 "
+                "excisions, lockout -40, skip 3.5%), stops "
+                "capped at 1xTP -- AUDIT +621.27 win 87.10, "
+                "Gate A bit-exact (kept 406), live-rules "
+                "sizing peak 2.04% (incumbent 3.51%); record "
+                "work_rr1_newcombo_r1/validate/oct/"
+                "VALIDATION.md")
+    if _ACTIVE == SYSTEM_CYCLE94K:
+        return ("cycle94k (RR 1:1 norm R8 C07 VALIDATED "
+                "under the LOWERED STANDARD, sizing arm "
+                "re-graded under the 2026-11-07 live-rules "
+                "sizing law, user order 2026-11-07) -- December "
+                "system: the cycle94e panel surface settled "
+                "through the R8 C07 chain (KW base = R18C14 "
+                "winner set, admG union, dyx12/trx30 "
+                "excisions, daily_lockout 4, skip 3.7%), stops "
+                "capped at 1xTP -- AUDIT +638.70 win 89.66, "
+                "Gate A bit-exact (kept 431), live-rules "
+                "sizing peak 1.54%; record work_rr1_norm_r8/"
+                "validate/dec/VALIDATION.md")
     if _ACTIVE == SYSTEM_CYCLE78E:
         return ("cycle78e (Plan E E09 IMPROVE) -- July "
                 "system: cycle78d stream + CONS3 "
@@ -1558,6 +1657,36 @@ def evaluate_signals(frames: dict, check_time_utc) -> pd.DataFrame:
         return evaluate_cycle78g_signals(
             frames, check_time_utc,
             m15_frames=fetch_cycle78g_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE78H:
+        from core.cycle78h_best import (evaluate_cycle78h_signals,
+                                        fetch_cycle78h_m15_frames)
+        return evaluate_cycle78h_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle78h_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE60F:
+        from core.cycle60f_best import (evaluate_cycle60f_signals,
+                                        fetch_cycle60f_m15_frames)
+        return evaluate_cycle60f_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle60f_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE85K:
+        from core.cycle85k_best import (evaluate_cycle85k_signals,
+                                        fetch_cycle85k_m15_frames)
+        return evaluate_cycle85k_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle85k_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE92F:
+        from core.cycle92f_best import (evaluate_cycle92f_signals,
+                                        fetch_cycle92f_m15_frames)
+        return evaluate_cycle92f_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle92f_m15_frames())
+    if _ACTIVE == SYSTEM_CYCLE94K:
+        from core.cycle94k_best import (evaluate_cycle94k_signals,
+                                        fetch_cycle94k_m15_frames)
+        return evaluate_cycle94k_signals(
+            frames, check_time_utc,
+            m15_frames=fetch_cycle94k_m15_frames())
     if _ACTIVE == SYSTEM_CYCLE78E:
         from core.cycle78e_best import (evaluate_cycle78e_signals,
                                         fetch_cycle78e_m15_frames)
@@ -1864,6 +1993,21 @@ def select_entries(signals: pd.DataFrame, open_symbols=(), k=2) -> pd.DataFrame:
     if _ACTIVE == SYSTEM_CYCLE78G:
         from core.cycle78g_best import select_cycle78g_entries
         return select_cycle78g_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE78H:
+        from core.cycle78h_best import select_cycle78h_entries
+        return select_cycle78h_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE60F:
+        from core.cycle60f_best import select_cycle60f_entries
+        return select_cycle60f_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE85K:
+        from core.cycle85k_best import select_cycle85k_entries
+        return select_cycle85k_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE92F:
+        from core.cycle92f_best import select_cycle92f_entries
+        return select_cycle92f_entries(signals, open_symbols=open_symbols)
+    if _ACTIVE == SYSTEM_CYCLE94K:
+        from core.cycle94k_best import select_cycle94k_entries
+        return select_cycle94k_entries(signals, open_symbols=open_symbols)
     if _ACTIVE == SYSTEM_CYCLE78D:
         from core.cycle78d_best import select_cycle78d_entries
         return select_cycle78d_entries(signals, open_symbols=open_symbols)
@@ -2223,7 +2367,12 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE78D,
                            SYSTEM_CYCLE78E,
                            SYSTEM_CYCLE78F,
-                           SYSTEM_CYCLE78G):
+                           SYSTEM_CYCLE78G,
+                           SYSTEM_CYCLE60F,
+                           SYSTEM_CYCLE85K,
+                           SYSTEM_CYCLE78H,
+                           SYSTEM_CYCLE92F,
+                           SYSTEM_CYCLE94K):
             # Ledger-aware systems: the full entries for a check
             # include stateful legs (BRIEF21 C20a re-entries, or
             # the NEW8 merged-walk candidate picks), which only
@@ -2317,6 +2466,16 @@ def active_check_hours():
         return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE78G:
         return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE78H:
+        return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE60F:
+        return (11, 13, 17)
+    if _ACTIVE == SYSTEM_CYCLE85K:
+        return (11, 13, 16)
+    if _ACTIVE == SYSTEM_CYCLE92F:
+        return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE94K:
+        return (10, 11, 13, 14)
     if _ACTIVE == SYSTEM_CYCLE67:
         return (1, 6, 16, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE91:

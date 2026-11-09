@@ -1,0 +1,1216 @@
+{
+ "mon": "apr",
+ "round": 108,
+ "stamp": "Graded in frame on the stored pool of the previous build \u2014 NOT VALIDATED, NOT INSTALLABLE \u2014 anchor still owed. Sizing NOT graded.",
+ "record_DISC": {
+  "kept": 866,
+  "win": 98.26789838337181,
+  "net": 10683.758714285395,
+  "leftover": 78.90806510064454,
+  "epd": 5.124260355029586
+ },
+ "record_AUDIT": {
+  "kept": 216,
+  "win": 96.29629629629629,
+  "net": 2842.4761428570746,
+  "leftover": 75.77357770020542,
+  "epd": 4.909090909090909
+ },
+ "base_label": "R3A07",
+ "base_DISC": {
+  "kept": 869,
+  "win": 97.92865362485615,
+  "net": 10586.258714285395,
+  "leftover": 78.18794996578795,
+  "epd": 5.1420118343195265
+ },
+ "base_AUDIT": {
+  "kept": 217,
+  "win": 95.85253456221197,
+  "net": 2809.9761428570746,
+  "leftover": 74.90720586400018,
+  "epd": 4.931818181818182
+ },
+ "designs": [
+  {
+   "design": "R108A01",
+   "desc": "minimal-change +2 adds",
+   "disc": {
+    "kept": 870,
+    "win": 97.816091954023,
+    "net": 10553.758714285395,
+    "leftover": 77.94791158750242,
+    "epd": 5.14792899408284
+   },
+   "audit": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2777.4761428570746,
+    "leftover": 74.04083402779493,
+    "epd": 4.954545454545454
+   },
+   "added_total": 2,
+   "added_DISC": 1,
+   "added_AUDIT": 1,
+   "kept_total": 1088,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10553.76 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2777.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 218 < 88 (epd 4.955 < 2.0, -130 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "febb8602f5400c07d8c0876c2bbef61d",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 142.46,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 2.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -135.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 35.9,
+     "q05": 74.65,
+     "PASS_middle": false
+    },
+    "dsr": 0.9999999999999963,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.49999999999999634,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R11 R11A01"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2577.590428571363,
+    "leftover": 68.71236161804391
+   },
+   "dup_of": "R107 R107A01",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  },
+  {
+   "design": "R108A02",
+   "desc": "minimal-change +4 adds",
+   "disc": {
+    "kept": 872,
+    "win": 97.59174311926606,
+    "net": 10489.358714285396,
+    "leftover": 77.47226630868434,
+    "epd": 5.159763313609467
+   },
+   "audit": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2777.4761428570746,
+    "leftover": 74.04083402779493,
+    "epd": 4.954545454545454
+   },
+   "added_total": 4,
+   "added_DISC": 3,
+   "added_AUDIT": 1,
+   "kept_total": 1090,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10489.36 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2777.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 218 < 88 (epd 4.955 < 2.0, -130 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "551af78327f4facc4f6baa2565822416",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 127.41,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 29.3,
+     "q05": 74.07,
+     "PASS_middle": false
+    },
+    "dsr": 0.9999999999999877,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.4999999999999877,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R11 R11A02"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2577.590428571363,
+    "leftover": 68.71236161804391
+   },
+   "dup_of": "R107 R107A02",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  },
+  {
+   "design": "R108A03",
+   "desc": "minimal-change +5 adds",
+   "disc": {
+    "kept": 873,
+    "win": 97.59450171821305,
+    "net": 10503.397285713967,
+    "leftover": 77.48130851654781,
+    "epd": 5.165680473372781
+   },
+   "audit": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2777.4761428570746,
+    "leftover": 74.04083402779493,
+    "epd": 4.954545454545454
+   },
+   "added_total": 5,
+   "added_DISC": 4,
+   "added_AUDIT": 1,
+   "kept_total": 1091,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10503.40 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2777.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 218 < 88 (epd 4.955 < 2.0, -130 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "04a571bf5df3ddf19ae8521e124fa691",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 127.54,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 29.56,
+     "q05": 73.99,
+     "PASS_middle": false
+    },
+    "dsr": 0.9999999999999893,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.49999999999998934,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R11 R11A03"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2577.590428571363,
+    "leftover": 68.71236161804391
+   },
+   "dup_of": "R107 R107A03",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  },
+  {
+   "design": "R108A04",
+   "desc": "minimal-change-plus +9 adds",
+   "disc": {
+    "kept": 876,
+    "win": 97.26027397260275,
+    "net": 10405.89728571397,
+    "leftover": 76.76207193291043,
+    "epd": 5.183431952662722
+   },
+   "audit": {
+    "kept": 219,
+    "win": 94.97716894977168,
+    "net": 2756.9761428570746,
+    "leftover": 73.49435333111163,
+    "epd": 4.9772727272727275
+   },
+   "added_total": 9,
+   "added_DISC": 7,
+   "added_AUDIT": 2,
+   "kept_total": 1095,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10405.90 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2756.98 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 219 < 88 (epd 4.977 < 2.0, -131 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "ae28d91676c4e25e817876b5e6d103bc",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 132.97,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 2.0,
+     "obs_consec": 2.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 21.27,
+     "q05": 73.18,
+     "PASS_middle": false
+    },
+    "dsr": 0.9999999999999848,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.4999999999999848,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R11 R11A04"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 219,
+    "win": 94.97716894977168,
+    "net": 2557.090428571363,
+    "leftover": 68.16588092136061
+   },
+   "dup_of": "R107 R107A04",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  },
+  {
+   "design": "R108A05",
+   "desc": "minimal-change-plus +14 adds",
+   "disc": {
+    "kept": 878,
+    "win": 97.15261958997722,
+    "net": 10425.7687142854,
+    "leftover": 76.59860737153681,
+    "epd": 5.195266272189349
+   },
+   "audit": {
+    "kept": 222,
+    "win": 93.69369369369369,
+    "net": 2659.4761428570746,
+    "leftover": 70.8952378224959,
+    "epd": 5.045454545454546
+   },
+   "added_total": 14,
+   "added_DISC": 9,
+   "added_AUDIT": 5,
+   "kept_total": 1100,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10425.77 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2659.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 222 < 88 (epd 5.045 < 2.0, -134 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "77153c38a8f1a10671bfe734f44e23b0",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 140.4,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 2.0,
+     "obs_consec": 2.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 20.43,
+     "q05": 72.8,
+     "PASS_middle": false
+    },
+    "dsr": 0.9999999999999821,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.4999999999999821,
+    "pbo": 1.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover",
+     "19_pbo"
+    ],
+    "battery_source": "R11 R11A05"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 222,
+    "win": 93.69369369369369,
+    "net": 2315.890428571368,
+    "leftover": 61.73606901696983
+   },
+   "dup_of": "R107 R107A05",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  },
+  {
+   "design": "R108A06",
+   "desc": "worst-week shield: shield adds -- adds ranked by balanced score drawn only from DISC addable rows that are SHIELDED (neither their ISO week nor their symbol is in the base's worst-week set -- the up-to-3 most negative red DISC weeks of the base and the symbols that lost inside them; 16 DISC addable shielded rows), top 14 adds from DISC rows + near-miss fill",
+   "disc": {
+    "kept": 883,
+    "win": 96.60249150622876,
+    "net": 10263.268714285401,
+    "leftover": 75.40471231794528,
+    "epd": 5.224852071005917
+   },
+   "audit": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2777.4761428570746,
+    "leftover": 74.04083402779493,
+    "epd": 4.954545454545454
+   },
+   "added_total": 15,
+   "added_DISC": 14,
+   "added_AUDIT": 1,
+   "kept_total": 1101,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10263.27 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2777.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 218 < 88 (epd 4.955 < 2.0, -130 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "2494a1d6ecf180a1084db386191ca00e",
+   "design_stats": {
+    "DISC": {
+     "slots_possible_days_x3": 507,
+     "slots_with_any_form_row": 487,
+     "slots_occupied_before": 493,
+     "slots_filled": 0,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 493,
+     "slots_with_rows_unfilled": -6
+    },
+    "AUDIT": {
+     "slots_possible_days_x3": 132,
+     "slots_with_any_form_row": 128,
+     "slots_occupied_before": 127,
+     "slots_filled": 1,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 128,
+     "slots_with_rows_unfilled": 0
+    }
+   },
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 128.81,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 2.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 9.55,
+     "q05": 71.76,
+     "PASS_middle": false
+    },
+    "dsr": 0.999999999729137,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.499999999729137,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R93 R93A07"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2577.590428571366,
+    "leftover": 68.712361618044
+   },
+   "dup_of": "R104 R104A09",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  },
+  {
+   "design": "R108A07",
+   "desc": "worst-week shield: deep-shield adds -- adds ranked by balanced score drawn only from DISC addable rows whose symbol NEVER lost in ANY red DISC week of the base (DEEP-CLEAN; 16 DISC addable deep-clean rows), top 14 adds from DISC rows + near-miss fill",
+   "disc": {
+    "kept": 883,
+    "win": 96.60249150622876,
+    "net": 10263.268714285401,
+    "leftover": 75.40471231794528,
+    "epd": 5.224852071005917
+   },
+   "audit": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2777.4761428570746,
+    "leftover": 74.04083402779493,
+    "epd": 4.954545454545454
+   },
+   "added_total": 15,
+   "added_DISC": 14,
+   "added_AUDIT": 1,
+   "kept_total": 1101,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10263.27 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2777.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 218 < 88 (epd 4.955 < 2.0, -130 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "2494a1d6ecf180a1084db386191ca00e",
+   "design_stats": {
+    "DISC": {
+     "slots_possible_days_x3": 507,
+     "slots_with_any_form_row": 487,
+     "slots_occupied_before": 493,
+     "slots_filled": 0,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 493,
+     "slots_with_rows_unfilled": -6
+    },
+    "AUDIT": {
+     "slots_possible_days_x3": 132,
+     "slots_with_any_form_row": 128,
+     "slots_occupied_before": 127,
+     "slots_filled": 1,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 128,
+     "slots_with_rows_unfilled": 0
+    }
+   },
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 128.81,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 2.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 9.55,
+     "q05": 71.76,
+     "PASS_middle": false
+    },
+    "dsr": 0.999999999729137,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.499999999729137,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R93 R93A07"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2577.590428571366,
+    "leftover": 68.712361618044
+   },
+   "dup_of": "R104 R104A09",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  },
+  {
+   "design": "R108A08",
+   "desc": "worst-week shield: post-worst-week adds -- adds ranked by balanced score drawn only from DISC addable rows entering in the first frame week immediately after a worst week (POST; 0 DISC addable post-worst-week rows), top 14 adds from DISC rows + near-miss fill",
+   "disc": {
+    "kept": 869,
+    "win": 97.92865362485615,
+    "net": 10586.258714285395,
+    "leftover": 78.18794996578795,
+    "epd": 5.1420118343195265
+   },
+   "audit": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2777.4761428570746,
+    "leftover": 74.04083402779493,
+    "epd": 4.954545454545454
+   },
+   "added_total": 1,
+   "added_DISC": 0,
+   "added_AUDIT": 1,
+   "kept_total": 1087,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10586.26 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2777.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 218 < 88 (epd 4.955 < 2.0, -130 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "3b8751d653b3162fd2bd30c59c4f46eb",
+   "design_stats": {
+    "DISC": {
+     "slots_possible_days_x3": 507,
+     "slots_with_any_form_row": 487,
+     "slots_occupied_before": 493,
+     "slots_filled": 0,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 493,
+     "slots_with_rows_unfilled": -6
+    },
+    "AUDIT": {
+     "slots_possible_days_x3": 132,
+     "slots_with_any_form_row": 128,
+     "slots_occupied_before": 127,
+     "slots_filled": 1,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 128,
+     "slots_with_rows_unfilled": 0
+    }
+   },
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 128.13,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 2.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 38.15,
+     "q05": 74.95,
+     "PASS_middle": false
+    },
+    "dsr": 0.9999999999999992,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.4999999999999992,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R12 R12A06"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2577.590428571366,
+    "leftover": 68.712361618044
+   },
+   "dup_of": "R96 R96A08",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  },
+  {
+   "design": "R108A09",
+   "desc": "worst-week shield: shield-quota adds -- the pool capped at the top-4 balanced-ranked rows per shield band (WEEK-tainted / SYMBOL-tainted / POST-worst-week / CLEAN by priority; ceil(14 / 4) = 4 per band), so the shield classes supply in balance, ranked globally by balanced score, top 14 adds from DISC rows + near-miss fill",
+   "disc": {
+    "kept": 873,
+    "win": 97.59450171821305,
+    "net": 10503.397285713967,
+    "leftover": 77.48130851654781,
+    "epd": 5.165680473372781
+   },
+   "audit": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2777.4761428570746,
+    "leftover": 74.04083402779493,
+    "epd": 4.954545454545454
+   },
+   "added_total": 5,
+   "added_DISC": 4,
+   "added_AUDIT": 1,
+   "kept_total": 1091,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10503.40 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2777.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 218 < 88 (epd 4.955 < 2.0, -130 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "a95c4b5b9c8859f9d1f68c9818bd2d5e",
+   "design_stats": {
+    "DISC": {
+     "slots_possible_days_x3": 507,
+     "slots_with_any_form_row": 487,
+     "slots_occupied_before": 493,
+     "slots_filled": 0,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 493,
+     "slots_with_rows_unfilled": -6
+    },
+    "AUDIT": {
+     "slots_possible_days_x3": 132,
+     "slots_with_any_form_row": 128,
+     "slots_occupied_before": 127,
+     "slots_filled": 1,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 128,
+     "slots_with_rows_unfilled": 0
+    }
+   },
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 117.35,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 29.56,
+     "q05": 73.99,
+     "PASS_middle": false
+    },
+    "dsr": 0.9999999989406849,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.4999999989406849,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "fresh"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2577.590428571366,
+    "leftover": 68.712361618044
+   },
+   "dup_of": null,
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": true,
+   "stats22": {
+    "AUDIT net": 2777.4761428570746,
+    "AUDIT leftover": 74.04083402779493,
+    "AUDIT win": 95.41284403669725,
+    "AUDIT entries/day": 4.954545454545454,
+    "AUDIT kept": 218.0,
+    "AUDIT worst-case net": 2577.590428571366,
+    "AUDIT worst-case win": 95.41284403669725,
+    "AUDIT worst-case leftover": 68.712361618044,
+    "AUDIT observed max DD": 102.5,
+    "AUDIT worst cluster": -94.90714285714287,
+    "DISC net": 10503.397285713967,
+    "DISC leftover": 77.48130851654781,
+    "DISC win": 97.59450171821305,
+    "DISC entries/day": 5.165680473372781,
+    "DISC red weeks": 0.0,
+    "DISC worst week net": 37.819785714282844,
+    "\u00a79 P(profit)": 1.0,
+    "\u00a79 DD p95": 117.35,
+    "\u00a79 max-consec-loss p95": 1.0,
+    "\u00a79 worst-cluster p95": -95.0,
+    "DSR": 0.9999999989406849,
+    "PBO": 0.0
+   },
+   "improved_stats": [
+    "AUDIT entries/day",
+    "AUDIT kept",
+    "DISC entries/day",
+    "\u00a79 DD p95",
+    "\u00a79 max-consec-loss p95",
+    "PBO"
+   ],
+   "improved_stat_base": 22,
+   "huge": false
+  },
+  {
+   "design": "R108A10",
+   "desc": "worst-week shield: shield-ladder adds -- adds drawn from ALL DISC addable rows ranked by DIST descending -- the distance in whole calendar weeks between the Monday of the row's ISO week and the Monday of the nearest worst week, farthest from a worst week first (further ties by balanced score, then row order), top 14 adds from DISC rows + near-miss fill",
+   "disc": {
+    "kept": 883,
+    "win": 96.60249150622876,
+    "net": 10263.268714285401,
+    "leftover": 75.40471231794528,
+    "epd": 5.224852071005917
+   },
+   "audit": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2777.4761428570746,
+    "leftover": 74.04083402779493,
+    "epd": 4.954545454545454
+   },
+   "added_total": 15,
+   "added_DISC": 14,
+   "added_AUDIT": 1,
+   "kept_total": 1101,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +10263.27 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +2777.48 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 218 < 88 (epd 4.955 < 2.0, -130 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day"
+   ],
+   "mask_hash": "2494a1d6ecf180a1084db386191ca00e",
+   "design_stats": {
+    "DISC": {
+     "slots_possible_days_x3": 507,
+     "slots_with_any_form_row": 487,
+     "slots_occupied_before": 493,
+     "slots_filled": 0,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 493,
+     "slots_with_rows_unfilled": -6
+    },
+    "AUDIT": {
+     "slots_possible_days_x3": 132,
+     "slots_with_any_form_row": 128,
+     "slots_occupied_before": 127,
+     "slots_filled": 1,
+     "slots_blocked_floor": 0,
+     "slots_blocked_occupancy": 0,
+     "slots_occupied_after": 128,
+     "slots_with_rows_unfilled": 0
+    }
+   },
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 128.81,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 2.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -95.0,
+     "obs_worstpair": -95.0,
+     "PASS": true
+    },
+    "lct": {
+     "P": 9.55,
+     "q05": 71.76,
+     "PASS_middle": false
+    },
+    "dsr": 0.999999999729137,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.499999999729137,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R93 R93A07"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 218,
+    "win": 95.41284403669725,
+    "net": 2577.590428571366,
+    "leftover": 68.712361618044
+   },
+   "dup_of": "R104 R104A09",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false,
+   "huge": false
+  }
+ ],
+ "counts": {
+  "graded": 10,
+  "screen_survivors": 10,
+  "improved": 0,
+  "acceptable": 10,
+  "nearly": 0,
+  "no_improvement": 0,
+  "improve_mark": 10,
+  "improve_mark_exactly1": 10,
+  "improve_mark_exactly2": 0,
+  "improve_mark_3plus": 0,
+  "improved_overall": 0,
+  "improved_lowered": 1,
+  "battery_cache_hits": 9,
+  "battery_fresh": 1,
+  "improved_broadened": 1,
+  "huge": 0,
+  "huge_designs": []
+ },
+ "best_design": "R108A01",
+ "improve_test": "BROADENED (ADDENDUM rule 4, user order 2026-11-09 00:30 MMT): ACCEPTABLE under the middle validation AND genuinely new kept set AND >= 1 of the 22 named statistics strictly better than the FIXED BASE's (base_stats22 below, identical definitions); profit statistics may reduce",
+ "base_stats22": {
+  "AUDIT net": 2809.9761428570746,
+  "AUDIT leftover": 74.90720586400018,
+  "AUDIT win": 95.85253456221197,
+  "AUDIT entries/day": 4.931818181818182,
+  "AUDIT kept": 217.0,
+  "AUDIT worst-case net": 2680.090428571363,
+  "AUDIT worst-case win": 95.85253456221197,
+  "AUDIT worst-case leftover": 71.44476510146045,
+  "AUDIT observed max DD": 102.5,
+  "AUDIT worst cluster": -94.90714285714287,
+  "DISC net": 10586.258714285395,
+  "DISC leftover": 78.18794996578795,
+  "DISC win": 97.92865362485615,
+  "DISC entries/day": 5.1420118343195265,
+  "DISC red weeks": 0.0,
+  "DISC worst week net": 37.819785714282844,
+  "\u00a79 P(profit)": 1.0,
+  "\u00a79 DD p95": 128.13,
+  "\u00a79 max-consec-loss p95": 2.0,
+  "\u00a79 worst-cluster p95": -95.0,
+  "DSR": 0.9999999995985912,
+  "PBO": 0.00026025852346664354
+ },
+ "huge_test": "HUGE (user's locked definition, SERIES_PLAN_R71_R100.md): ACCEPTABLE under the middle validation AND DISC leftover >= base DISC leftover + 5.00 points AND AUDIT leftover >= base AUDIT leftover; graded per design (each design carries 'huge'), counted in counts.huge with counts.huge_designs"
+}

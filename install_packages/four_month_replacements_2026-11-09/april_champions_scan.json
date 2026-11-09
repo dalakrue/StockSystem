@@ -1,0 +1,2436 @@
+[
+ {
+  "design": "R100A06",
+  "round": 100,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.87,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R101A06",
+  "round": 101,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.3,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R101A07",
+  "round": 101,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.0,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R102A06",
+  "round": 102,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.76,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R102A10",
+  "round": 102,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 75.15,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R103A06",
+  "round": 103,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.28,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R103A07",
+  "round": 103,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R103A08",
+  "round": 103,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R103A09",
+  "round": 103,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.35,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R103A10",
+  "round": 103,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R104A06",
+  "round": 104,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.24,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R104A07",
+  "round": 104,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.75,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R104A08",
+  "round": 104,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R104A10",
+  "round": 104,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R105A06",
+  "round": 105,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "disc_lo": 76.51,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R105A07",
+  "round": 105,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.99,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R105A08",
+  "round": 105,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.36,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R105A10",
+  "round": 105,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R106A06",
+  "round": 106,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R106A07",
+  "round": 106,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 76.36,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R106A08",
+  "round": 106,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R106A09",
+  "round": 106,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.04,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R106A10",
+  "round": 106,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R107A07",
+  "round": 107,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.51,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R107A08",
+  "round": 107,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.28,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R107A09",
+  "round": 107,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.28,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R108A09",
+  "round": 108,
+  "n_imp": 6,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "disc_lo": 77.48,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R109A06",
+  "round": 109,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.95,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R109A08",
+  "round": 109,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 77.96,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R109A09",
+  "round": 109,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 77.0,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R109A10",
+  "round": 109,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 75.08,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R110A09",
+  "round": 110,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.12,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R111A07",
+  "round": 111,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.99,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R112A06",
+  "round": 112,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R112A07",
+  "round": 112,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.99,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R112A08",
+  "round": 112,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.07,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R114A06",
+  "round": 114,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.51,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R114A07",
+  "round": 114,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.75,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R114A08",
+  "round": 114,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.59,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R114A09",
+  "round": 114,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.12,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R114A10",
+  "round": 114,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R116A06",
+  "round": 116,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.6,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R116A07",
+  "round": 116,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 77.95,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R116A09",
+  "round": 116,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.04,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R117A06",
+  "round": 117,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R117A09",
+  "round": 117,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.0,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R117A10",
+  "round": 117,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R118A09",
+  "round": 118,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.84,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R119A08",
+  "round": 119,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.83,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R121A06",
+  "round": 121,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R121A07",
+  "round": 121,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R121A08",
+  "round": 121,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.48,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R121A09",
+  "round": 121,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.8,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R121A10",
+  "round": 121,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.08,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R122A06",
+  "round": 122,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R122A07",
+  "round": 122,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R122A08",
+  "round": 122,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R122A09",
+  "round": 122,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.27,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R123A08",
+  "round": 123,
+  "n_imp": 6,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC net",
+   "DISC leftover",
+   "DISC win",
+   "DISC entries/day"
+  ],
+  "disc_lo": 78.26,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R124A06",
+  "round": 124,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.24,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R125A06",
+  "round": 125,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R125A07",
+  "round": 125,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.28,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R125A09",
+  "round": 125,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.36,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R125A10",
+  "round": 125,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R126A07",
+  "round": 126,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R126A08",
+  "round": 126,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.95,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R126A09",
+  "round": 126,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.04,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R127A07",
+  "round": 127,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R127A08",
+  "round": 127,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.72,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R127A09",
+  "round": 127,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.76,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R128A09",
+  "round": 128,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.99,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R128A10",
+  "round": 128,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R129A06",
+  "round": 129,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.52,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R129A08",
+  "round": 129,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R129A09",
+  "round": 129,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.59,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R129A10",
+  "round": 129,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R130A09",
+  "round": 130,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.24,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R72A06",
+  "round": 72,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.58,
+  "audit_net": 2594.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R72A07",
+  "round": 72,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.35,
+  "audit_net": 2659.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R72A08",
+  "round": 72,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.28,
+  "audit_net": 2626.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R72A09",
+  "round": 72,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.6,
+  "audit_net": 2626.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R72A10",
+  "round": 72,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.12,
+  "audit_net": 2691.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R73A06",
+  "round": 73,
+  "n_imp": 6,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC net",
+   "DISC leftover",
+   "DISC win",
+   "DISC entries/day"
+  ],
+  "disc_lo": 78.26,
+  "audit_net": 2659.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R73A07",
+  "round": 73,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.52,
+  "audit_net": 2712.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R73A08",
+  "round": 73,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2691.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R73A09",
+  "round": 73,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.51,
+  "audit_net": 2679.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R74A06",
+  "round": 74,
+  "n_imp": 7,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC net",
+   "DISC leftover",
+   "DISC win",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 78.26,
+  "audit_net": 2756.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R74A07",
+  "round": 74,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "PBO"
+  ],
+  "disc_lo": 78.19,
+  "audit_net": 2744.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R74A08",
+  "round": 74,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.04,
+  "audit_net": 2647.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R74A09",
+  "round": 74,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC net",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 78.02,
+  "audit_net": 2724.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R74A10",
+  "round": 74,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.6,
+  "audit_net": 2626.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R75A06",
+  "round": 75,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.27,
+  "audit_net": 2614.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R75A07",
+  "round": 75,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.83,
+  "audit_net": 2561.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R75A08",
+  "round": 75,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2744.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R75A09",
+  "round": 75,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.27,
+  "audit_net": 2594.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R75A10",
+  "round": 75,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.78,
+  "audit_net": 2691.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R76A06",
+  "round": 76,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.75,
+  "audit_net": 2691.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R76A07",
+  "round": 76,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2679.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R76A08",
+  "round": 76,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.07,
+  "audit_net": 2679.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R76A09",
+  "round": 76,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.28,
+  "audit_net": 2626.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R76A10",
+  "round": 76,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.59,
+  "audit_net": 2647.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R77A10",
+  "round": 77,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 76.51,
+  "audit_net": 2561.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R78A06",
+  "round": 78,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "disc_lo": 78.18,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R78A07",
+  "round": 78,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.59,
+  "audit_net": 2626.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R79A06",
+  "round": 79,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R79A08",
+  "round": 79,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 75.64,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R79A10",
+  "round": 79,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 75.56,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R80A06",
+  "round": 80,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 76.52,
+  "audit_net": 2724.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R80A07",
+  "round": 80,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "PBO"
+  ],
+  "disc_lo": 78.19,
+  "audit_net": 2744.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R80A08",
+  "round": 80,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.54,
+  "audit_net": 2679.98,
+  "mc_pass": true
+ },
+ {
+  "design": "R80A09",
+  "round": 80,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.6,
+  "audit_net": 2659.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R81A06",
+  "round": 81,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.72,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R81A07",
+  "round": 81,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.83,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R81A08",
+  "round": 81,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R81A09",
+  "round": 81,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.95,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R82A06",
+  "round": 82,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.72,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R82A10",
+  "round": 82,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R83A06",
+  "round": 83,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.24,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R83A07",
+  "round": 83,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R83A08",
+  "round": 83,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R84A06",
+  "round": 84,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.87,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R84A07",
+  "round": 84,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R84A08",
+  "round": 84,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R85A06",
+  "round": 85,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.12,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R85A07",
+  "round": 85,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R85A08",
+  "round": 85,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "disc_lo": 77.0,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R85A10",
+  "round": 85,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R86A06",
+  "round": 86,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.75,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R86A07",
+  "round": 86,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.3,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R86A08",
+  "round": 86,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.24,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R86A09",
+  "round": 86,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R86A10",
+  "round": 86,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 77.96,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R87A06",
+  "round": 87,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R87A07",
+  "round": 87,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R87A08",
+  "round": 87,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.23,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R87A09",
+  "round": 87,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R87A10",
+  "round": 87,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.51,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R88A06",
+  "round": 88,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.0,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R88A07",
+  "round": 88,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.3,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R88A08",
+  "round": 88,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.99,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R88A09",
+  "round": 88,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R88A10",
+  "round": 88,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R89A06",
+  "round": 89,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.55,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R89A07",
+  "round": 89,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.99,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R89A08",
+  "round": 89,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.47,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R89A10",
+  "round": 89,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R90A06",
+  "round": 90,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.99,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R90A08",
+  "round": 90,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 77.48,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R90A09",
+  "round": 90,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.56,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R90A10",
+  "round": 90,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.27,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R91A06",
+  "round": 91,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.58,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R91A07",
+  "round": 91,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC net",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 78.02,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R91A08",
+  "round": 91,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R91A09",
+  "round": 91,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.82,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R92A08",
+  "round": 92,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.24,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R92A09",
+  "round": 92,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 76.36,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R93A06",
+  "round": 93,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R93A07",
+  "round": 93,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R93A09",
+  "round": 93,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 77.0,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R93A10",
+  "round": 93,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R94A06",
+  "round": 94,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.03,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R94A09",
+  "round": 94,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 76.36,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R95A06",
+  "round": 95,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "disc_lo": 76.6,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R95A07",
+  "round": 95,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 77.24,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R97A06",
+  "round": 97,
+  "n_imp": 6,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC net",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 78.02,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R97A07",
+  "round": 97,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "PBO"
+  ],
+  "disc_lo": 75.08,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R97A08",
+  "round": 97,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 77.95,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R97A09",
+  "round": 97,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "PBO"
+  ],
+  "disc_lo": 77.08,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R98A06",
+  "round": 98,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 77.24,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R98A08",
+  "round": 98,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 76.59,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R98A10",
+  "round": 98,
+  "n_imp": 5,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "disc_lo": 75.4,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R99A06",
+  "round": 99,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.8,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R99A07",
+  "round": 99,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95"
+  ],
+  "disc_lo": 77.71,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R99A08",
+  "round": 99,
+  "n_imp": 3,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day"
+  ],
+  "disc_lo": 75.56,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ },
+ {
+  "design": "R99A09",
+  "round": 99,
+  "n_imp": 4,
+  "imp": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 max-consec-loss p95"
+  ],
+  "disc_lo": 76.76,
+  "audit_net": 2777.48,
+  "mc_pass": true
+ }
+]

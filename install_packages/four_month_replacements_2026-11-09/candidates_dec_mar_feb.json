@@ -1,0 +1,393 @@
+{
+ "dec": [
+  {
+   "design": "R44A10",
+   "round": 44,
+   "mon": "dec",
+   "desc": "disagreement-penalty fusion disagreement penalty lambda 1.00 x RANGE (score = mean(sH, sM,",
+   "disc": {
+    "kept": 609,
+    "win": 95.56650246305419,
+    "net": 7549.802214285553,
+    "leftover": 74.2046358696813,
+    "epd": 3.48
+   },
+   "audit": {
+    "kept": 151,
+    "win": 92.71523178807946,
+    "net": 948.2894999999613,
+    "leftover": 50.22031445977164,
+    "epd": 3.3555555555555556
+   },
+   "base_disc": {
+    "kept": 596,
+    "win": 96.30872483221476,
+    "net": 7645.304571428413,
+    "leftover": 76.03935253056629,
+    "epd": 3.4057142857142857
+   },
+   "base_audit": {
+    "kept": 150,
+    "win": 92.66666666666666,
+    "net": 931.6306428571056,
+    "leftover": 49.84381137766014,
+    "epd": 3.3333333333333335
+   },
+   "base_label": "R27 R27A10",
+   "screen_pass": true,
+   "dup_of": null,
+   "improved_stats": null,
+   "improved_lowered": true,
+   "category": "ACCEPTABLE (in frame)",
+   "mask_hash": "0731eeef8a1dd71fc693cdcf57d5d330",
+   "battery_pass": true,
+   "mc9": {
+    "P_profit": 1.0,
+    "DD_p95": 161.93,
+    "obs_DD": 126.93,
+    "consec_p95": 2.0,
+    "obs_consec": 2.0,
+    "worstpair_p95": -126.93,
+    "obs_worstpair": -126.93,
+    "PASS": true
+   },
+   "battery_failed": null,
+   "dsr": 0.9999999789505112,
+   "pbo": 1.0
+  }
+ ],
+ "mar": [
+  {
+   "design": "R34A09",
+   "round": 34,
+   "mon": "mar",
+   "desc": "threshold ladder q80 (balanced weights; every leg >= its DISC-fitted q80 threshold), top 1",
+   "disc": {
+    "kept": 376,
+    "win": 98.13829787234043,
+    "net": 3836.77757142852,
+    "leftover": 76.76133665814517,
+    "epd": 2.088888888888889
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "base_disc": {
+    "kept": 373,
+    "win": 98.12332439678283,
+    "net": 3789.2758571428076,
+    "leftover": 76.65449217733429,
+    "epd": 2.0722222222222224
+   },
+   "base_audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "base_label": "R3A08",
+   "screen_pass": true,
+   "dup_of": null,
+   "improved_stats": null,
+   "improved_lowered": true,
+   "category": "ACCEPTABLE (in frame)",
+   "mask_hash": "1c5d6acfe8a2a3a3679d9e49a2f2ad2c",
+   "battery_pass": true,
+   "mc9": {
+    "P_profit": 1.0,
+    "DD_p95": 49.99,
+    "obs_DD": 58.54,
+    "consec_p95": 1.0,
+    "obs_consec": 1.0,
+    "worstpair_p95": -35.5,
+    "obs_worstpair": -35.5,
+    "PASS": true
+   },
+   "battery_failed": null,
+   "dsr": 0.7705733000067547,
+   "pbo": 1.0
+  },
+  {
+   "design": "R34A10",
+   "round": 34,
+   "mon": "mar",
+   "desc": "threshold ladder q90 (balanced weights; every leg >= its DISC-fitted q90 threshold), top 1",
+   "disc": {
+    "kept": 374,
+    "win": 98.1283422459893,
+    "net": 3822.277571428521,
+    "leftover": 76.77074572712161,
+    "epd": 2.077777777777778
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "base_disc": {
+    "kept": 373,
+    "win": 98.12332439678283,
+    "net": 3789.2758571428076,
+    "leftover": 76.65449217733429,
+    "epd": 2.0722222222222224
+   },
+   "base_audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "base_label": "R3A08",
+   "screen_pass": true,
+   "dup_of": null,
+   "improved_stats": null,
+   "improved_lowered": true,
+   "category": "ACCEPTABLE (in frame)",
+   "mask_hash": "36bf41e31bb7fba3b0619d42fee06cec",
+   "battery_pass": true,
+   "mc9": {
+    "P_profit": 1.0,
+    "DD_p95": 74.95,
+    "obs_DD": 58.54,
+    "consec_p95": 1.0,
+    "obs_consec": 1.0,
+    "worstpair_p95": -35.5,
+    "obs_worstpair": -35.5,
+    "PASS": true
+   },
+   "battery_failed": null,
+   "dsr": 0.7586165122562853,
+   "pbo": 0.0
+  },
+  {
+   "design": "R39A06",
+   "round": 39,
+   "mon": "mar",
+   "desc": "tiered confidence tier-1 only -- strong 3-leg agreement takes the full adds (HIGH bar = ea",
+   "disc": {
+    "kept": 377,
+    "win": 98.14323607427056,
+    "net": 3873.330714285664,
+    "leftover": 76.89186953008225,
+    "epd": 2.0944444444444446
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "base_disc": {
+    "kept": 373,
+    "win": 98.12332439678283,
+    "net": 3789.2758571428076,
+    "leftover": 76.65449217733429,
+    "epd": 2.0722222222222224
+   },
+   "base_audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "base_label": "R3A08",
+   "screen_pass": true,
+   "dup_of": null,
+   "improved_stats": null,
+   "improved_lowered": true,
+   "category": "ACCEPTABLE (in frame)",
+   "mask_hash": "71e0e1b1de3a2c8ce33ae3d0dea856c5",
+   "battery_pass": true,
+   "mc9": {
+    "P_profit": 1.0,
+    "DD_p95": 56.99,
+    "obs_DD": 58.54,
+    "consec_p95": 1.0,
+    "obs_consec": 1.0,
+    "worstpair_p95": -35.5,
+    "obs_worstpair": -35.5,
+    "PASS": true
+   },
+   "battery_failed": null,
+   "dsr": 0.7845165331146927,
+   "pbo": 0.9368512110726643
+  },
+  {
+   "design": "R39A07",
+   "round": 39,
+   "mon": "mar",
+   "desc": "tiered confidence small strong core, partial agreement fills the rest (HIGH bar = each leg",
+   "disc": {
+    "kept": 380,
+    "win": 97.89473684210527,
+    "net": 3882.450357142806,
+    "leftover": 76.21624516999371,
+    "epd": 2.111111111111111
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "base_disc": {
+    "kept": 373,
+    "win": 98.12332439678283,
+    "net": 3789.2758571428076,
+    "leftover": 76.65449217733429,
+    "epd": 2.0722222222222224
+   },
+   "base_audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "base_label": "R3A08",
+   "screen_pass": true,
+   "dup_of": null,
+   "improved_stats": null,
+   "improved_lowered": true,
+   "category": "ACCEPTABLE (in frame)",
+   "mask_hash": "53fa16cfbc6a9acfaf9f7773b56f8f2c",
+   "battery_pass": true,
+   "mc9": {
+    "P_profit": 1.0,
+    "DD_p95": 70.0,
+    "obs_DD": 58.54,
+    "consec_p95": 1.0,
+    "obs_consec": 1.0,
+    "worstpair_p95": -35.5,
+    "obs_worstpair": -35.5,
+    "PASS": true
+   },
+   "battery_failed": null,
+   "dsr": 0.678506818722632,
+   "pbo": 0.04528535980148883
+  }
+ ],
+ "feb": [
+  {
+   "design": "R34A08",
+   "round": 34,
+   "mon": "feb",
+   "desc": "threshold ladder q70 (balanced weights; every leg >= its DISC-fitted q70 threshold), top 1",
+   "disc": {
+    "kept": 489,
+    "win": 99.18200408997954,
+    "net": 6679.40567845063,
+    "leftover": 82.77728323887958,
+    "epd": 3.0372670807453415
+   },
+   "audit": {
+    "kept": 130,
+    "win": 95.38461538461539,
+    "net": 1140.423367440715,
+    "leftover": 66.22577771030032,
+    "epd": 3.1707317073170733
+   },
+   "base_disc": {
+    "kept": 485,
+    "win": 99.17525773195877,
+    "net": 6568.854964164915,
+    "leftover": 82.64188659518658,
+    "epd": 3.012422360248447
+   },
+   "base_audit": {
+    "kept": 130,
+    "win": 95.38461538461539,
+    "net": 1140.423367440715,
+    "leftover": 66.22577771030032,
+    "epd": 3.1707317073170733
+   },
+   "base_label": "R3A09",
+   "screen_pass": true,
+   "dup_of": null,
+   "improved_stats": null,
+   "improved_lowered": true,
+   "category": "ACCEPTABLE (in frame)",
+   "mask_hash": "8af1edb0dc0db5dbd69f2d10e48b5f88",
+   "battery_pass": true,
+   "mc9": {
+    "P_profit": 1.0,
+    "DD_p95": 90.0,
+    "obs_DD": 90.0,
+    "consec_p95": 1.0,
+    "obs_consec": 1.0,
+    "worstpair_p95": -82.5,
+    "obs_worstpair": -82.5,
+    "PASS": true
+   },
+   "battery_failed": null,
+   "dsr": 0.9999989787482142,
+   "pbo": 0.0
+  },
+  {
+   "design": "R34A10",
+   "round": 34,
+   "mon": "feb",
+   "desc": "threshold ladder q90 (balanced weights; every leg >= its DISC-fitted q90 threshold), top 1",
+   "disc": {
+    "kept": 486,
+    "win": 99.1769547325103,
+    "net": 6605.9826784506295,
+    "leftover": 82.69670019969608,
+    "epd": 3.018633540372671
+   },
+   "audit": {
+    "kept": 130,
+    "win": 95.38461538461539,
+    "net": 1140.423367440715,
+    "leftover": 66.22577771030032,
+    "epd": 3.1707317073170733
+   },
+   "base_disc": {
+    "kept": 485,
+    "win": 99.17525773195877,
+    "net": 6568.854964164915,
+    "leftover": 82.64188659518658,
+    "epd": 3.012422360248447
+   },
+   "base_audit": {
+    "kept": 130,
+    "win": 95.38461538461539,
+    "net": 1140.423367440715,
+    "leftover": 66.22577771030032,
+    "epd": 3.1707317073170733
+   },
+   "base_label": "R3A09",
+   "screen_pass": true,
+   "dup_of": null,
+   "improved_stats": null,
+   "improved_lowered": true,
+   "category": "ACCEPTABLE (in frame)",
+   "mask_hash": "06fc7e7dc078e1fe321d7896693f7a0a",
+   "battery_pass": true,
+   "mc9": {
+    "P_profit": 1.0,
+    "DD_p95": 90.82,
+    "obs_DD": 90.0,
+    "consec_p95": 1.0,
+    "obs_consec": 1.0,
+    "worstpair_p95": -82.5,
+    "obs_worstpair": -82.5,
+    "PASS": true
+   },
+   "battery_failed": null,
+   "dsr": 0.999998475371019,
+   "pbo": 0.0
+  }
+ ]
+}

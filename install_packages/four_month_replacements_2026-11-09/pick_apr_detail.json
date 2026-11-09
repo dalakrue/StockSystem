@@ -1,0 +1,61 @@
+{
+ "feb": {},
+ "apr_pick": {
+  "design": "R108A09",
+  "grade_file": "round6_r108/grade_r6r108_apr.json",
+  "mask_hash": "a95c4b5b9c8859f9d1f68c9818bd2d5e",
+  "improved_stats": [
+   "AUDIT entries/day",
+   "AUDIT kept",
+   "DISC entries/day",
+   "\u00a79 DD p95",
+   "\u00a79 max-consec-loss p95",
+   "PBO"
+  ],
+  "audit": {
+   "kept": 218,
+   "win": 95.41284403669725,
+   "net": 2777.4761428570746,
+   "leftover": 74.04083402779493,
+   "epd": 4.954545454545454
+  },
+  "disc": {
+   "kept": 873,
+   "win": 97.59450171821305,
+   "net": 10503.397285713967,
+   "leftover": 77.48130851654781,
+   "epd": 5.165680473372781
+  },
+  "base_audit": {
+   "kept": 217,
+   "win": 95.85253456221197,
+   "net": 2809.9761428570746,
+   "leftover": 74.90720586400018,
+   "epd": 4.931818181818182
+  },
+  "base_disc": {
+   "kept": 869,
+   "win": 97.92865362485615,
+   "net": 10586.258714285395,
+   "leftover": 78.18794996578795,
+   "epd": 5.1420118343195265
+  },
+  "mc9": {
+   "P_profit": 1.0,
+   "DD_p95": 117.35,
+   "obs_DD": 102.5,
+   "DD_cap": 153.75,
+   "consec_p95": 1.0,
+   "obs_consec": 1.0,
+   "worstpair_p95": -95.0,
+   "obs_worstpair": -95.0,
+   "PASS": true
+  },
+  "audit_worst_case": {
+   "kept": 218,
+   "win": 95.41284403669725,
+   "net": 2577.590428571366,
+   "leftover": 68.712361618044
+  }
+ }
+}

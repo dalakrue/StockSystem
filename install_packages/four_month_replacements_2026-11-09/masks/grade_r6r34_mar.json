@@ -1,0 +1,1037 @@
+{
+ "mon": "mar",
+ "round": 34,
+ "stamp": "Graded in frame on the stored pool of the previous build \u2014 NOT VALIDATED, NOT INSTALLABLE \u2014 anchor still owed. Sizing NOT graded.",
+ "record_DISC": {
+  "kept": 362,
+  "win": 98.89502762430939,
+  "net": 3829.728642857095,
+  "leftover": 78.92325885596922,
+  "epd": 2.011111111111111
+ },
+ "record_AUDIT": {
+  "kept": 84,
+  "win": 97.61904761904762,
+  "net": 760.3873571428387,
+  "leftover": 75.39132349396984,
+  "epd": 2.0
+ },
+ "base_label": "R3A08",
+ "base_DISC": {
+  "kept": 373,
+  "win": 98.12332439678283,
+  "net": 3789.2758571428076,
+  "leftover": 76.65449217733429,
+  "epd": 2.0722222222222224
+ },
+ "base_AUDIT": {
+  "kept": 84,
+  "win": 97.61904761904762,
+  "net": 760.3873571428387,
+  "leftover": 75.39132349396984,
+  "epd": 2.0
+ },
+ "designs": [
+  {
+   "design": "R34A01",
+   "desc": "minimal-change +2 adds",
+   "disc": {
+    "kept": 375,
+    "win": 98.13333333333333,
+    "net": 3858.8307142856647,
+    "leftover": 76.90171263496195,
+    "epd": 2.0833333333333335
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "added_total": 2,
+   "added_DISC": 2,
+   "added_AUDIT": 0,
+   "kept_total": 459,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3858.83 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +760.39 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 84 < 84 (epd 2.000 < 2.0, 0 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "DISC net"
+   ],
+   "mask_hash": "713f94b23ffdc2f9fcbf2279d0d4d8f8",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 71.54,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 24.4,
+     "q05": 72.6,
+     "PASS_middle": false
+    },
+    "dsr": 0.8649038096709247,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.36490380967092473,
+    "pbo": 0.3382009345794392,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R11 R11A01"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 84,
+    "win": 98.80952380952381,
+    "net": 810.3873571428377,
+    "leftover": 79.55992693802853
+   },
+   "dup_of": "R33 R33A01",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false
+  },
+  {
+   "design": "R34A02",
+   "desc": "minimal-change +4 adds",
+   "disc": {
+    "kept": 377,
+    "win": 97.87798408488064,
+    "net": 3823.3307142856647,
+    "leftover": 76.05026083628135,
+    "epd": 2.0944444444444446
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "added_total": 4,
+   "added_DISC": 4,
+   "added_AUDIT": 0,
+   "kept_total": 461,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3823.33 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +760.39 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 84 < 84 (epd 2.000 < 2.0, 0 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [],
+   "mask_hash": "233a1400c99a49ede70f7c7c93099ed2",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 74.95,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 16.16,
+     "q05": 71.43,
+     "PASS_middle": false
+    },
+    "dsr": 0.7735260853528136,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.27352608535281364,
+    "pbo": 1.0,
+    "red_disc_weeks": 1,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover",
+     "19_pbo"
+    ],
+    "battery_source": "R11 R11A02"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 84,
+    "win": 98.80952380952381,
+    "net": 810.3873571428377,
+    "leftover": 79.55992693802853
+   },
+   "dup_of": "R33 R33A02",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false
+  },
+  {
+   "design": "R34A03",
+   "desc": "minimal-change +5 adds",
+   "disc": {
+    "kept": 378,
+    "win": 97.88359788359789,
+    "net": 3861.271785714236,
+    "leftover": 76.19204840407022,
+    "epd": 2.1
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "added_total": 5,
+   "added_DISC": 5,
+   "added_AUDIT": 0,
+   "kept_total": 462,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3861.27 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +760.39 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 84 < 84 (epd 2.000 < 2.0, 0 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "DISC net"
+   ],
+   "mask_hash": "61f1733ac440d805e020ba4886dcc1fb",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 74.95,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 17.65,
+     "q05": 71.5,
+     "PASS_middle": false
+    },
+    "dsr": 0.7873872697631606,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.28738726976316065,
+    "pbo": 0.0,
+    "red_disc_weeks": 1,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R11 R11A03"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 84,
+    "win": 98.80952380952381,
+    "net": 810.3873571428377,
+    "leftover": 79.55992693802853
+   },
+   "dup_of": "R33 R33A03",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false
+  },
+  {
+   "design": "R34A04",
+   "desc": "minimal-change-plus +9 adds",
+   "disc": {
+    "kept": 381,
+    "win": 97.63779527559055,
+    "net": 3869.750357142806,
+    "leftover": 75.96693192072625,
+    "epd": 2.1166666666666667
+   },
+   "audit": {
+    "kept": 85,
+    "win": 96.47058823529412,
+    "net": 717.8873571428387,
+    "leftover": 71.17750902375921,
+    "epd": 2.0238095238095237
+   },
+   "added_total": 9,
+   "added_DISC": 8,
+   "added_AUDIT": 1,
+   "kept_total": 466,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3869.75 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +717.89 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 85 < 84 (epd 2.024 < 2.0, -1 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day",
+    "DISC net"
+   ],
+   "mask_hash": "2c24e4a1711646b3f0ce9ae5a3b00b22",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 58.54,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 15.22,
+     "q05": 71.86,
+     "PASS_middle": false
+    },
+    "dsr": 0.7827050691275279,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.2827050691275279,
+    "pbo": 0.21315092674315975,
+    "red_disc_weeks": 1,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R11 R11A04"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 85,
+    "win": 98.82352941176471,
+    "net": 817.3873571428377,
+    "leftover": 79.50563261612734
+   },
+   "dup_of": "R33 R33A04",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false
+  },
+  {
+   "design": "R34A05",
+   "desc": "minimal-change-plus +14 adds",
+   "disc": {
+    "kept": 383,
+    "win": 97.38903394255874,
+    "net": 3841.275178571378,
+    "leftover": 75.1655765091342,
+    "epd": 2.1277777777777778
+   },
+   "audit": {
+    "kept": 88,
+    "win": 94.31818181818183,
+    "net": 581.4456428571234,
+    "leftover": 57.024285537853025,
+    "epd": 2.0952380952380953
+   },
+   "added_total": 14,
+   "added_DISC": 10,
+   "added_AUDIT": 4,
+   "kept_total": 471,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3841.28 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +581.45 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 88 < 84 (epd 2.095 < 2.0, -4 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "AUDIT entries/day",
+    "DISC net"
+   ],
+   "mask_hash": "7640dfa3138f17413833544763f6b6a0",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 102.5,
+     "obs_DD": 102.5,
+     "DD_cap": 153.75,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -95.5,
+     "obs_worstpair": -95.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 9.91,
+     "q05": 70.8,
+     "PASS_middle": false
+    },
+    "dsr": 0.6690155801950912,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.16901558019509122,
+    "pbo": 0.9088345864661654,
+    "red_disc_weeks": 1,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover",
+     "19_pbo"
+    ],
+    "battery_source": "R11 R11A05"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 88,
+    "win": 97.72727272727273,
+    "net": 730.9456428571214,
+    "leftover": 69.67055983443333
+   },
+   "dup_of": "R33 R33A05",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false
+  },
+  {
+   "design": "R34A06",
+   "desc": "threshold ladder q50 (balanced weights; every leg >= its DISC-fitted q50 threshold), top 14 adds",
+   "disc": {
+    "kept": 383,
+    "win": 97.38903394255874,
+    "net": 3856.1253571428056,
+    "leftover": 75.52340160981407,
+    "epd": 2.1277777777777778
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "added_total": 10,
+   "added_DISC": 10,
+   "added_AUDIT": 0,
+   "kept_total": 467,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3856.13 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +760.39 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 84 < 84 (epd 2.000 < 2.0, 0 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "DISC net"
+   ],
+   "mask_hash": "2aca5d78efdda237ee28cfabc61d0074",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 65.5,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 11.29,
+     "q05": 71.42,
+     "PASS_middle": false
+    },
+    "dsr": 0.07054582321017779,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": -0.42945417678982223,
+    "pbo": 1.0,
+    "red_disc_weeks": 1,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover",
+     "20_dsr",
+     "19_pbo"
+    ],
+    "battery_source": "R33 R33A06"
+   },
+   "battery_pass": false,
+   "audit_worst_case": {
+    "kept": 84,
+    "win": 98.80952380952381,
+    "net": 810.3873571428377,
+    "leftover": 79.55992693802853
+   },
+   "dup_of": "R33 R33A06",
+   "category": "NEARLY IMPROVED",
+   "battery_fail_count": 1,
+   "improved_lowered": false
+  },
+  {
+   "design": "R34A07",
+   "desc": "threshold ladder q60 (balanced weights; every leg >= its DISC-fitted q60 threshold), top 14 adds",
+   "disc": {
+    "kept": 381,
+    "win": 97.63779527559055,
+    "net": 3869.750357142806,
+    "leftover": 75.96693192072625,
+    "epd": 2.1166666666666667
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "added_total": 8,
+   "added_DISC": 8,
+   "added_AUDIT": 0,
+   "kept_total": 465,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3869.75 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +760.39 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 84 < 84 (epd 2.000 < 2.0, 0 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "DISC net"
+   ],
+   "mask_hash": "73238d2edba091ba8e08dc9612bc5b6c",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 61.59,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 15.22,
+     "q05": 71.86,
+     "PASS_middle": false
+    },
+    "dsr": 0.0031849512956515346,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": -0.49681504870434845,
+    "pbo": 0.0,
+    "red_disc_weeks": 1,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover",
+     "20_dsr"
+    ],
+    "battery_source": "R15 R15A06"
+   },
+   "battery_pass": false,
+   "audit_worst_case": {
+    "kept": 84,
+    "win": 98.80952380952381,
+    "net": 810.3873571428377,
+    "leftover": 79.55992693802853
+   },
+   "dup_of": "R18 R18A06",
+   "category": "NEARLY IMPROVED",
+   "battery_fail_count": 1,
+   "improved_lowered": false
+  },
+  {
+   "design": "R34A08",
+   "desc": "threshold ladder q70 (balanced weights; every leg >= its DISC-fitted q70 threshold), top 14 adds",
+   "disc": {
+    "kept": 379,
+    "win": 97.62532981530343,
+    "net": 3818.130714285663,
+    "leftover": 75.79606039031367,
+    "epd": 2.1055555555555556
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "added_total": 6,
+   "added_DISC": 6,
+   "added_AUDIT": 0,
+   "kept_total": 463,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3818.13 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +760.39 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 84 < 84 (epd 2.000 < 2.0, 0 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [],
+   "mask_hash": "980de21da30c65e8ace6e3316315a066",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 63.05,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 12.7,
+     "q05": 71.67,
+     "PASS_middle": false
+    },
+    "dsr": 0.7293630642278579,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.2293630642278579,
+    "pbo": 0.0,
+    "red_disc_weeks": 1,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "R32 R32A08"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 84,
+    "win": 98.80952380952381,
+    "net": 810.3873571428377,
+    "leftover": 79.55992693802853
+   },
+   "dup_of": "R32 R32A08",
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": false
+  },
+  {
+   "design": "R34A09",
+   "desc": "threshold ladder q80 (balanced weights; every leg >= its DISC-fitted q80 threshold), top 14 adds",
+   "disc": {
+    "kept": 376,
+    "win": 98.13829787234043,
+    "net": 3836.77757142852,
+    "leftover": 76.76133665814517,
+    "epd": 2.088888888888889
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "added_total": 3,
+   "added_DISC": 3,
+   "added_AUDIT": 0,
+   "kept_total": 460,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3836.78 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +760.39 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 84 < 84 (epd 2.000 < 2.0, 0 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [
+    "DISC net"
+   ],
+   "mask_hash": "1c5d6acfe8a2a3a3679d9e49a2f2ad2c",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 49.99,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 20.94,
+     "q05": 73.02,
+     "PASS_middle": false
+    },
+    "dsr": 0.7705733000067547,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.2705733000067547,
+    "pbo": 1.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover",
+     "19_pbo"
+    ],
+    "battery_source": "fresh"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 84,
+    "win": 98.80952380952381,
+    "net": 810.3873571428377,
+    "leftover": 79.55992693802853
+   },
+   "dup_of": null,
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": true
+  },
+  {
+   "design": "R34A10",
+   "desc": "threshold ladder q90 (balanced weights; every leg >= its DISC-fitted q90 threshold), top 14 adds",
+   "disc": {
+    "kept": 374,
+    "win": 98.1283422459893,
+    "net": 3822.277571428521,
+    "leftover": 76.77074572712161,
+    "epd": 2.077777777777778
+   },
+   "audit": {
+    "kept": 84,
+    "win": 97.61904761904762,
+    "net": 760.3873571428387,
+    "leftover": 75.39132349396984,
+    "epd": 2.0
+   },
+   "added_total": 1,
+   "added_DISC": 1,
+   "added_AUDIT": 0,
+   "kept_total": 458,
+   "max_ratio": 1.0,
+   "screen_arms": {
+    "DISC net > 0": {
+     "pass": true,
+     "miss": "DISC net +3822.28 <= 0"
+    },
+    "AUDIT net > 0": {
+     "pass": true,
+     "miss": "AUDIT net +760.39 <= 0"
+    },
+    "AUDIT win >= 70%": {
+     "pass": true,
+     "miss": ""
+    },
+    "AUDIT epd >= 2.0": {
+     "pass": true,
+     "miss": "AUDIT kept 84 < 84 (epd 2.000 < 2.0, 0 trades short)"
+    },
+    "office added = 0": {
+     "pass": true,
+     "miss": ""
+    },
+    "exactly-3 form": {
+     "pass": true,
+     "miss": ""
+    },
+    "RR ratio <= 1.0": {
+     "pass": true,
+     "miss": "max post-cap ratio 1.0"
+    }
+   },
+   "screen_failed": [],
+   "screen_pass": true,
+   "improve_mark_stats": [],
+   "mask_hash": "36bf41e31bb7fba3b0619d42fee06cec",
+   "battery": {
+    "mc9": {
+     "P_profit": 1.0,
+     "DD_p95": 74.95,
+     "obs_DD": 58.54,
+     "DD_cap": 87.81,
+     "consec_p95": 1.0,
+     "obs_consec": 1.0,
+     "worstpair_p95": -35.5,
+     "obs_worstpair": -35.5,
+     "PASS": true
+    },
+    "lct": {
+     "P": 23.61,
+     "q05": 72.37,
+     "PASS_middle": false
+    },
+    "dsr": 0.7586165122562853,
+    "dsr_line": 0.5,
+    "dsr_trials": 11,
+    "dsr_gap": 0.25861651225628535,
+    "pbo": 0.0,
+    "red_disc_weeks": 0,
+    "ec22_failed": [
+     "13_lct",
+     "14_leftover"
+    ],
+    "battery_source": "fresh"
+   },
+   "battery_pass": true,
+   "audit_worst_case": {
+    "kept": 84,
+    "win": 98.80952380952381,
+    "net": 810.3873571428377,
+    "leftover": 79.55992693802853
+   },
+   "dup_of": null,
+   "category": "ACCEPTABLE (in frame)",
+   "improved_lowered": true
+  }
+ ],
+ "counts": {
+  "graded": 10,
+  "screen_survivors": 10,
+  "improved": 0,
+  "acceptable": 8,
+  "nearly": 2,
+  "no_improvement": 0,
+  "improve_mark": 7,
+  "improve_mark_exactly1": 5,
+  "improve_mark_exactly2": 2,
+  "improve_mark_3plus": 0,
+  "improved_overall": 0,
+  "improved_lowered": 2,
+  "battery_cache_hits": 8,
+  "battery_fresh": 2
+ },
+ "best_design": "R34A01"
+}

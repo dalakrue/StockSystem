@@ -180,6 +180,7 @@ SYSTEM_CYCLE87I = "cycle87i"   # R5 T4 (87h stream, worst DISC hour 19 UTC dropp
 SYSTEM_CYCLE87J = "cycle87j"   # RR 1:1 R20C09 (87i stream + 12h currency loss-cooldown + worst-5-day excision + partner union + exposure re-skip 5%, cap 1xTP) -- April IMPROVED system (2026-11-05 install, user order; VALIDATED, record work_rr1_validate/results/apr_VALIDATION.md; second-best slot stays empty)
 SYSTEM_CYCLE87K = "cycle87k"   # R108A09 April design install (2026-11-09, user order; built on Everest, anchor proof skipped on his scoped waiver) -- NOT VALIDATED
 SYSTEM_CYCLE87L = "cycle87l"   # M5 validation series M5R23A06 equation (membership-first fill, W2 base + eps 0.02 W8 jitter blend) -- April install (2026-11-11, user order; written from the validated design, not checked; check triple 22:30/23:30/00:30 MMT = (16, 17, 18) UTC)
+SYSTEM_CYCLE87M = "cycle87m"   # R448-PVHI ballot + protection-clause equation -- April install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R448-PVHI; live replay verified IDENTICAL (AUDIT 132 picks / 86 wins / +546.48); blocker: screen 6 wins short, §9 only at levels ≥301; check triple 22:30/23:30/00:30 MMT = (16, 17, 18) UTC)
 SYSTEM_CYCLE94G = "cycle94g"   # Plan E Dec E03 (94f stream + PCOL {GBPJPY,USDJPY} cap + CONS3 fills over 48 pool designs) -- December ACCEPT system (2026-11-01 install, validate-and-replace programme; second-best cycle94s kept)
 SYSTEM_CYCLE94H = "cycle94h"   # ROBUSTNESS-FIX D21-RC (94g+94s combined stream + exposure-skip 10% + stop cap 5xTP) -- December IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/dec_VALIDATION.md; second-best slot emptied -- combined stream internalised)
 SYSTEM_CYCLE94I = "cycle94i"   # RISKOPT5 C2 (94h stream + cluster-skip 12h + stop cap 4xTP) -- December IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_riskopt5_validate/results/dec_VALIDATION.md; second-best slot stays empty -- combined stream internalised)
@@ -209,7 +210,7 @@ MONTH_SYSTEMS = {
     1: SYSTEM_CYCLE60F,   # January -- RR 1:1 norm R9 C07 VALIDATED under the LOWERED STANDARD (2026-11-07 install; live-rules sizing re-grade)
     2: SYSTEM_CYCLE85N,   # February -- R478-DW campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
     3: SYSTEM_CYCLE86L,   # March -- stored R100A06 equation install (2026-11-11, user order; written from the validated design, not checked)
-    4: SYSTEM_CYCLE87L,   # April -- M5R23A06 equation install (2026-11-11, user order; written from the validated design, not checked)
+    4: SYSTEM_CYCLE87M,   # April -- R448-PVHI campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
     5: SYSTEM_CYCLE88P,   # May -- M5R23A02 equation install (2026-11-11, user order; written from the validated design, not checked)
     6: SYSTEM_CYCLE89T,   # June -- M5R23A01 equation install (2026-11-11, user order; written from the validated design, not checked; held cycle89s untouched)
     7: SYSTEM_CYCLE78I,   # July -- M5R71A01 MP-ALWAYS equation install (2026-11-11, user order; written from the validated design, not checked)
@@ -324,6 +325,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE87J: 150,   # RR 1:1 April validated (as 87i; month N carried)
     SYSTEM_CYCLE87K: 150,
     SYSTEM_CYCLE87L: 150,   # M5R23A06 April equation install (as 87k; month N carried)
+    SYSTEM_CYCLE87M: 150,   # R448-PVHI April campaign-champion install (as 87l; month N carried)
     SYSTEM_CYCLE86D: 86,   # R2 M18 March improved (month N carried from cycle86c)
     SYSTEM_CYCLE86E: 86,   # R3 D10 March improved (month N carried from cycle86d)
     SYSTEM_CYCLE86F: 86,   # RISK6 C10 March improved (month N carried from cycle86e)
@@ -445,6 +447,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE87K: 50.0,
     SYSTEM_CYCLE87L: 50.0,   # M5R23A06 April equation install (150 / 3)
     SYSTEM_CYCLE86D: 28.666666666666668,   # R2 M18 March improved (86 / 3)
+    SYSTEM_CYCLE87M: 50.0,   # R448-PVHI April campaign-champion install (150 / 3)
     SYSTEM_CYCLE86E: 28.666666666666668,   # R3 D10 March improved (86 / 3)
     SYSTEM_CYCLE86F: 28.666666666666668,   # RISK6 C10 March improved (86 / 3)
     SYSTEM_CYCLE86G: 28.666666666666668,   # SL4-10CYC D5 March validated (86 / 3)
@@ -486,7 +489,7 @@ def set_active_system(name: str) -> str:
     systems only; best-only since the 2026-11-06 update)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE87K, SYSTEM_CYCLE91T, SYSTEM_CYCLE89R, SYSTEM_CYCLE78F, SYSTEM_CYCLE78G, SYSTEM_CYCLE91U, SYSTEM_CYCLE60F, SYSTEM_CYCLE85K, SYSTEM_CYCLE78H, SYSTEM_CYCLE92F, SYSTEM_CYCLE94K, SYSTEM_CYCLE86J, SYSTEM_CYCLE94L, SYSTEM_CYCLE86K, SYSTEM_CYCLE85L, SYSTEM_CYCLE93AD, SYSTEM_CYCLE93AE, SYSTEM_CYCLE67R, SYSTEM_CYCLE85M, SYSTEM_CYCLE86L, SYSTEM_CYCLE87L, SYSTEM_CYCLE88P, SYSTEM_CYCLE89T, SYSTEM_CYCLE78I, SYSTEM_CYCLE91V, SYSTEM_CYCLE92G, SYSTEM_CYCLE92H, SYSTEM_CYCLE94M, SYSTEM_CYCLE85N,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE87K, SYSTEM_CYCLE91T, SYSTEM_CYCLE89R, SYSTEM_CYCLE78F, SYSTEM_CYCLE78G, SYSTEM_CYCLE91U, SYSTEM_CYCLE60F, SYSTEM_CYCLE85K, SYSTEM_CYCLE78H, SYSTEM_CYCLE92F, SYSTEM_CYCLE94K, SYSTEM_CYCLE86J, SYSTEM_CYCLE94L, SYSTEM_CYCLE86K, SYSTEM_CYCLE85L, SYSTEM_CYCLE93AD, SYSTEM_CYCLE93AE, SYSTEM_CYCLE67R, SYSTEM_CYCLE85M, SYSTEM_CYCLE86L, SYSTEM_CYCLE87L, SYSTEM_CYCLE88P, SYSTEM_CYCLE89T, SYSTEM_CYCLE78I, SYSTEM_CYCLE91V, SYSTEM_CYCLE92G, SYSTEM_CYCLE92H, SYSTEM_CYCLE94M, SYSTEM_CYCLE85N, SYSTEM_CYCLE87M,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
                          f"monthly best systems remain: "
                          f"{sorted(MONTH_SYSTEMS.values())}")
@@ -2555,6 +2558,7 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE85N,
                            SYSTEM_CYCLE86L,
                            SYSTEM_CYCLE87L,
+                           SYSTEM_CYCLE87M,
                            SYSTEM_CYCLE88P,
                            SYSTEM_CYCLE89T,
                            SYSTEM_CYCLE78I,
@@ -2808,6 +2812,8 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_CYCLE87K:
         return (16, 17, 18, 19)
     if _ACTIVE == SYSTEM_CYCLE87L:
+        return (16, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE87M:
         return (16, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE94I:
         return (10, 11, 13, 14)

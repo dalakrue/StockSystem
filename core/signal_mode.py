@@ -89,10 +89,12 @@ SYSTEM_CYCLE78G = "cycle78g"   # RR 1:1 NEW-COMBO R2 C04 (78e panel surface, KW 
 SYSTEM_CYCLE78H = "cycle78h"
 SYSTEM_CYCLE78I = "cycle78i"   # M5 validation series M5R71A01 MP-ALWAYS equation (sMC fill + unconditional second pick) -- July install (2026-11-11, user order; written from the validated design, not checked; check triple 21:30/23:30/00:30 MMT = (15, 17, 18) UTC)
 SYSTEM_CYCLE78J = "cycle78j"   # R440-WDIV-PROT governed wide-divergence + protection-clause equation -- July install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R440-WDIV-PROT; live replay verified IDENTICAL (AUDIT 138 picks / 93 wins / +507.06); blocker: screen 4 wins short (93-win ceiling); check triple 21:30/23:30/00:30 MMT = (15, 17, 18) UTC)
+SYSTEM_CYCLE78K = "cycle78k"   # RR12 JSTACK-N2 (RR 1:2 campaign R041, VALIDATED) -- July install (2026-11-14, user order; AUDIT 138 picks / 97.83% / +3,809.09; sizing N 103 carried from 78j; check triple 21:30/23:30/00:30 MMT = (15, 17, 18) UTC unchanged)
 SYSTEM_CYCLE67 = "cycle67"   # C67-04 -- August system
 SYSTEM_CYCLE67Q = "cycle67q"   # RR 1:1 R20C08 (67 stream; exposure-skip 6% + hour-1 excision + windowed week repair) -- August COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 4-check form + office rows + 20_dsr)
 SYSTEM_CYCLE67R = "cycle67r"   # M5 validation series M5R97A04 mined equation (DISC-fitted cell fill, WDIV first pick + STAB second pick) -- August install (2026-11-11, user order; written from the validated design, not checked; check triple 07:30/22:30/23:30 MMT = (1, 16, 17) UTC)
 SYSTEM_CYCLE67S = "cycle67s"   # FIXONLY fixed-exit repair of the 67r stream -- August install (2026-11-13, user order; VALIDATED (middle standard, family-scoped, FIX lineage), Round 3 campaign R3-057 champion; live replay verified EXACT on this machine (DISC 781 picks / 588 wins / +5,194.80; AUDIT 213 picks / 152 wins / +954.40; combined DD 257.50); check triple 07:30/22:30/23:30 MMT = (1, 16, 17) UTC)
+SYSTEM_CYCLE67T = "cycle67t"   # RR12 WSTACK-N3 (RR 1:2 campaign R047, VALIDATED) -- August install (2026-11-14, user order; AUDIT 219 picks / 96.35% / +6,240.66; sizing N 121 carried from 67s; check triple 07:30/22:30/23:30 MMT = (1, 16, 17) UTC unchanged)
 SYSTEM_CYCLE91 = "cycle91"   # C91-15 -- September system
 SYSTEM_CYCLE92 = "cycle92"   # C92-24 -- October system
 SYSTEM_CYCLE93 = "cycle93"   # C93-24 -- November system
@@ -113,11 +115,13 @@ SYSTEM_CYCLE60E = "cycle60e"   # RR 1:1 R18C12 (60c stream, 60d reference set; p
 # arm re-graded under the live-rules sizing law)
 SYSTEM_CYCLE60F = "cycle60f"
 SYSTEM_CYCLE60G = "cycle60g"   # R423-PJW live port (WDIV-NAME fill + protection clause P) -- January install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R423-PJW; live replay verified EXACT (AUDIT 180 picks / 110 wins / +1,003.20, combined DD 351.96); blocker: screen fails — AUDIT win 61.11% < 70% (110 of 126 wins); §9/EC22 battery never ran; check triple 17:30/19:30/23:30 MMT = (11, 13, 17) UTC)
+SYSTEM_CYCLE60H = "cycle60h"   # RR12 JSTACK-N2 (RR 1:2 campaign R037, VALIDATED) -- January install (2026-11-14, user order; AUDIT 181 picks / 87.29% / +7,422.16; sizing N 83 carried from 60g; check triple 17:30/19:30/23:30 MMT = (11, 13, 17) UTC unchanged)
 SYSTEM_CYCLE87B = "cycle87b"   # BRIEF21 C20a -- April IMPROVED system
 SYSTEM_CYCLE88N = "cycle88n"   # NEW8 Round-4 E07 -- May IMPROVED system
 SYSTEM_CYCLE88O = "cycle88o"   # RR 1:1 R11C01 (88n reference set + cycle88 second stream; exposure-skip 6%) -- May COMPOSITION install (2026-11-06, user order; only buildable May 1:1 form, zero mined rows; NEAREST -- blocked by check-count + EC22 13/14/15)
 SYSTEM_CYCLE88P = "cycle88p"   # M5 validation series M5R23A02 equation (weighted sMC fill (0.0612, 0.179, 0.7599)) -- May install (2026-11-11, user order; written from the validated design, not checked; check triple 06:30/22:30/00:30 MMT = (0, 16, 18) UTC -- REPLACES the old (10, 16, 18) May grid)
 SYSTEM_CYCLE88Q = "cycle88q"   # R492-ARB source-arbitration equation -- May install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R492-ARB; live replay verified PASS EXACT (AUDIT 135 picks / 98 wins / +1,133.90); blocker: battery refused (§9 DD-p95 tail, red weeks 9, DSR 0.18); check triple 06:30/22:30/00:30 MMT = (0, 16, 18) UTC)
+SYSTEM_CYCLE88R = "cycle88r"   # RR12 MSTACK-N3 (RR 1:2 campaign R045, VALIDATED) -- May install (2026-11-14, user order; AUDIT 134 picks / 98.51% / +4,732.90; sizing N 66 carried from 88q; check triple 06:30/22:30/00:30 MMT = (0, 16, 18) UTC unchanged)
 SYSTEM_CYCLE89N = "cycle89n"   # NEW8 Plan-B P07 -- June IMPROVED system
 SYSTEM_CYCLE91N = "cycle91n"   # NEW8 D26 + Plan-B P07 -- September IMPROVED system
 SYSTEM_CYCLE93N = "cycle93n"   # NEW8 Plan B-4 partner C16 -- November IMPROVED system
@@ -130,12 +134,14 @@ SYSTEM_CYCLE89Q = "cycle89q"   # RR 1:1 R18C14 (89p stream + exposure-skip 6% + 
 SYSTEM_CYCLE89R = "cycle89r"   # RR 1:1 R11C01 (89p stream + exposure-skip 6%, cap 1xTP) -- June IMPROVED system (2026-11-06 install, user order; VALIDATED under the LOWERED STANDARD, record work_rr1_lowered_validate/results/jun_R11C01_VALIDATION.md)
 SYSTEM_CYCLE89T = "cycle89t"   # M5 validation series M5R23A01 equation (plain sMC fill; validated under the red-week tolerance label) -- June install (2026-11-11, user order; written from the validated design, not checked; check triple 07:30/21:30/00:30 MMT = (1, 15, 18) UTC; the held cycle89s is a different design and is NOT touched by this install)
 SYSTEM_CYCLE89U = "cycle89u"   # R493-PPH union preference-table arbitration equation -- June install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R493-PPH; live replay verified PASS (AUDIT 123 picks / 86 wins / +485.04, 0 mismatches); blocker: screen 1 win short; check triple 07:30/21:30/00:30 MMT = (1, 15, 18) UTC)
+SYSTEM_CYCLE89V = "cycle89v"   # RR12 JuneStack-N4 (RR 1:2 campaign R049, VALIDATED) -- June install (2026-11-14, user order; AUDIT 123 picks / 75.61% / +2,070.16; sizing N 84 carried from 89u; check triple 07:30/21:30/00:30 MMT = (1, 15, 18) UTC unchanged)
 SYSTEM_CYCLE91P = "cycle91p"   # NEW8 Plan B-9 C02 + Plan C C06 -- September IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE91R = "cycle91r"   # B-13 Sep OfficeAlt (91q stream minus the 10 UTC office-hour slot + sep_b13o02 fills at the 18 UTC slot) -- September IMPROVE HUGE system (2026-11-01 install, validate-and-replace programme Step 4; second-best cycle91s kept)
 SYSTEM_CYCLE91T = "cycle91t"   # RR 1:1 R18C02 (91r stream + exposure-skip 8% + worst-10-day excision, cap 1xTP) -- September IMPROVED system (2026-11-05 install, user order; VALIDATED, record work_rr1_validate/results/sep_VALIDATION.md; second-best cycle91s kept)
 SYSTEM_CYCLE91U = "cycle91u"   # RR 1:1 NEW-COMBO R4 C05 (91r panel surface, KW base = R18C02 winner set (cycle91t chain) + admG union + wkx6 excision + winrep + maxopen 26 + exposure-skip 8.2%, cap 1xTP) -- September IMPROVED system (2026-11-06 install, user order; VALIDATED under the LOWERED STANDARD, record work_rr1_newcombo_r4/validate/sep/VALIDATION.md; CHECK HOURS CHANGE to (1, 11, 18) UTC)
 SYSTEM_CYCLE91V = "cycle91v"   # M5 validation series M5R23A01 equation (plain sMC fill) -- September install (2026-11-11, user order; written from the validated design, not checked; check triple 07:30/17:30/00:30 MMT = (1, 11, 18) UTC)
 SYSTEM_CYCLE91W = "cycle91w"   # R494-GAPW governed weighted-ballot gap-window equation -- September install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R494-GAPW; live replay verified IDENTICAL (AUDIT 129 picks / 96 wins / +692.10, combined DD 123.81); blocker: fails DSR check alone; check triple 07:30/17:30/00:30 MMT = (1, 11, 18) UTC)
+SYSTEM_CYCLE91X = "cycle91x"   # RR12 SSTACK-N2 (RR 1:2 campaign R033, VALIDATED) -- September install (2026-11-14, user order; AUDIT 132 picks / 81.82% / +2,555.33; sizing N 83 carried from 91w; check triple 07:30/17:30/00:30 MMT = (1, 11, 18) UTC unchanged)
 SYSTEM_CYCLE91Q = "cycle91q"   # R3 Sep R04 (drop 2 DISC-negative FB equations + 7-design pool cascade refill) -- September IMPROVED system (2026-10-31 install; over cycle91p)
 SYSTEM_CYCLE93Q = "cycle93q"   # P-BRANCH Plan C C10 -- November IMPROVED system (2026-10-28 update)
 SYSTEM_CYCLE91S = "cycle91s"   # NEW8 Plan B-9 Track B R14 -- September SECOND-BEST system (2026-10-28 update, user waiver)
@@ -154,6 +160,7 @@ SYSTEM_CYCLE93AC = "cycle93ac"   # RR 1:1 R11C01 (93aa stream, office-excised; e
 SYSTEM_CYCLE93AD = "cycle93ad"   # M5 validation series M5R143A02 UNION-GAP equation (base W2 score fill + mined gap layer) -- November install (2026-11-11, user order; written from the validated design, not checked; check triple 19:30/21:30/23:30 MMT = (13, 15, 17) UTC)
 SYSTEM_CYCLE93AE = "cycle93ae"   # November improvement round 5 B40__S20__winXband equation (narrow mid-band (0.40, 0.60) generation + step 2.0 + shrunk P(win) winXband ranking) -- November install (2026-11-11, user order; NOT VALIDATED — installed by user order 2026-11-11. Round verdict: NO IMPROVEMENT (AUDIT dense-stream win 61.5% vs 70% floor; §9/EC22 battery not run — screen stopped it). Written from November improvement round 5's filed design B40__S20__winXband. Check triple 19:30/21:30/23:30 MMT = (13, 15, 17) UTC)
 SYSTEM_CYCLE93AF = "cycle93af"   # R496-PARB protection-clause arbitration equation -- November install (2026-11-13, user order; VALIDATED (middle standard), Round 4 campaign champion R496-PARB; live replay verified EXACT (AUDIT 122 picks / 89 wins / +856.26, combined DD 138.87); check triple 19:30/21:30/23:30 MMT = (13, 15, 17) UTC)
+SYSTEM_CYCLE93AG = "cycle93ag"   # RR12 NovStack-N2 (RR 1:2 campaign R035, VALIDATED) -- November install (2026-11-14, user order; AUDIT 123 picks / 82.11% / +3,087.65; sizing N 100 carried from 93af; check triple 19:30/21:30/23:30 MMT = (13, 15, 17) UTC unchanged)
 SYSTEM_CYCLE94C = "cycle94c"   # P-REGIME Track A C07 + Plan C C07 -- December IMPROVED system (2026-10-29 update; over cycle94b+94s)
 SYSTEM_CYCLE85C = "cycle85c"   # R2 Plan A A16 (FB veto + PLANB P38 partner) -- February IMPROVED system (2026-10-30 install; over cycle85b)
 SYSTEM_CYCLE85D = "cycle85d"   # R2 Feb A16+X12 combined (85c + X12 cascade second-priority fills) -- February IMPROVED system (2026-10-30 install; over cycle85c)
@@ -168,6 +175,7 @@ SYSTEM_CYCLE85K = "cycle85k"
 SYSTEM_CYCLE85L = "cycle85l"   # R34A08 February design install (2026-11-09, user order; built on Everest, anchor proof skipped on his scoped waiver) -- NOT VALIDATED
 SYSTEM_CYCLE85M = "cycle85m"   # M5 validation series M5R73A02 ANCH-BROAD equation (sMC fill + anchored second pick) -- February install (2026-11-11, user order; written from the validated design, not checked; check triple 17:30/19:30/22:30 MMT = (11, 13, 16) UTC)
 SYSTEM_CYCLE85N = "cycle85n"   # R478-DW dual-priced-walk equation -- February install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R478-DW; live replay verified EXACT (AUDIT 123 picks / 75 wins / +338.09); blocker: screen 12 wins short + §9 tail +2.10; check triple 17:30/19:30/22:30 MMT = (11, 13, 16) UTC)
+SYSTEM_CYCLE85O = "cycle85o"   # RR12 FSTACK-N (RR 1:2 campaign R026, VALIDATED) -- February install (2026-11-14, user order; AUDIT 120 picks / 71.67% / +1,813.03; sizing N 104 carried from 85n; check triple 17:30/19:30/22:30 MMT = (11, 13, 16) UTC unchanged)
 SYSTEM_CYCLE85I = "cycle85i"   # 10CYC-R2 R9 (85g stream walked on the full (11,13,16) grid, the UTC-11 check never delivered, stop cap 4xTP) -- February IMPROVED system (2026-11-04 install, user order; VALIDATED, record work_r2_validate/results/feb_VALIDATION.md; February has no second-best; CHECK HOURS CHANGE to (13, 16) UTC = 19:30/22:30 MMT)
 SYSTEM_CYCLE92C = "cycle92c"   # R2 Oct C14 (PLANB9 C09 partner) -- October IMPROVED system (2026-10-30 install; over cycle92+92e)
 SYSTEM_CYCLE92D = "cycle92d"   # RR 1:1 R18C12 (92c stream; exposure-skip 6% + 4%) -- October COMPOSITION install (2026-11-06, user order; NEAREST -- blocked by 8_weeks ALONE)
@@ -178,6 +186,7 @@ SYSTEM_CYCLE92F = "cycle92f"
 SYSTEM_CYCLE92G = "cycle92g"   # M5 validation series M5R23A06 equation (weighted sMC fill (0.236, 0.1812, 0.5828), single pick) -- October install (2026-11-11, user order; written from the validated design, not checked; check triple 21:30/23:30/00:30 MMT = (15, 17, 18) UTC)
 SYSTEM_CYCLE92H = "cycle92h"   # October improvement round F08 win-gate equation (mined-cell win gate 0.55 + cell expectancy + component agreement) -- October install (2026-11-11, user order; NOT VALIDATED -- round verdict NO IMPROVEMENT: AUDIT dense-stream win 64.5% vs 70% floor, section 9/EC22 battery not run (screen stopped it); written from the round's filed design F08; check triple 21:30/23:30/00:30 MMT = (15, 17, 18) UTC)
 SYSTEM_CYCLE92I = "cycle92i"   # R442-ARB source-arbitration equation on the live on-the-hour basis -- October install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R442-ARB; live replay verified PASS (AUDIT 138 picks / 86 wins / +100.38, mask identical, combined DD 291.88); blocker: screen 13 wins short, §9 2.60×; check triple 21:30/23:30/00:30 MMT = (15, 17, 18) UTC)
+SYSTEM_CYCLE92J = "cycle92j"   # RR12 OSTACK-N4 (RR 1:2 campaign R048, VALIDATED) -- October install (2026-11-14, user order; AUDIT 138 picks / 95.65% / +3,687.16; sizing N 83 carried from 92i; check triple 21:30/23:30/00:30 MMT = (15, 17, 18) UTC unchanged)
 SYSTEM_CYCLE94D = "cycle94d"   # R2 Dec D19 (PC03 veto + dec_rg/dec_rgc refill + PLANB12C partner) -- December IMPROVED system (2026-10-30 install; over cycle94c)
 SYSTEM_CYCLE94E = "cycle94e"   # R3 Dec P15 (94d + PLANB4 cand1 partner cascade) -- December IMPROVED system (2026-10-31 install; over cycle94d)
 SYSTEM_CYCLE94F = "cycle94f"   # RISK6 Dec C15_FCAP_MERGED (94e stream + 18-design curated partner merge + high-vol EURJPY/EURUSD filter + R2D11 cap stack) -- December IMPROVED system (2026-11-01 install, user standing conditional order; second-best cycle94s kept)
@@ -189,6 +198,7 @@ SYSTEM_CYCLE87J = "cycle87j"   # RR 1:1 R20C09 (87i stream + 12h currency loss-c
 SYSTEM_CYCLE87K = "cycle87k"   # R108A09 April design install (2026-11-09, user order; built on Everest, anchor proof skipped on his scoped waiver) -- NOT VALIDATED
 SYSTEM_CYCLE87L = "cycle87l"   # M5 validation series M5R23A06 equation (membership-first fill, W2 base + eps 0.02 W8 jitter blend) -- April install (2026-11-11, user order; written from the validated design, not checked; check triple 22:30/23:30/00:30 MMT = (16, 17, 18) UTC)
 SYSTEM_CYCLE87M = "cycle87m"   # R448-PVHI ballot + protection-clause equation -- April install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R448-PVHI; live replay verified IDENTICAL (AUDIT 132 picks / 86 wins / +546.48); blocker: screen 6 wins short, §9 only at levels ≥301; check triple 22:30/23:30/00:30 MMT = (16, 17, 18) UTC)
+SYSTEM_CYCLE87N = "cycle87n"   # RR12 ASTACK-N (RR 1:2 campaign R028, VALIDATED) -- April install (2026-11-14, user order; AUDIT 131 picks / 79.39% / +2,995.41; sizing N 150 carried from 87m; check triple 22:30/23:30/00:30 MMT = (16, 17, 18) UTC unchanged)
 SYSTEM_CYCLE94G = "cycle94g"   # Plan E Dec E03 (94f stream + PCOL {GBPJPY,USDJPY} cap + CONS3 fills over 48 pool designs) -- December ACCEPT system (2026-11-01 install, validate-and-replace programme; second-best cycle94s kept)
 SYSTEM_CYCLE94H = "cycle94h"   # ROBUSTNESS-FIX D21-RC (94g+94s combined stream + exposure-skip 10% + stop cap 5xTP) -- December IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_rob_validate/results/dec_VALIDATION.md; second-best slot emptied -- combined stream internalised)
 SYSTEM_CYCLE94I = "cycle94i"   # RISKOPT5 C2 (94h stream + cluster-skip 12h + stop cap 4xTP) -- December IMPROVED system (2026-11-03 install, user order; VALIDATED, record work_riskopt5_validate/results/dec_VALIDATION.md; second-best slot stays empty -- combined stream internalised)
@@ -200,6 +210,7 @@ SYSTEM_CYCLE94K = "cycle94k"
 SYSTEM_CYCLE94L = "cycle94l"   # R44A10 December design install (2026-11-09, user order; built on Everest, anchor proof skipped on his scoped waiver) -- NOT VALIDATED
 SYSTEM_CYCLE94M = "cycle94m"   # M5 validation series M5R23A02 equation (weighted sMC fill (0.142, 0.6593, 0.1987)) -- December install (2026-11-11, user order; written from the validated design, not checked; check triple 17:30/19:30/20:30 MMT = (11, 13, 14) UTC)
 SYSTEM_CYCLE94N = "cycle94n"   # R444-ARB2 dual-source arbitration equation -- December install (2026-11-13, user order; NOT VALIDATED — Round 4 campaign champion R444-ARB2; live replay verified PASS (AUDIT 129 picks / 86 wins / +633.50, combined DD 125.00); blocker: screen fails (§9-clean books at 79–83 wins); check triple 17:30/19:30/20:30 MMT = (11, 13, 14) UTC)
+SYSTEM_CYCLE94O = "cycle94o"   # RR12 DSTACK-N (RR 1:2 campaign R024, VALIDATED) -- December install (2026-11-14, user order; AUDIT 136 picks / 77.21% / +2,722.70; sizing N 150 carried from 94n; check triple 17:30/19:30/20:30 MMT = (11, 13, 14) UTC unchanged)
 SYSTEM_CYCLE86D = "cycle86d"   # R2 Mar M18 (PC14 M15 veto + EURAUD h12 b6v slot veto + mar_rp refill) -- March IMPROVED system (2026-10-30 install; over cycle86c)
 SYSTEM_CYCLE86E = "cycle86e"   # R3 Mar D10 (86d + dual veto + cool1) -- March IMPROVED system (2026-10-31 install; over cycle86d)
 SYSTEM_CYCLE86F = "cycle86f"   # RISK6 Mar C10_EXC (86e construction with FB_EURGBP_h16_2 excised at the input; refill 20 vs 8) -- March IMPROVED system (2026-11-01 install, user standing conditional order; VALIDATED under the relaxed re-screen standard, LCT P 71.41; second-best cycle86s kept)
@@ -212,22 +223,23 @@ SYSTEM_CYCLE86I = "cycle86i"   # RR 1:1 R19C03 (86c panel, 86h reference set; ex
 SYSTEM_CYCLE86J = "cycle86j"
 SYSTEM_CYCLE86K = "cycle86k"   # R34A10 March design install (2026-11-09, user order; built on Everest, anchor proof skipped on his scoped waiver) -- NOT VALIDATED
 SYSTEM_CYCLE86L = "cycle86l"   # M5 validation series stored R100A06 kept set written as the plain sMC fill equation -- March install (2026-11-11, user order; written from the validated design, not checked; check triple 17:30/22:30/23:30 MMT = (11, 16, 17) UTC)
+SYSTEM_CYCLE86M = "cycle86m"   # RR12 CELLEXC-N3-STACK (RR 1:2 campaign R044, VALIDATED) -- March install (2026-11-14, user order; AUDIT 132 picks / 79.55% / +581.59; sizing N 86 carried from 86l; check triple 17:30/22:30/23:30 MMT = (11, 16, 17) UTC unchanged)
 SYSTEM_CYCLE87D = "cycle87d"   # R2 Apr C19 (FB_NZDUSD_h17_0 veto + q09/pvote/pvsb refill + PLANB9C partner) -- April IMPROVED system (2026-10-30 install; over cycle87c)
 SYSTEM_CYCLE87E = "cycle87e"   # R3 Apr R01 (87d minus the negative mom_EURAUD strategy + 6-design pool cascade refill) -- April IMPROVED system (2026-10-31 install; over cycle87d)
 
 MONTH_SYSTEMS = {
-    1: SYSTEM_CYCLE60G,   # January -- R423-PJW campaign-champion live-port install (2026-11-13, user order; NOT VALIDATED)
-    2: SYSTEM_CYCLE85N,   # February -- R478-DW campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
-    3: SYSTEM_CYCLE86L,   # March -- stored R100A06 equation install (2026-11-11, user order; written from the validated design, not checked)
-    4: SYSTEM_CYCLE87M,   # April -- R448-PVHI campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
-    5: SYSTEM_CYCLE88Q,   # May -- R492-ARB campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
-    6: SYSTEM_CYCLE89U,   # June -- R493-PPH campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
-    7: SYSTEM_CYCLE78J,   # July -- R440-WDIV-PROT campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
-    8: SYSTEM_CYCLE67S,   # August -- FIXONLY (R3-057) campaign-champion equation install (2026-11-13, user order; VALIDATED middle, family-scoped)
-    9: SYSTEM_CYCLE91W,   # September -- R494-GAPW campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
-    10: SYSTEM_CYCLE92I,   # October -- R442-ARB campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
-    11: SYSTEM_CYCLE93AF,   # November -- R496-PARB campaign-champion equation install (2026-11-13, user order; VALIDATED middle standard)
-    12: SYSTEM_CYCLE94N,   # December -- R444-ARB2 campaign-champion equation install (2026-11-13, user order; NOT VALIDATED)
+    1: SYSTEM_CYCLE60H,   # January -- RR12 JSTACK-N2 (R037, VALIDATED) install (2026-11-14, user order)
+    2: SYSTEM_CYCLE85O,   # February -- RR12 FSTACK-N (R026, VALIDATED) install (2026-11-14, user order)
+    3: SYSTEM_CYCLE86M,   # March -- RR12 CELLEXC-N3-STACK (R044, VALIDATED) install (2026-11-14, user order)
+    4: SYSTEM_CYCLE87N,   # April -- RR12 ASTACK-N (R028, VALIDATED) install (2026-11-14, user order)
+    5: SYSTEM_CYCLE88R,   # May -- RR12 MSTACK-N3 (R045, VALIDATED) install (2026-11-14, user order)
+    6: SYSTEM_CYCLE89V,   # June -- RR12 JuneStack-N4 (R049, VALIDATED) install (2026-11-14, user order)
+    7: SYSTEM_CYCLE78K,   # July -- RR12 JSTACK-N2 (R041, VALIDATED) install (2026-11-14, user order)
+    8: SYSTEM_CYCLE67T,   # August -- RR12 WSTACK-N3 (R047, VALIDATED) install (2026-11-14, user order)
+    9: SYSTEM_CYCLE91X,   # September -- RR12 SSTACK-N2 (R033, VALIDATED) install (2026-11-14, user order)
+    10: SYSTEM_CYCLE92J,   # October -- RR12 OSTACK-N4 (R048, VALIDATED) install (2026-11-14, user order)
+    11: SYSTEM_CYCLE93AG,   # November -- RR12 NovStack-N2 (R035, VALIDATED) install (2026-11-14, user order)
+    12: SYSTEM_CYCLE94O,   # December -- RR12 DSTACK-N (R024, VALIDATED) install (2026-11-14, user order)
 }
 
 # Original verified Best N per system (full values, pre-division).
@@ -248,10 +260,12 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE78H: 103,
     SYSTEM_CYCLE78I: 103,   # M5R71A01 July equation install (as 78h; month N carried)
     SYSTEM_CYCLE78J: 103,   # R440-WDIV-PROT July campaign-champion install (as 78i; month N carried)
+    SYSTEM_CYCLE78K: 103,   # RR12 JSTACK-N2 July install (as 78j; month N carried)
     SYSTEM_CYCLE67: 121,   # C67-04 -- August
     SYSTEM_CYCLE67Q: 121,   # RR 1:1 August composition install (as 67; month N carried)
     SYSTEM_CYCLE67R: 121,   # M5R97A04 August equation install (as 67q; month N carried)
     SYSTEM_CYCLE67S: 121,   # FIXONLY August campaign-champion install (as 67r; month N carried)
+    SYSTEM_CYCLE67T: 121,   # RR12 WSTACK-N3 August install (as 67s; month N carried)
     SYSTEM_CYCLE91: 83,   # C91-15 -- September
     SYSTEM_CYCLE92: 83,   # C92-24 -- October
     SYSTEM_CYCLE93: 83,   # C93-24 -- November
@@ -266,11 +280,13 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE60E: 83,   # RR 1:1 January composition install (as 60d; month N carried)
     SYSTEM_CYCLE60F: 83,
     SYSTEM_CYCLE60G: 83,   # R423-PJW January campaign-champion install (as 60f; month N carried)
+    SYSTEM_CYCLE60H: 83,   # RR12 JSTACK-N2 January install (as 60g; month N carried)
     SYSTEM_CYCLE87B: 104,   # BRIEF21 C20a April improved (as C87-24)
     SYSTEM_CYCLE88N: 66,   # NEW8 E07 May improved (as C88-03)
     SYSTEM_CYCLE88O: 66,   # RR 1:1 May composition install (as 88n; month N carried)
     SYSTEM_CYCLE88P: 66,   # M5R23A02 May equation install (as 88o; month N carried)
     SYSTEM_CYCLE88Q: 66,   # R492-ARB May campaign-champion install (as 88p; month N carried)
+    SYSTEM_CYCLE88R: 66,   # RR12 MSTACK-N3 May install (as 88q; month N carried)
     SYSTEM_CYCLE89N: 84,   # NEW8 P07 June improved (as C89-21)
     SYSTEM_CYCLE91N: 83,   # NEW8 D26+P07 September improved (as C91-15)
     SYSTEM_CYCLE93N: 83,   # NEW8 B-4 partner November improved (as C93-24)
@@ -283,6 +299,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE89R: 84,   # RR 1:1 June validated, lowered standard (month N carried)
     SYSTEM_CYCLE89T: 84,   # M5R23A01 June equation install (as 89r; month N carried)
     SYSTEM_CYCLE89U: 84,   # R493-PPH June campaign-champion install (as 89t; month N carried)
+    SYSTEM_CYCLE89V: 84,   # RR12 JuneStack-N4 June install (as 89u; month N carried)
     SYSTEM_CYCLE91P: 83,   # NEW8 Plan B-9 September improved (as C91-15)
     SYSTEM_CYCLE91Q: 83,   # R3 R04 September improved (month N carried from cycle91p)
     SYSTEM_CYCLE91R: 83,   # B-13 OfficeAlt September (month N carried from cycle91q)
@@ -290,6 +307,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE91U: 83,   # RR 1:1 NEW-COMBO September validated under the LOWERED STANDARD (as 91r; month N carried)
     SYSTEM_CYCLE91V: 83,   # M5R23A01 September equation install (as 91u; month N carried)
     SYSTEM_CYCLE91W: 83,   # R494-GAPW September campaign-champion install (as 91v; month N carried)
+    SYSTEM_CYCLE91X: 83,   # RR12 SSTACK-N2 September install (as 91w; month N carried)
     SYSTEM_CYCLE93Q: 83,   # P-BRANCH Plan C November improved (as C93-24)
     SYSTEM_CYCLE91S: 83,   # NEW8 Plan B-9 Track B September second best (as C91-15)
     SYSTEM_CYCLE94S: 105,   # NEW8 Plan B-6 SB-REDO December second best (as C94-23)
@@ -307,6 +325,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE93AD: 100,   # M5R143A02 November equation install (as 93ac; month N carried)
     SYSTEM_CYCLE93AE: 100,   # B40__S20__winXband November improvement-round install (as 93ad; month N carried)
     SYSTEM_CYCLE93AF: 100,   # R496-PARB November campaign-champion install (as 93ae; month N carried)
+    SYSTEM_CYCLE93AG: 100,   # RR12 NovStack-N2 November install (as 93af; month N carried)
     SYSTEM_CYCLE94C: 105,   # P-REGIME Track A + Plan C December improved (as C94-23)
     SYSTEM_CYCLE85C: 104,   # R2 A16 February improved (as C85-23)
     SYSTEM_CYCLE85D: 104,   # R2 A16+X12 February improved (month N carried from cycle85c)
@@ -318,6 +337,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE85L: 104,
     SYSTEM_CYCLE85M: 104,   # M5R73A02 February equation install (as 85l; month N carried)
     SYSTEM_CYCLE85N: 104,   # R478-DW February campaign-champion install (as 85m; month N carried)
+    SYSTEM_CYCLE85O: 104,   # RR12 FSTACK-N February install (as 85n; month N carried)
     SYSTEM_CYCLE85I: 104,   # 10CYC-R2 R9 February validated (as 85g; month N carried)
     SYSTEM_CYCLE92C: 83,   # R2 C14 October improved (as C92-24)
     SYSTEM_CYCLE92D: 83,   # RR 1:1 October composition install (as 92c; month N carried)
@@ -325,6 +345,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE92G: 83,   # M5R23A06 October equation install (as 92f; month N carried)
     SYSTEM_CYCLE92H: 83,   # F08 October improvement-round install (as 92g; month N carried)
     SYSTEM_CYCLE92I: 83,   # R442-ARB October campaign-champion install (as 92h; month N carried)
+    SYSTEM_CYCLE92J: 83,   # RR12 OSTACK-N4 October install (as 92i; month N carried)
     SYSTEM_CYCLE94D: 105,   # R2 D19 December improved (as C94-23)
     SYSTEM_CYCLE94E: 105,   # R3 P15 December improved (month N carried from cycle94d)
     SYSTEM_CYCLE94F: 105,   # RISK6 C15 December improved (month N carried from cycle94e)
@@ -336,6 +357,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE94L: 150,
     SYSTEM_CYCLE94M: 150,   # M5R23A02 December equation install (as 94l; month N carried)
     SYSTEM_CYCLE94N: 150,   # R444-ARB2 December campaign-champion install (as 94m; month N carried)
+    SYSTEM_CYCLE94O: 150,   # RR12 DSTACK-N December install (as 94n; month N carried)
     SYSTEM_CYCLE87F: 150,   # Plan E E04 April accepted (own sizing-grid pass)
     SYSTEM_CYCLE87G: 150,   # SL4-10CYC D6 April validated (as 87f; month N carried)
     SYSTEM_CYCLE87H: 150,   # 10CYC-R2 R1 April validated (as 87g; month N carried)
@@ -344,6 +366,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE87K: 150,
     SYSTEM_CYCLE87L: 150,   # M5R23A06 April equation install (as 87k; month N carried)
     SYSTEM_CYCLE87M: 150,   # R448-PVHI April campaign-champion install (as 87l; month N carried)
+    SYSTEM_CYCLE87N: 150,   # RR12 ASTACK-N April install (as 87m; month N carried)
     SYSTEM_CYCLE86D: 86,   # R2 M18 March improved (month N carried from cycle86c)
     SYSTEM_CYCLE86E: 86,   # R3 D10 March improved (month N carried from cycle86d)
     SYSTEM_CYCLE86F: 86,   # RISK6 C10 March improved (month N carried from cycle86e)
@@ -353,6 +376,7 @@ SYSTEM_BEST_N_FULL = {
     SYSTEM_CYCLE86J: 86,
     SYSTEM_CYCLE86K: 86,
     SYSTEM_CYCLE86L: 86,   # R100A06 March equation install (as 86k; month N carried)
+    SYSTEM_CYCLE86M: 86,   # RR12 CELLEXC-N3-STACK March install (as 86l; month N carried)
     SYSTEM_CYCLE87D: 104,   # R2 C19 April improved (month N carried from cycle87c)
     SYSTEM_CYCLE87E: 104,   # R3 R01 April improved (month N carried from cycle87d)
 }
@@ -379,10 +403,12 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE78I: 34.333333333333336,   # M5R71A01 July equation install (103 / 3)
     SYSTEM_CYCLE67: 40.333333333333336,   # C67-04 -- August (121 / 3)
     SYSTEM_CYCLE78J: 34.333333333333336,   # R440-WDIV-PROT July campaign-champion install (103 / 3)
+    SYSTEM_CYCLE78K: 34.333333333333336,   # RR12 JSTACK-N2 July install (103 / 3)
     SYSTEM_CYCLE67Q: 40.333333333333336,   # RR 1:1 August composition install (121 / 3)
     SYSTEM_CYCLE67R: 40.333333333333336,   # M5R97A04 August equation install (121 / 3)
     SYSTEM_CYCLE91: 27.666666666666668,   # C91-15 -- September (83 / 3)
     SYSTEM_CYCLE67S: 40.333333333333336,   # FIXONLY August campaign-champion install (121 / 3)
+    SYSTEM_CYCLE67T: 40.333333333333336,   # RR12 WSTACK-N3 August install (121 / 3)
     SYSTEM_CYCLE92: 27.666666666666668,   # C92-24 -- October (83 / 3)
     SYSTEM_CYCLE93: 27.666666666666668,   # C93-24 -- November (83 / 3)
     SYSTEM_CYCLE94: 35.0,   # C94-23 -- December (105 / 3)
@@ -397,11 +423,13 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE60F: 27.666666666666668,
     SYSTEM_CYCLE87B: 34.666666666666664,   # BRIEF21 C20a April improved (104 / 3)
     SYSTEM_CYCLE60G: 27.666666666666668,   # R423-PJW January campaign-champion install (83 / 3)
+    SYSTEM_CYCLE60H: 27.666666666666668,   # RR12 JSTACK-N2 January install (83 / 3)
     SYSTEM_CYCLE88N: 22.0,   # NEW8 E07 May improved (66 / 3)
     SYSTEM_CYCLE88O: 22.0,   # RR 1:1 May composition install (66 / 3)
     SYSTEM_CYCLE88P: 22.0,   # M5R23A02 May equation install (66 / 3)
     SYSTEM_CYCLE89N: 28.0,   # NEW8 P07 June improved (84 / 3)
     SYSTEM_CYCLE88Q: 22.0,   # R492-ARB May campaign-champion install (66 / 3)
+    SYSTEM_CYCLE88R: 22.0,   # RR12 MSTACK-N3 May install (66 / 3)
     SYSTEM_CYCLE91N: 27.666666666666668,   # NEW8 D26+P07 September improved (83 / 3)
     SYSTEM_CYCLE93N: 27.666666666666668,   # NEW8 B-4 partner November improved (83 / 3)
     SYSTEM_CYCLE93P: 27.666666666666668,   # NEW8 B-7 November improved (83 / 3)
@@ -414,6 +442,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE89T: 28.0,   # M5R23A01 June equation install (84 / 3)
     SYSTEM_CYCLE91P: 27.666666666666668,   # NEW8 Plan B-9 September improved (83 / 3)
     SYSTEM_CYCLE89U: 28.0,   # R493-PPH June campaign-champion install (84 / 3)
+    SYSTEM_CYCLE89V: 28.0,   # RR12 JuneStack-N4 June install (84 / 3)
     SYSTEM_CYCLE91Q: 27.666666666666668,   # R3 R04 September improved (83 / 3)
     SYSTEM_CYCLE91R: 27.666666666666668,   # B-13 OfficeAlt September (83 / 3)
     SYSTEM_CYCLE91T: 27.666666666666668,   # RR 1:1 September validated (83 / 3)
@@ -421,6 +450,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE91V: 27.666666666666668,   # M5R23A01 September equation install (83 / 3)
     SYSTEM_CYCLE93Q: 27.666666666666668,   # P-BRANCH Plan C November improved (83 / 3)
     SYSTEM_CYCLE91W: 27.666666666666668,   # R494-GAPW September campaign-champion install (83 / 3)
+    SYSTEM_CYCLE91X: 27.666666666666668,   # RR12 SSTACK-N2 September install (83 / 3)
     SYSTEM_CYCLE91S: 27.666666666666668,   # NEW8 Plan B-9 Track B September second best (83 / 3)
     SYSTEM_CYCLE94S: 35.0,   # NEW8 Plan B-6 SB-REDO December second best (105 / 3)
     SYSTEM_CYCLE86S: 28.666666666666668,   # NEW8 Plan B-6 SB-REDO March second best (86 / 3)
@@ -438,6 +468,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE93AE: 33.333333333333336,   # B40__S20__winXband November improvement-round install (100 / 3)
     SYSTEM_CYCLE94C: 35.0,   # P-REGIME Track A + Plan C December improved (105 / 3)
     SYSTEM_CYCLE93AF: 33.333333333333336,   # R496-PARB November campaign-champion install (100 / 3)
+    SYSTEM_CYCLE93AG: 33.333333333333336,   # RR12 NovStack-N2 November install (100 / 3)
     SYSTEM_CYCLE85C: 34.666666666666664,   # R2 A16 February improved (104 / 3)
     SYSTEM_CYCLE85D: 34.666666666666664,   # R2 A16+X12 February improved (104 / 3)
     SYSTEM_CYCLE85E: 34.666666666666664,   # R3 C01 February improved (104 / 3)
@@ -449,6 +480,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE85M: 34.666666666666664,   # M5R73A02 February equation install (104 / 3)
     SYSTEM_CYCLE85I: 34.666666666666664,   # 10CYC-R2 R9 February validated (104 / 3)
     SYSTEM_CYCLE85N: 34.666666666666664,   # R478-DW February campaign-champion install (104 / 3)
+    SYSTEM_CYCLE85O: 34.666666666666664,   # RR12 FSTACK-N February install (104 / 3)
     SYSTEM_CYCLE92C: 27.666666666666668,   # R2 C14 October improved (83 / 3)
     SYSTEM_CYCLE92D: 27.666666666666668,   # RR 1:1 October composition install (83 / 3)
     SYSTEM_CYCLE92F: 27.666666666666668,
@@ -456,6 +488,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE92H: 27.666666666666668,   # F08 October improvement-round install (83 / 3)
     SYSTEM_CYCLE94D: 35.0,   # R2 D19 December improved (105 / 3)
     SYSTEM_CYCLE92I: 27.666666666666668,   # R442-ARB October campaign-champion install (83 / 3)
+    SYSTEM_CYCLE92J: 27.666666666666668,   # RR12 OSTACK-N4 October install (83 / 3)
     SYSTEM_CYCLE94E: 35.0,   # R3 P15 December improved (105 / 3)
     SYSTEM_CYCLE94F: 35.0,   # RISK6 C15 December improved (105 / 3)
     SYSTEM_CYCLE94G: 50.0,   # Plan E E03 December accepted (150 / 3)
@@ -467,6 +500,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE94M: 50.0,   # M5R23A02 December equation install (150 / 3)
     SYSTEM_CYCLE87F: 50.0,   # Plan E E04 April accepted (150 / 3)
     SYSTEM_CYCLE94N: 50.0,   # R444-ARB2 December campaign-champion install (150 / 3)
+    SYSTEM_CYCLE94O: 50.0,   # RR12 DSTACK-N December install (150 / 3)
     SYSTEM_CYCLE87G: 50.0,   # SL4-10CYC D6 April validated (150 / 3)
     SYSTEM_CYCLE87H: 50.0,   # 10CYC-R2 R1 April validated (150 / 3)
     SYSTEM_CYCLE87I: 50.0,   # R5 April validated (150 / 3)
@@ -475,6 +509,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE87L: 50.0,   # M5R23A06 April equation install (150 / 3)
     SYSTEM_CYCLE86D: 28.666666666666668,   # R2 M18 March improved (86 / 3)
     SYSTEM_CYCLE87M: 50.0,   # R448-PVHI April campaign-champion install (150 / 3)
+    SYSTEM_CYCLE87N: 50.0,   # RR12 ASTACK-N April install (150 / 3)
     SYSTEM_CYCLE86E: 28.666666666666668,   # R3 D10 March improved (86 / 3)
     SYSTEM_CYCLE86F: 28.666666666666668,   # RISK6 C10 March improved (86 / 3)
     SYSTEM_CYCLE86G: 28.666666666666668,   # SL4-10CYC D5 March validated (86 / 3)
@@ -483,6 +518,7 @@ SYSTEM_BEST_N = {
     SYSTEM_CYCLE86J: 28.666666666666668,
     SYSTEM_CYCLE86K: 28.666666666666668,
     SYSTEM_CYCLE86L: 28.666666666666668,   # R100A06 March equation install (86 / 3)
+    SYSTEM_CYCLE86M: 28.666666666666668,   # RR12 CELLEXC-N3-STACK March install (86 / 3)
     SYSTEM_CYCLE87D: 34.666666666666664,   # R2 C19 April improved (104 / 3)
     SYSTEM_CYCLE87E: 34.666666666666664,   # R3 R01 April improved (104 / 3)
 }
@@ -516,7 +552,7 @@ def set_active_system(name: str) -> str:
     systems only; best-only since the 2026-11-06 update)."""
     global _ACTIVE
     n = str(name).strip().lower()
-    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE87K, SYSTEM_CYCLE91T, SYSTEM_CYCLE89R, SYSTEM_CYCLE78F, SYSTEM_CYCLE78G, SYSTEM_CYCLE91U, SYSTEM_CYCLE60F, SYSTEM_CYCLE85K, SYSTEM_CYCLE78H, SYSTEM_CYCLE92F, SYSTEM_CYCLE94K, SYSTEM_CYCLE86J, SYSTEM_CYCLE94L, SYSTEM_CYCLE86K, SYSTEM_CYCLE85L, SYSTEM_CYCLE93AD, SYSTEM_CYCLE93AE, SYSTEM_CYCLE67R, SYSTEM_CYCLE85M, SYSTEM_CYCLE86L, SYSTEM_CYCLE87L, SYSTEM_CYCLE88P, SYSTEM_CYCLE89T, SYSTEM_CYCLE78I, SYSTEM_CYCLE91V, SYSTEM_CYCLE92G, SYSTEM_CYCLE92H, SYSTEM_CYCLE94M, SYSTEM_CYCLE85N, SYSTEM_CYCLE87M, SYSTEM_CYCLE88Q, SYSTEM_CYCLE89U, SYSTEM_CYCLE78J, SYSTEM_CYCLE67S, SYSTEM_CYCLE91W, SYSTEM_CYCLE92I, SYSTEM_CYCLE93AF, SYSTEM_CYCLE94N, SYSTEM_CYCLE60G,):
+    if n not in (SYSTEM_CYCLE60, SYSTEM_CYCLE85, SYSTEM_CYCLE86, SYSTEM_CYCLE87, SYSTEM_CYCLE88, SYSTEM_CYCLE89, SYSTEM_CYCLE78, SYSTEM_CYCLE67, SYSTEM_CYCLE91, SYSTEM_CYCLE92, SYSTEM_CYCLE93, SYSTEM_CYCLE94, SYSTEM_CYCLE93B, SYSTEM_CYCLE94B, SYSTEM_CYCLE60B, SYSTEM_CYCLE87B, SYSTEM_CYCLE88N, SYSTEM_CYCLE89N, SYSTEM_CYCLE91N, SYSTEM_CYCLE93N, SYSTEM_CYCLE92E, SYSTEM_CYCLE67P, SYSTEM_CYCLE93P, SYSTEM_CYCLE85B, SYSTEM_CYCLE86B, SYSTEM_CYCLE87C, SYSTEM_CYCLE89P, SYSTEM_CYCLE91P, SYSTEM_CYCLE93Q, SYSTEM_CYCLE91S, SYSTEM_CYCLE94S, SYSTEM_CYCLE86S, SYSTEM_CYCLE93S, SYSTEM_CYCLE87S, SYSTEM_CYCLE86C, SYSTEM_CYCLE93R, SYSTEM_CYCLE93T, SYSTEM_CYCLE94C, SYSTEM_CYCLE85C, SYSTEM_CYCLE92C, SYSTEM_CYCLE94D, SYSTEM_CYCLE86D, SYSTEM_CYCLE87D, SYSTEM_CYCLE85D, SYSTEM_CYCLE78D, SYSTEM_CYCLE85E, SYSTEM_CYCLE86E, SYSTEM_CYCLE94E, SYSTEM_CYCLE87E, SYSTEM_CYCLE91Q, SYSTEM_CYCLE94F, SYSTEM_CYCLE85F, SYSTEM_CYCLE86F, SYSTEM_CYCLE78E, SYSTEM_CYCLE94G, SYSTEM_CYCLE87F, SYSTEM_CYCLE91R, SYSTEM_CYCLE93W, SYSTEM_CYCLE94H, SYSTEM_CYCLE94I, SYSTEM_CYCLE60C, SYSTEM_CYCLE85G, SYSTEM_CYCLE93X, SYSTEM_CYCLE86G, SYSTEM_CYCLE87G, SYSTEM_CYCLE60D, SYSTEM_CYCLE93AA, SYSTEM_CYCLE85I, SYSTEM_CYCLE87H, SYSTEM_CYCLE87I, SYSTEM_CYCLE86H, SYSTEM_CYCLE87J, SYSTEM_CYCLE89Q, SYSTEM_CYCLE87K, SYSTEM_CYCLE91T, SYSTEM_CYCLE89R, SYSTEM_CYCLE78F, SYSTEM_CYCLE78G, SYSTEM_CYCLE91U, SYSTEM_CYCLE60F, SYSTEM_CYCLE85K, SYSTEM_CYCLE78H, SYSTEM_CYCLE92F, SYSTEM_CYCLE94K, SYSTEM_CYCLE86J, SYSTEM_CYCLE94L, SYSTEM_CYCLE86K, SYSTEM_CYCLE85L, SYSTEM_CYCLE93AD, SYSTEM_CYCLE93AE, SYSTEM_CYCLE67R, SYSTEM_CYCLE85M, SYSTEM_CYCLE86L, SYSTEM_CYCLE87L, SYSTEM_CYCLE88P, SYSTEM_CYCLE89T, SYSTEM_CYCLE78I, SYSTEM_CYCLE91V, SYSTEM_CYCLE92G, SYSTEM_CYCLE92H, SYSTEM_CYCLE94M, SYSTEM_CYCLE85N, SYSTEM_CYCLE87M, SYSTEM_CYCLE88Q, SYSTEM_CYCLE89U, SYSTEM_CYCLE78J, SYSTEM_CYCLE67S, SYSTEM_CYCLE91W, SYSTEM_CYCLE92I, SYSTEM_CYCLE93AF, SYSTEM_CYCLE94N, SYSTEM_CYCLE60G, SYSTEM_CYCLE60H, SYSTEM_CYCLE85O, SYSTEM_CYCLE86M, SYSTEM_CYCLE87N, SYSTEM_CYCLE88R, SYSTEM_CYCLE89V, SYSTEM_CYCLE78K, SYSTEM_CYCLE67T, SYSTEM_CYCLE91X, SYSTEM_CYCLE92J, SYSTEM_CYCLE93AG, SYSTEM_CYCLE94O,):
         raise ValueError(f"unknown system {name!r}; only the 12 standing "
                          f"monthly best systems remain: "
                          f"{sorted(MONTH_SYSTEMS.values())}")
@@ -2571,6 +2607,7 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE78G,
                            SYSTEM_CYCLE60F,
                            SYSTEM_CYCLE60G,
+                           SYSTEM_CYCLE60H,
                            SYSTEM_CYCLE85K,
                            SYSTEM_CYCLE85L,
                            SYSTEM_CYCLE78H,
@@ -2582,26 +2619,37 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
                            SYSTEM_CYCLE93AD,
                            SYSTEM_CYCLE93AE,
                            SYSTEM_CYCLE93AF,
+                           SYSTEM_CYCLE93AG,
                            SYSTEM_CYCLE67R,
                            SYSTEM_CYCLE67S,
+                           SYSTEM_CYCLE67T,
                            SYSTEM_CYCLE85M,
                            SYSTEM_CYCLE85N,
+                           SYSTEM_CYCLE85O,
                            SYSTEM_CYCLE86L,
+                           SYSTEM_CYCLE86M,
                            SYSTEM_CYCLE87L,
                            SYSTEM_CYCLE87M,
+                           SYSTEM_CYCLE87N,
                            SYSTEM_CYCLE88P,
                            SYSTEM_CYCLE88Q,
+                           SYSTEM_CYCLE88R,
                            SYSTEM_CYCLE89T,
                            SYSTEM_CYCLE89U,
+                           SYSTEM_CYCLE89V,
                            SYSTEM_CYCLE78I,
                            SYSTEM_CYCLE78J,
+                           SYSTEM_CYCLE78K,
                            SYSTEM_CYCLE91V,
                            SYSTEM_CYCLE91W,
+                           SYSTEM_CYCLE91X,
                            SYSTEM_CYCLE92G,
                            SYSTEM_CYCLE92H,
                            SYSTEM_CYCLE92I,
+                           SYSTEM_CYCLE92J,
                            SYSTEM_CYCLE94M,
-                           SYSTEM_CYCLE94N):
+                           SYSTEM_CYCLE94N,
+                           SYSTEM_CYCLE94O):
             # Ledger-aware systems: the full entries for a check
             # include stateful legs (BRIEF21 C20a re-entries, or
             # the NEW8 merged-walk candidate picks), which only
@@ -2701,9 +2749,13 @@ def active_check_hours():
         return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE78J:
         return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE78K:
+        return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE60F:
         return (11, 13, 17)
     if _ACTIVE == SYSTEM_CYCLE60G:
+        return (11, 13, 17)
+    if _ACTIVE == SYSTEM_CYCLE60H:
         return (11, 13, 17)
     if _ACTIVE == SYSTEM_CYCLE85K:
         return (11, 13, 16)
@@ -2713,6 +2765,8 @@ def active_check_hours():
         return (11, 13, 16)
     if _ACTIVE == SYSTEM_CYCLE85N:
         return (11, 13, 16)
+    if _ACTIVE == SYSTEM_CYCLE85O:
+        return (11, 13, 16)
     if _ACTIVE == SYSTEM_CYCLE92F:
         return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE92G:
@@ -2720,6 +2774,8 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_CYCLE92H:
         return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE92I:
+        return (15, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE92J:
         return (15, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE94K:
         return (10, 11, 13, 14)
@@ -2729,11 +2785,15 @@ def active_check_hours():
         return (11, 13, 14)
     if _ACTIVE == SYSTEM_CYCLE94N:
         return (11, 13, 14)
+    if _ACTIVE == SYSTEM_CYCLE94O:
+        return (11, 13, 14)
     if _ACTIVE == SYSTEM_CYCLE67:
         return (1, 6, 16, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE67R:
         return (1, 16, 17)
     if _ACTIVE == SYSTEM_CYCLE67S:
+        return (1, 16, 17)
+    if _ACTIVE == SYSTEM_CYCLE67T:
         return (1, 16, 17)
     if _ACTIVE == SYSTEM_CYCLE91:
         return (1, 10, 11)
@@ -2765,6 +2825,8 @@ def active_check_hours():
         return (0, 16, 18)
     if _ACTIVE == SYSTEM_CYCLE88Q:
         return (0, 16, 18)
+    if _ACTIVE == SYSTEM_CYCLE88R:
+        return (0, 16, 18)
     if _ACTIVE == SYSTEM_CYCLE89N:
         return (1, 15, 18)
     if _ACTIVE == SYSTEM_CYCLE91N:
@@ -2789,6 +2851,8 @@ def active_check_hours():
         return (1, 15, 18)
     if _ACTIVE == SYSTEM_CYCLE89U:
         return (1, 15, 18)
+    if _ACTIVE == SYSTEM_CYCLE89V:
+        return (1, 15, 18)
     if _ACTIVE == SYSTEM_CYCLE91P:
         return (1, 10, 11)
     if _ACTIVE == SYSTEM_CYCLE91R:
@@ -2800,6 +2864,8 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_CYCLE91V:
         return (1, 11, 18)
     if _ACTIVE == SYSTEM_CYCLE91W:
+        return (1, 11, 18)
+    if _ACTIVE == SYSTEM_CYCLE91X:
         return (1, 11, 18)
     if _ACTIVE == SYSTEM_CYCLE91Q:
         return (1, 2, 10, 11)
@@ -2828,6 +2894,8 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_CYCLE93AE:
         return (13, 15, 17)
     if _ACTIVE == SYSTEM_CYCLE93AF:
+        return (13, 15, 17)
+    if _ACTIVE == SYSTEM_CYCLE93AG:
         return (13, 15, 17)
     if _ACTIVE == SYSTEM_CYCLE93W:
         return (9, 10, 13, 15)
@@ -2869,6 +2937,8 @@ def active_check_hours():
         return (16, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE87M:
         return (16, 17, 18)
+    if _ACTIVE == SYSTEM_CYCLE87N:
+        return (16, 17, 18)
     if _ACTIVE == SYSTEM_CYCLE94I:
         return (10, 11, 13, 14)
     if _ACTIVE == SYSTEM_CYCLE94H:
@@ -2886,6 +2956,8 @@ def active_check_hours():
     if _ACTIVE == SYSTEM_CYCLE86K:
         return (11, 16, 17)
     if _ACTIVE == SYSTEM_CYCLE86L:
+        return (11, 16, 17)
+    if _ACTIVE == SYSTEM_CYCLE86M:
         return (11, 16, 17)
     if _ACTIVE == SYSTEM_CYCLE86G:
         return (11, 16, 17)

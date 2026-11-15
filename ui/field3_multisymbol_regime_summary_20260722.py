@@ -2983,6 +2983,21 @@ _CYCLE22_REQUIRED_SYMBOLS = tuple(_CYCLE22_PANEL_SYMBOLS)
 _C22_N_FETCH = len(_CYCLE22_PANEL_SYMBOLS)
 _C22_N_REQ = len(_CYCLE22_REQUIRED_SYMBOLS)
 
+# Readiness floor for the COMBINED panels (2026-11-16 fix, user
+# order): a check window evaluates when at least this many of the
+# 28 required symbols carry the check candles; a symbol without
+# them simply cannot fire and shows as "No data" in the check
+# ranking. 20 is the line the app already uses elsewhere for an
+# incomplete calculation (the eval-history table calls a window
+# with < 20 evaluable symbols "Calculation incomplete"). Below
+# the floor the window is still voided as a data failure, exactly
+# as before: a broadly failed fetch leaves far fewer than 20
+# symbols with the exact check candles, so broken data can never
+# fire a window. (Before this fix the combined gate demanded all
+# 28, and one symbol's missing candle -- GBPNZD on 2016-12-26 --
+# voided whole windows the module itself would fill.)
+_C22_MIN_EVALUABLE = 20
+
 
 def _normalize_c22_frame(df):
     from core.check_candle_runtime import normalize_ohlc
@@ -3615,9 +3630,19 @@ def _payload_data_failed(payload):
     needed candles), as opposed to a genuine no-signal window. Such payloads
     must not block re-evaluation of the same window once data recovers --
     before this check, a 0/28 payload was stored and the panel never retried
-    that window (the 2026-10-22 00:30 MMT incident)."""
+    that window (the 2026-10-22 00:30 MMT incident).
+
+    The "too few" line is the payload's own readiness floor when it
+    carries one: combined-panel payloads stamp "min_evaluable"
+    (_C22_MIN_EVALUABLE, 2026-11-16 fix) because their windows may
+    legitimately evaluate with a few symbols missing; every other
+    payload keeps the strict all-28 line it has always used."""
     try:
-        return isinstance(payload, dict) and (int(payload.get("n_evaluable", 0)) < len(_CYCLE22_REQUIRED_SYMBOLS)
+        if not isinstance(payload, dict):
+            return False
+        floor = int(payload.get("min_evaluable",
+                                len(_CYCLE22_REQUIRED_SYMBOLS)))
+        return (int(payload.get("n_evaluable", 0)) < floor
             or bool((payload.get("diag") or {}).get("evaluation_error")))
     except Exception:
         return False
@@ -10533,8 +10558,24 @@ def _evaluate_combined_window(state, month, hour_utc, day=None):
             except Exception:
                 pass
             return None
+        # Readiness (2026-11-16 fix, user order): count the symbols
+        # carrying BOTH check candles up front. At or above the
+        # _C22_MIN_EVALUABLE floor the window evaluates with the
+        # symbols that have data -- a symbol without the candles
+        # cannot fire and shows as "No data" in the ranking --
+        # instead of the old all-28 gate, under which one symbol's
+        # missing candle (GBPNZD, 2016-12-26) voided whole windows.
+        # Below the floor the window is voided as a data failure,
+        # exactly as before (same ValueError the strict gate raised).
         try:
-            _require_check_frames(frames, need)
+            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
+            n_evaluable = sum(1 for f in frames.values()
+                              if f is not None and _need_set.issubset(set(f.index)))
+        except Exception:
+            n_evaluable = 0
+        try:
+            if n_evaluable < _C22_MIN_EVALUABLE:
+                raise ValueError("check_candles_incomplete")
             entries, source = evaluate_combined_entries(
                 month, frames, check_label, open_symbols=())
             _require_evaluator_status(entries)
@@ -10557,13 +10598,7 @@ def _evaluate_combined_window(state, month, hour_utc, day=None):
                 disp["Quick look"] = source_label + " \u00b7 " + disp["Quick look"].astype(str)
             except Exception:
                 pass
-        try:
-            _need_set = set(_pd.Timestamp(c).tz_localize(None) for c in need)
-            n_evaluable = sum(1 for f in frames.values()
-                              if f is not None and _need_set.issubset(set(f.index)))
-        except Exception:
-            n_evaluable = 0
-        if n_evaluable < len(_CYCLE22_REQUIRED_SYMBOLS) or diag.get("evaluation_error"):
+        if n_evaluable < _C22_MIN_EVALUABLE or diag.get("evaluation_error"):
             entries = _pd.DataFrame()
             if "disp" in locals():
                 disp = _pd.DataFrame()
@@ -10573,6 +10608,7 @@ def _evaluate_combined_window(state, month, hour_utc, day=None):
             "evaluated_at_utc": now_utc,
             "n_symbols": len(frames),
             "n_evaluable": n_evaluable,
+            "min_evaluable": _C22_MIN_EVALUABLE,
             "diag": diag,
             "signals": disp,
             "source": source,
@@ -11084,10 +11120,16 @@ def _compute_precheck_possible(month, state):
         try:
             from core.precheck_day_log import record_precheck as _record_pc
             from core.signal_mode import MONTH_SYSTEMS as _MS_PC
-            _chk_mmt = (_pd.Timestamp(check_label)
-                        + _pd.Timedelta(hours=6, minutes=30))
+            # Check-name unification (2026-11-16 fix, user order):
+            # record the check by its locked grid label -- the entry
+            # hour converted to MMT by _c22_window_mmt_label, the
+            # same label the signals table uses -- NOT by the :30
+            # evaluation label + 6:30, which recorded November's
+            # 19:30 check as "20:00".
+            _chk_mmt = _c22_window_mmt_label(
+                int(_pd.Timestamp(check_label).hour))
             _record_pc(
-                int(month), _MS_PC[int(month)], _chk_mmt.strftime("%H:%M"),
+                int(month), _MS_PC[int(month)], _chk_mmt,
                 result.get("status"),
                 symbol=result.get("symbol"),
                 direction=result.get("direction"))
@@ -11109,7 +11151,13 @@ def _render_precheck_possible(st, state, month):
         if result is None:
             return
         _check = _pd.Timestamp(result["check_label"])
-        _mmt = (_check + _pd.Timedelta(hours=6, minutes=30)).strftime("%H:%M")
+        # Check-name unification (2026-11-16 fix, user order): name
+        # the check by its locked grid label -- the entry hour
+        # converted to MMT via _c22_window_mmt_label, exactly as
+        # the signals table names the same window -- not by the
+        # :30 evaluation label + 6:30 (which read "20:00" for the
+        # 19:30 check).
+        _mmt = _c22_window_mmt_label(int(_check.hour))
         if result["status"] == "pick":
             _d = int(result.get("dec", 5))
             _src = ""

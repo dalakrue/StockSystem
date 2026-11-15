@@ -2797,10 +2797,11 @@ def _cycle12_next_check(now_utc):
         from core.signal_mode import active_check_hours
         ALL_CHECK_HOURS = active_check_hours()
     except Exception:
-        try:
-            from core.cycle12_best import ALL_CHECK_HOURS
-        except Exception:
-            ALL_CHECK_HOURS = (6, 10, 11, 12, 13, 18)
+        # No honest hardcoded fallback exists (hours differ per month);
+        # signal_mode is the only source. Empty -> caller gets None.
+        ALL_CHECK_HOURS = ()
+    if not ALL_CHECK_HOURS:
+        return None
     cand = []
     base = now_utc.replace(second=0, microsecond=0)
     for day_off in (0, 1, 2, 3):
@@ -2815,10 +2816,12 @@ def _cycle12_next_check(now_utc):
 
 
 def _render_cycle12_check_banner(st, candle_age_txt=None):
-    """Light entry-window banner above the Cycle 22 signals table.
+    """Light entry-window banner above the signals table.
 
-    Entry windows are H:00:00-H:04:59 UTC on the active system's hours
-    (cycle22: 10/11/13/18 -> 16:30/17:30/19:30/00:30 MMT). The backtest
+    Entry windows are H:00:00-H:04:59 UTC on the ACTIVE system's check
+    hours (core.signal_mode.active_check_hours -- the current registry
+    cycle of the month; e.g. November cycle93ah: 13/15/17 UTC ->
+    19:30/21:30/23:30 MMT). The backtest
     enters at the H:00 candle open, so the banner, clocks and countdown
     all follow H:00 -- never H:30.
 
@@ -2835,8 +2838,20 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
         now = _dt.datetime.now(_dt.timezone.utc)
         now_pd = _pd.Timestamp(now)
         in_window = bool(is_active_check_time(now_pd))
-        sys_name = {"cycle22": "Cycle 22", "cycle18": "Cycle 18",
-                    "ft-c01": "FT-C01", "cycle24": "Cycle 24"}.get(active_system(), active_system())
+        sys_name = {
+            "cycle60i": "January \u00b7 Cycle 60I (JSTACK-F8)",
+            "cycle85p": "February \u00b7 Cycle 85P (FSTACK-F40)",
+            "cycle86n": "March \u00b7 Cycle 86N (CELLEXC-F40)",
+            "cycle87o": "April \u00b7 Cycle 87O (ASTACK-F20)",
+            "cycle88s": "May \u00b7 Cycle 88S (MSTACK-F12)",
+            "cycle89w": "June \u00b7 Cycle 89W (JuneStack-F30)",
+            "cycle78l": "July \u00b7 Cycle 78L (JSTACK-F15)",
+            "cycle67u": "August \u00b7 Cycle 67U (WSTACK-F60)",
+            "cycle91y": "September \u00b7 Cycle 91Y (SSTACK-F20)",
+            "cycle92k": "October \u00b7 Cycle 92K (OSTACK-F8)",
+            "cycle93ah": "November \u00b7 Cycle 93AH (NovStack-F60)",
+            "cycle94p": "December \u00b7 Cycle 94P (DSTACK-F8)",
+        }.get(active_system(), active_system())
 
         def _mmt(ts):
             t = _pd.Timestamp(ts)
@@ -3013,7 +3028,24 @@ def _c22_window_mmt_label(hour_utc):
 
 def _fetch_c22_frames(state, need_candles=None):
     from core.check_candle_runtime import fetch_check_frames
-    return fetch_check_frames(state, _CYCLE22_PANEL_SYMBOLS, need_candles)
+    frames, latest, diag = fetch_check_frames(
+        state, _CYCLE22_PANEL_SYMBOLS, need_candles)
+    # 2026-11-16 repair (app migration): the ported cycle modules
+    # convert the H1 frames through _bars_from_frame, which reads the
+    # time from a "Datetime" COLUMN; the runtime's normalized frames
+    # carry the time only in the index, so every module silently
+    # received zero H1 bars and no panel could ever fire. Hand the
+    # evaluation copies that carry the time as a column as well
+    # (index kept -- readiness, candle-age and display code all read
+    # the index exactly as before). Same repair on the M15 route:
+    # see fetch_m15_frames in core/check_candle_runtime.py.
+    out = {}
+    for _sym, _f in (frames or {}).items():
+        try:
+            out[_sym] = _f.assign(Datetime=_f.index)
+        except Exception:
+            out[_sym] = _f
+    return out, latest, diag
 
 
 def _require_check_frames(frames, need):
@@ -3419,18 +3451,13 @@ def _latest_entry_window_utc(now_utc, hours=None):
 
 def _month_check_hours_utc(month):
     """The month's panel check hours (UTC), from the same source the
-    panels themselves use: _combined_check_hours for the ten
-    cfg months; the best cycle's CHECK_HOURS for February
-    (cycle85g) and July (cycle78e)."""
+    panels themselves use: _combined_check_hours over _COMBINED_CFG,
+    whose hours modules are the CURRENT registry cycle of every month
+    (all twelve months are cfg months since the 2026-11-16 migration;
+    February and July read cycle85p / cycle78l like the rest)."""
     month = int(month)
     if month in _COMBINED_CFG:
         return tuple(_combined_check_hours(month))
-    if month == 2:
-        from core.cycle85g_best import CYCLE85G_CHECK_HOURS
-        return tuple(CYCLE85G_CHECK_HOURS)
-    if month == 7:
-        from core.cycle78e_best import CYCLE78E_CHECK_HOURS
-        return tuple(CYCLE78E_CHECK_HOURS)
     return ()
 
 
@@ -10279,16 +10306,24 @@ def _auto_refresh_field3(st: Any, interval_ms: int = 30_000) -> None:
 # label every pick "BEST". The _COMBINED_CFG name is kept for
 # session-state compatibility; its entries now carry the CURRENT
 # registry cycle ids/labels/hours and no second-best fields.
+#
+# 2026-11-16 migration (user order): every entry was re-pointed at the
+# CURRENT RR 1:3 registry cycle (ids, labels and CHECK_HOURS modules) --
+# the old entries named pre-RR-1:3 cycles and, for Apr/May/Aug/Sep/Nov/
+# Dec, resolved to outdated check-hour grids. February and July gained
+# combined panels here and evaluate the current registry best through
+# core.signal_mode like the other ten months (their legacy in-app
+# renderers remain in this file but are no longer wired to the page).
 # ============================================================================
 
 _COMBINED_CFG = {
     1: {
         "sysid": "cycle60bcombined",
         "month_name": "January",
-        "best_id": "cycle60d",
-        "best_label": "Cycle 60D (DIFFWAY W1 VALIDATED)",
-        "hours_mod": "core.cycle60d_best",
-        "hours_attr": "CYCLE60D_CHECK_HOURS",
+        "best_id": "cycle60i",
+        "best_label": "Cycle 60I (JSTACK-F8, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle60i_best",
+        "hours_attr": "CYCLE60I_CHECK_HOURS",
         "state_key": "combined_jan_signals_latest_v1",
         "age_key": "combined_jan_candle_age_txt",
         "diag_key": "combined_jan_signals_diag_v1",
@@ -10299,10 +10334,10 @@ _COMBINED_CFG = {
     3: {
         "sysid": "cycle86bcombined",
         "month_name": "March",
-        "best_id": "cycle86h",
-        "best_label": "Cycle 86H (FIX-BLOCKED S18-M1 VALIDATED)",
-        "hours_mod": "core.cycle86h_best",
-        "hours_attr": "CYCLE86H_CHECK_HOURS",
+        "best_id": "cycle86n",
+        "best_label": "Cycle 86N (CELLEXC-F40, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle86n_best",
+        "hours_attr": "CYCLE86N_CHECK_HOURS",
         "state_key": "combined_mar_signals_latest_v1",
         "age_key": "combined_mar_candle_age_txt",
         "diag_key": "combined_mar_signals_diag_v1",
@@ -10313,10 +10348,10 @@ _COMBINED_CFG = {
     4: {
         "sysid": "cycle87bcombined",
         "month_name": "April",
-        "best_id": "cycle87j",
-        "best_label": "Cycle 87J (RR 1:1 R20C09 VALIDATED)",
-        "hours_mod": "core.cycle87j_best",
-        "hours_attr": "CYCLE87J_CHECK_HOURS",
+        "best_id": "cycle87o",
+        "best_label": "Cycle 87O (ASTACK-F20, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle87o_best",
+        "hours_attr": "CYCLE87O_CHECK_HOURS",
         "state_key": "combined_apr_signals_latest_v1",
         "age_key": "combined_apr_candle_age_txt",
         "diag_key": "combined_apr_signals_diag_v1",
@@ -10327,10 +10362,10 @@ _COMBINED_CFG = {
     9: {
         "sysid": "cycle91combined",
         "month_name": "September",
-        "best_id": "cycle91t",
-        "best_label": "Cycle 91T (RR 1:1 R18C02 VALIDATED)",
-        "hours_mod": "core.cycle91t_best",
-        "hours_attr": "CYCLE91T_CHECK_HOURS",
+        "best_id": "cycle91y",
+        "best_label": "Cycle 91Y (SSTACK-F20, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle91y_best",
+        "hours_attr": "CYCLE91Y_CHECK_HOURS",
         "state_key": "combined_sep_signals_latest_v1",
         "age_key": "combined_sep_candle_age_txt",
         "diag_key": "combined_sep_signals_diag_v1",
@@ -10341,10 +10376,10 @@ _COMBINED_CFG = {
     11: {
         "sysid": "cycle93pcombined",
         "month_name": "November",
-        "best_id": "cycle93aa",
-        "best_label": "Cycle 93AA (10CYC-R2 R1 VALIDATED)",
-        "hours_mod": "core.cycle93aa_best",
-        "hours_attr": "CYCLE93AA_CHECK_HOURS",
+        "best_id": "cycle93ah",
+        "best_label": "Cycle 93AH (NovStack-F60, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle93ah_best",
+        "hours_attr": "CYCLE93AH_CHECK_HOURS",
         "state_key": "combined_nov_signals_latest_v1",
         "age_key": "combined_nov_candle_age_txt",
         "diag_key": "combined_nov_signals_diag_v1",
@@ -10355,10 +10390,10 @@ _COMBINED_CFG = {
     12: {
         "sysid": "cycle94combined",
         "month_name": "December",
-        "best_id": "cycle94i",
-        "best_label": "Cycle 94I (RISKOPT5 C2 VALIDATED)",
-        "hours_mod": "core.cycle94i_best",
-        "hours_attr": "CYCLE94I_CHECK_HOURS",
+        "best_id": "cycle94p",
+        "best_label": "Cycle 94P (DSTACK-F8, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle94p_best",
+        "hours_attr": "CYCLE94P_CHECK_HOURS",
         "state_key": "combined_dec_signals_latest_v1",
         "age_key": "combined_dec_candle_age_txt",
         "diag_key": "combined_dec_signals_diag_v1",
@@ -10369,10 +10404,10 @@ _COMBINED_CFG = {
     5: {
         "sysid": "cycle88ncombined",
         "month_name": "May",
-        "best_id": "cycle88n",
-        "best_label": "Cycle 88N (C88-03 + NEW8 E07 IMPROVED)",
-        "hours_mod": "core.cycle88n_best",
-        "hours_attr": "CYCLE88N_CHECK_HOURS",
+        "best_id": "cycle88s",
+        "best_label": "Cycle 88S (MSTACK-F12, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle88s_best",
+        "hours_attr": "CYCLE88S_CHECK_HOURS",
         "state_key": "combined_may_signals_latest_v1",
         "age_key": "combined_may_candle_age_txt",
         "diag_key": "combined_may_signals_diag_v1",
@@ -10383,10 +10418,10 @@ _COMBINED_CFG = {
     6: {
         "sysid": "cycle89ncombined",
         "month_name": "June",
-        "best_id": "cycle89q",
-        "best_label": "Cycle 89Q (RR 1:1 R18C14 VALIDATED)",
-        "hours_mod": "core.cycle89q_best",
-        "hours_attr": "CYCLE89Q_CHECK_HOURS",
+        "best_id": "cycle89w",
+        "best_label": "Cycle 89W (JuneStack-F30, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle89w_best",
+        "hours_attr": "CYCLE89W_CHECK_HOURS",
         "state_key": "combined_jun_signals_latest_v1",
         "age_key": "combined_jun_candle_age_txt",
         "diag_key": "combined_jun_signals_diag_v1",
@@ -10397,10 +10432,10 @@ _COMBINED_CFG = {
     8: {
         "sysid": "cycle67combined",
         "month_name": "August",
-        "best_id": "cycle67",
-        "best_label": "Cycle 67 (C67-04)",
-        "hours_mod": "core.cycle67_best",
-        "hours_attr": "CYCLE67_CHECK_HOURS",
+        "best_id": "cycle67u",
+        "best_label": "Cycle 67U (WSTACK-F60, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle67u_best",
+        "hours_attr": "CYCLE67U_CHECK_HOURS",
         "state_key": "combined_aug_signals_latest_v1",
         "age_key": "combined_aug_candle_age_txt",
         "diag_key": "combined_aug_signals_diag_v1",
@@ -10411,16 +10446,44 @@ _COMBINED_CFG = {
     10: {
         "sysid": "cycle92combined",
         "month_name": "October",
-        "best_id": "cycle92c",
-        "best_label": "Cycle 92C (C92-24 + C155 dual-pick + PLANB9 C09 partner IMPROVED, R2 C14)",
-        "hours_mod": "core.cycle92_best",
-        "hours_attr": "CYCLE92_CHECK_HOURS",
+        "best_id": "cycle92k",
+        "best_label": "Cycle 92K (OSTACK-F8, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle92k_best",
+        "hours_attr": "CYCLE92K_CHECK_HOURS",
         "state_key": "combined_oct_signals_latest_v1",
         "age_key": "combined_oct_candle_age_txt",
         "diag_key": "combined_oct_signals_diag_v1",
         "fail_key": "combined_oct_signals_fail_v1",
         "dl_base": "october_combined_signals",
         "sheet": "OctCombined",
+    },
+    2: {
+        "sysid": "cycle85pcombined",
+        "month_name": "February",
+        "best_id": "cycle85p",
+        "best_label": "Cycle 85P (FSTACK-F40, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle85p_best",
+        "hours_attr": "CYCLE85P_CHECK_HOURS",
+        "state_key": "combined_feb_signals_latest_v1",
+        "age_key": "combined_feb_candle_age_txt",
+        "diag_key": "combined_feb_signals_diag_v1",
+        "fail_key": "combined_feb_signals_fail_v1",
+        "dl_base": "february_combined_signals",
+        "sheet": "FebCombined",
+    },
+    7: {
+        "sysid": "cycle78lcombined",
+        "month_name": "July",
+        "best_id": "cycle78l",
+        "best_label": "Cycle 78L (JSTACK-F15, RR 1:3, VALIDATED)",
+        "hours_mod": "core.cycle78l_best",
+        "hours_attr": "CYCLE78L_CHECK_HOURS",
+        "state_key": "combined_jul_signals_latest_v1",
+        "age_key": "combined_jul_candle_age_txt",
+        "diag_key": "combined_jul_signals_diag_v1",
+        "fail_key": "combined_jul_signals_fail_v1",
+        "dl_base": "july_combined_signals",
+        "sheet": "JulCombined",
     },
 }
 
@@ -10577,9 +10640,12 @@ def _render_combined_signals_table(st, state, month):
     try:
         hours = _combined_check_hours(month)
     except Exception:
-        hours = {1: (11, 13, 17), 3: (11, 16, 17),
-                 4: (16, 17, 18, 19), 9: (1, 2, 11, 18),
-                 11: (9, 10, 13, 15), 12: (10, 11, 13, 14)}[month]
+        # Last-resort grid = the CURRENT registry check hours (UTC),
+        # one triple per month (2026-11-16 migration).
+        hours = {1: (11, 13, 17), 2: (11, 13, 16), 3: (11, 16, 17),
+                 4: (16, 17, 18), 5: (0, 16, 18), 6: (1, 15, 18),
+                 7: (15, 17, 18), 8: (1, 16, 17), 9: (1, 11, 18),
+                 10: (15, 17, 18), 11: (13, 15, 17), 12: (11, 13, 14)}[month]
     try:
         now_utc = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
         payload = state.get(cfg["state_key"])
@@ -10670,9 +10736,8 @@ def _render_combined_signals_table(st, state, month):
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             else:
                 st.info(f"No entry at this check -- the Best system "
-                        f"({cfg['best_label']}) had no entry, and the "
-                        f"Second-Best system ({cfg['second_label']}) had "
-                        "no entry either.")
+                        f"({cfg['best_label']}) had no entry. "
+                        "(Best only: there is no second-best system.)")
         return payload
     except Exception:
         _p = state.get(_COMBINED_CFG[month]["state_key"])
@@ -10717,6 +10782,14 @@ def _render_aug_combined_signals_table(st, state):
 
 def _render_oct_combined_signals_table(st, state):
     return _render_combined_signals_table(st, state, 10)
+
+
+def _render_feb_combined_signals_table(st, state):
+    return _render_combined_signals_table(st, state, 2)
+
+
+def _render_jul_combined_signals_table(st, state):
+    return _render_combined_signals_table(st, state, 7)
 
 
 def _render_combined_download_buttons(st, payload, month):
@@ -10808,6 +10881,14 @@ def render_aug_combined_download_buttons(st, payload):
 
 def render_oct_combined_download_buttons(st, payload):
     return _render_combined_download_buttons(st, payload, 10)
+
+
+def render_feb_combined_download_buttons(st, payload):
+    return _render_combined_download_buttons(st, payload, 2)
+
+
+def render_jul_combined_download_buttons(st, payload):
+    return _render_combined_download_buttons(st, payload, 7)
 
 
 # ============================================================================
@@ -10996,6 +11077,22 @@ def _compute_precheck_possible(month, state):
                 state[_PRECHECK_STATE_KEY] = cache
             except Exception:
                 pass
+        # All-day precheck log (user order 2026-11-16): every fresh
+        # precheck computation is recorded to the persistent day log
+        # behind the "Today's precheck signals" table. Symbol + side
+        # only for a pick (no prices, no score). Never raises.
+        try:
+            from core.precheck_day_log import record_precheck as _record_pc
+            from core.signal_mode import MONTH_SYSTEMS as _MS_PC
+            _chk_mmt = (_pd.Timestamp(check_label)
+                        + _pd.Timedelta(hours=6, minutes=30))
+            _record_pc(
+                int(month), _MS_PC[int(month)], _chk_mmt.strftime("%H:%M"),
+                result.get("status"),
+                symbol=result.get("symbol"),
+                direction=result.get("direction"))
+        except Exception:
+            pass
         return result
     except Exception:
         return None
@@ -11039,6 +11136,42 @@ def _render_precheck_possible(st, state, month):
         return
 
 
+def _render_precheck_day_table(st):
+    """Today's precheck signals -- every precheck run recorded today
+    (Myanmar date), in check-time order.
+
+    Read back from the persistent day log (core.precheck_day_log) on
+    every render, so the table never disappears within the day: it
+    survives page refreshes and Streamlit reruns, and it starts empty
+    on a new Myanmar date. Display only; never raises."""
+    try:
+        import pandas as _pd
+        from core.precheck_day_log import load_day, mmt_today
+        _today = mmt_today()
+        st.markdown(f"### \U0001F4CB Today's precheck signals "
+                    f"\u2014 {_today} (MMT)")
+        rows = load_day(_today)
+        if not rows:
+            st.caption("No precheck runs recorded yet today \u2014 each "
+                       "precheck the app computes is added here and "
+                       "stays for the whole day.")
+            return
+        _disp = [{
+            "Check (MMT)": r.get("check", ""),
+            "System": r.get("system", ""),
+            "Result": r.get("result", ""),
+            "Runs": r.get("runs", 1),
+            "Last run (MMT)": r.get("last_run", ""),
+        } for r in rows]
+        st.dataframe(_pd.DataFrame(_disp),
+                     use_container_width=True, hide_index=True)
+        st.caption("Precheck reads only \u2014 the final signal is "
+                   "computed at the check time and can differ. Kept "
+                   "for the whole day; a new day starts empty.")
+    except Exception:
+        pass
+
+
 # ============================================================================
 # The 12 standing monthly systems (2026-10-22 purge): panel wiring table.
 # Month order Jan..Dec. The renderers/download buttons/state keys for every
@@ -11047,94 +11180,93 @@ def _render_precheck_possible(st, state, month):
 
 _MONTH_PANEL_ORDER = [
     # 12-system rebuild (2026-10-27): exactly ONE panel per month,
-    # in month order. BEST-ONLY since 2026-11-06: the ten cfg
-    # panels evaluate the month's CURRENT registry best cycle via
-    # signal_mode (see _COMBINED_CFG); Feb/Jul keep their legacy
-    # in-app panels. The third element names the CURRENT best
-    # cycle module used by the check-time reminders.
-    # The third element names the BEST cycle module
-    # (core.cycle<nn>_best / CYCLE<NN>_CHECK_HOURS) used by the
-    # check-time reminders.
-    ("January", "cycle60bcombined", "60d", "C60D"),
-    ("February", "cycle85b", "85g", "C85G"),
-    ("March", "cycle86bcombined", "86h", "C86H"),
-    ("April", "cycle87bcombined", "87j", "C87J"),
-    ("May", "cycle88ncombined", "88n", "C88N"),
-    ("June", "cycle89ncombined", "89q", "C89Q"),
-    ("July", "cycle78", "78e", "C78E"),
-    ("August", "cycle67combined", 67, "C67-04"),
-    ("September", "cycle91combined", "91t", "C91T"),
-    ("October", "cycle92combined", "92c", "C92C"),
-    ("November", "cycle93pcombined", "93aa", "C93AA"),
-    ("December", "cycle94combined", "94i", "C94I"),
+    # in month order. BEST-ONLY since 2026-11-06: all twelve panels
+    # evaluate the month's CURRENT registry best cycle via
+    # signal_mode (see _COMBINED_CFG). The third element names the
+    # CURRENT best cycle module (core.cycle<nn>_best /
+    # CYCLE<NN>_CHECK_HOURS) used by the check-time reminders and
+    # the precheck computation.
+    # 2026-11-16 migration (user order): module codes re-pointed at
+    # the RR 1:3 registry cycles; February and July moved from their
+    # legacy in-app panels to combined panels.
+    ("January", "cycle60bcombined", "60i", "C60I"),
+    ("February", "cycle85pcombined", "85p", "C85P"),
+    ("March", "cycle86bcombined", "86n", "C86N"),
+    ("April", "cycle87bcombined", "87o", "C87O"),
+    ("May", "cycle88ncombined", "88s", "C88S"),
+    ("June", "cycle89ncombined", "89w", "C89W"),
+    ("July", "cycle78lcombined", "78l", "C78L"),
+    ("August", "cycle67combined", "67u", "C67U"),
+    ("September", "cycle91combined", "91y", "C91Y"),
+    ("October", "cycle92combined", "92k", "C92K"),
+    ("November", "cycle93pcombined", "93ah", "C93AH"),
+    ("December", "cycle94combined", "94p", "C94P"),
 ]
 
 _SIGNAL_PANELS = {
-    "cycle85b": {"render": _render_cycle85_signals_table,
-                "download": render_cycle85_download_buttons,
-                "state_key": _C85_SIG_STATE_KEY, "age_key": _C85_SIG_AGE_KEY,
-                "diag_key": _C85_SIG_DIAG_KEY, "fail_key": _C85_SIG_FAIL_KEY,
-                "label": "Cycle 85B (C85-23 + BRIEF22 C19) \u2014 February panel (legacy; live system: Cycle 85G)"},
-    "cycle86b": {"render": _render_cycle86_signals_table,
-                "download": render_cycle86_download_buttons,
-                "state_key": _C86_SIG_STATE_KEY, "age_key": _C86_SIG_AGE_KEY,
-                "diag_key": _C86_SIG_DIAG_KEY, "fail_key": _C86_SIG_FAIL_KEY,
-                "label": "Cycle 86D (C86-24 + R2 M18 PC14 veto) \u2014 March system"},
+    # 2026-11-16 migration (user order): labels name the CURRENT RR 1:3
+    # registry cycle of each month; February and July are combined
+    # panels now (their legacy renderers are no longer wired here).
+    "cycle85pcombined": {"render": _render_feb_combined_signals_table,
+                "download": render_feb_combined_download_buttons,
+                "state_key": _COMBINED_CFG[2]["state_key"], "age_key": _COMBINED_CFG[2]["age_key"],
+                "diag_key": _COMBINED_CFG[2]["diag_key"], "fail_key": _COMBINED_CFG[2]["fail_key"],
+                "label": "Cycle 85P (FSTACK-F40, RR 1:3, VALIDATED) \u2014 February system (Best only)"},
     "cycle86bcombined": {"render": _render_mar_combined_signals_table,
                 "download": render_mar_combined_download_buttons,
                 "state_key": _COMBINED_CFG[3]["state_key"], "age_key": _COMBINED_CFG[3]["age_key"],
                 "diag_key": _COMBINED_CFG[3]["diag_key"], "fail_key": _COMBINED_CFG[3]["fail_key"],
-                "label": "Cycle 86H (FIX-BLOCKED S18-M1 VALIDATED) \u2014 March system (Best only)"},
+                "label": "Cycle 86N (CELLEXC-F40, RR 1:3, VALIDATED) \u2014 March system (Best only)"},
     "cycle88ncombined": {"render": _render_may_combined_signals_table,
                 "download": render_may_combined_download_buttons,
                 "state_key": _COMBINED_CFG[5]["state_key"], "age_key": _COMBINED_CFG[5]["age_key"],
                 "diag_key": _COMBINED_CFG[5]["diag_key"], "fail_key": _COMBINED_CFG[5]["fail_key"],
-                "label": "Cycle 88N (NEW8 E07 IMPROVED) \u2014 May system (Best only)"},
+                "label": "Cycle 88S (MSTACK-F12, RR 1:3, VALIDATED) \u2014 May system (Best only)"},
     "cycle89ncombined": {"render": _render_jun_combined_signals_table,
                 "download": render_jun_combined_download_buttons,
                 "state_key": _COMBINED_CFG[6]["state_key"], "age_key": _COMBINED_CFG[6]["age_key"],
                 "diag_key": _COMBINED_CFG[6]["diag_key"], "fail_key": _COMBINED_CFG[6]["fail_key"],
-                "label": "Cycle 89Q (RR 1:1 R18C14 VALIDATED) \u2014 June system (Best only)"},
-    "cycle78": {"render": _render_cycle78_signals_table,
-                "download": render_cycle78_download_buttons,
-                "state_key": _C78_SIG_STATE_KEY, "age_key": _C78_SIG_AGE_KEY,
-                "diag_key": _C78_SIG_DIAG_KEY, "fail_key": _C78_SIG_FAIL_KEY,
-                "label": "Cycle 78 (C78-34) \u2014 July panel (legacy; live system: Cycle 78E)"},
+                "label": "Cycle 89W (JuneStack-F30, RR 1:3, VALIDATED) \u2014 June system (Best only)"},
+    "cycle78lcombined": {"render": _render_jul_combined_signals_table,
+                "download": render_jul_combined_download_buttons,
+                "state_key": _COMBINED_CFG[7]["state_key"], "age_key": _COMBINED_CFG[7]["age_key"],
+                "diag_key": _COMBINED_CFG[7]["diag_key"], "fail_key": _COMBINED_CFG[7]["fail_key"],
+                "label": "Cycle 78L (JSTACK-F15, RR 1:3, VALIDATED) \u2014 July system (Best only)"},
     "cycle67combined": {"render": _render_aug_combined_signals_table,
                 "download": render_aug_combined_download_buttons,
                 "state_key": _COMBINED_CFG[8]["state_key"], "age_key": _COMBINED_CFG[8]["age_key"],
                 "diag_key": _COMBINED_CFG[8]["diag_key"], "fail_key": _COMBINED_CFG[8]["fail_key"],
-                "label": "Cycle 67 (C67-04) \u2014 August system (Best only)"},
+                "label": "Cycle 67U (WSTACK-F60, RR 1:3, VALIDATED) \u2014 August system (Best only)"},
     "cycle92combined": {"render": _render_oct_combined_signals_table,
                 "download": render_oct_combined_download_buttons,
                 "state_key": _COMBINED_CFG[10]["state_key"], "age_key": _COMBINED_CFG[10]["age_key"],
                 "diag_key": _COMBINED_CFG[10]["diag_key"], "fail_key": _COMBINED_CFG[10]["fail_key"],
-                "label": "Cycle 92C (R2 C14 IMPROVED) \u2014 October system (Best only)"},
+                "label": "Cycle 92K (OSTACK-F8, RR 1:3, VALIDATED) \u2014 October system (Best only)"},
     "cycle91combined": {"render": _render_sep_combined_signals_table,
                 "download": render_sep_combined_download_buttons,
                 "state_key": _COMBINED_CFG[9]["state_key"], "age_key": _COMBINED_CFG[9]["age_key"],
                 "diag_key": _COMBINED_CFG[9]["diag_key"], "fail_key": _COMBINED_CFG[9]["fail_key"],
-                "label": "Cycle 91T (RR 1:1 R18C02 VALIDATED) \u2014 September system (Best only)"},
+                "label": "Cycle 91Y (SSTACK-F20, RR 1:3, VALIDATED) \u2014 September system (Best only)"},
     "cycle94combined": {"render": _render_dec_combined_signals_table,
                 "download": render_dec_combined_download_buttons,
                 "state_key": _COMBINED_CFG[12]["state_key"], "age_key": _COMBINED_CFG[12]["age_key"],
                 "diag_key": _COMBINED_CFG[12]["diag_key"], "fail_key": _COMBINED_CFG[12]["fail_key"],
-                "label": "Cycle 94I (RISKOPT5 C2 VALIDATED) \u2014 December system (Best only)"},
+                "label": "Cycle 94P (DSTACK-F8, RR 1:3, VALIDATED) \u2014 December system (Best only)"},
     "cycle93pcombined": {"render": _render_nov_combined_signals_table,
                 "download": render_nov_combined_download_buttons,
                 "state_key": _COMBINED_CFG[11]["state_key"], "age_key": _COMBINED_CFG[11]["age_key"],
                 "diag_key": _COMBINED_CFG[11]["diag_key"], "fail_key": _COMBINED_CFG[11]["fail_key"],
-                "label": "Cycle 93AA (10CYC-R2 R1 VALIDATED) \u2014 November system (Best only)"},
+                "label": "Cycle 93AH (NovStack-F60, RR 1:3, VALIDATED) \u2014 November system (Best only)"},
     "cycle60bcombined": {"render": _render_jan_combined_signals_table,
                 "download": render_jan_combined_download_buttons,
                 "state_key": _COMBINED_CFG[1]["state_key"], "age_key": _COMBINED_CFG[1]["age_key"],
                 "diag_key": _COMBINED_CFG[1]["diag_key"], "fail_key": _COMBINED_CFG[1]["fail_key"],
-                "label": "Cycle 60D (DIFFWAY W1 VALIDATED) \u2014 January system (Best only)"},
+                "label": "Cycle 60I (JSTACK-F8, RR 1:3, VALIDATED) \u2014 January system (Best only)"},
     "cycle87bcombined": {"render": _render_apr_combined_signals_table,
                 "download": render_apr_combined_download_buttons,
                 "state_key": _COMBINED_CFG[4]["state_key"], "age_key": _COMBINED_CFG[4]["age_key"],
                 "diag_key": _COMBINED_CFG[4]["diag_key"], "fail_key": _COMBINED_CFG[4]["fail_key"],
-                "label": "Cycle 87J (RR 1:1 R20C09 VALIDATED) \u2014 April system (Best only)"},
+                "label": "Cycle 87O (ASTACK-F20, RR 1:3, VALIDATED) \u2014 April system (Best only)"},
 }
 
 def render_multisymbol_regime_summary(
@@ -11146,14 +11278,13 @@ def render_multisymbol_regime_summary(
     Only the 12 standing monthly systems remain (2026-10-22 purge);
     BEST-ONLY since 2026-11-06 (second-best removed entirely).
     The "Signal system" dropdown offers the 12 month panels and
-    auto-defaults to the current month's system. The ten cfg
+    auto-defaults to the current month's system. All twelve cfg
     panels evaluate the month's CURRENT registry best cycle
-    (Jan 60D, Mar 86H, Apr 87J, May 88N, Jun 89Q, Aug 67,
-    Sep 91T, Oct 92C, Nov 93AA, Dec 94I) through
-    core.signal_mode; the February and July in-app panels are
-    legacy renderers (their live registry systems are Cycle 85G
-    and Cycle 78E, delivered through the signal route). Each
-    system runs its winner equations at its
+    (RR 1:3 set: Jan 60I, Feb 85P, Mar 86N, Apr 87O, May 88S,
+    Jun 89W, Jul 78L, Aug 67U, Sep 91Y, Oct 92K, Nov 93AH,
+    Dec 94P) through core.signal_mode (2026-11-16 migration;
+    February and July were legacy in-app renderers before it).
+    Each system runs its winner equations at its
     own check hours with exactly 1 entry per check. Each entry window's
     signals are persisted in session state and stay visible until the next
     window arrives. The "Refresh the dashboard" button above the signals
@@ -11177,13 +11308,15 @@ def render_multisymbol_regime_summary(
         import datetime as _dtm
         from core.signal_mode import (MONTH_SYSTEMS as _MONTH_SYSTEMS,
                                       set_active_system as _set_active_system)
-        if "signal_system" not in st.session_state:
+        _valid_sysids = [_row[1] for _row in _MONTH_PANEL_ORDER]
+        if st.session_state.get("signal_system") not in _valid_sysids:
+            # Default to the current month's ONE panel; also resets a
+            # stale pre-migration panel id held by an open session
+            # (e.g. the removed legacy February/July panels).
             _mnow = _dtm.datetime.now(_dtm.timezone.utc).month
-            # 12-system rebuild: default to the current month's ONE
-            # panel (its combined system where one exists).
             st.session_state["signal_system"] = (
                 _MONTH_PANEL_ORDER[_mnow - 1][1]
-                if 1 <= _mnow <= 12 else "cycle92")
+                if 1 <= _mnow <= 12 else _valid_sysids[0])
         _sys_choice = st.selectbox(
             "Signal system",
             options=[_sys for _m, _sys, _nn, _code in _MONTH_PANEL_ORDER],
@@ -11208,8 +11341,12 @@ def render_multisymbol_regime_summary(
             from core.signal_mode import active_system as _active_system
             _active = _active_system()
         except Exception:
-            _active = "cycle92"
-    _panel = _SIGNAL_PANELS.get(_active) or _SIGNAL_PANELS["cycle92"]
+            _active = None
+    _panel = _SIGNAL_PANELS.get(_active)
+    if _panel is None:
+        import datetime as _dtm3
+        _mnow3 = _dtm3.datetime.now(_dtm3.timezone.utc).month
+        _panel = _SIGNAL_PANELS[_MONTH_PANEL_ORDER[_mnow3 - 1][1]]
     _render_cycle12_check_banner(st, state.get(_panel["age_key"]))
     _render_symbols_loaded_box(st, context)
 
@@ -11233,6 +11370,11 @@ def render_multisymbol_regime_summary(
             _render_precheck_possible(st, state, _precheck_month)
     except Exception:
         pass
+
+    # Today's precheck signals -- all-day table under the check signal
+    # (user order 2026-11-16): every precheck run of the day, kept for
+    # the whole Myanmar day.
+    _render_precheck_day_table(st)
 
     # Downloads sit BELOW the signals table (full-width, mobile-friendly).
     if payload is not None:

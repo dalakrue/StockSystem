@@ -2740,8 +2740,13 @@ def walk_ledger():
 
 
 def fetch_cycle60i_m15_frames(state=None):
-    from core.cycle89_best import fetch_cycle89_m15_frames
-    return fetch_cycle89_m15_frames()
+    # 2026-11-16 app repair: fetch THIS system's own SYMBOLS
+    # through the shared route. The previous delegation ended at
+    # fetch_cycle89_m15_frames, which requests only the legacy
+    # 15-symbol subset -- 13 of this system's symbols silently
+    # received no M15 bars and could never fire.
+    from core.cycle78_best import fetch_cycle78_m15_frames
+    return fetch_cycle78_m15_frames(state=state, symbols=SYMBOLS)
 
 
 def evaluate_cycle60i_signals(frames: dict,
@@ -2922,9 +2927,14 @@ class JanStackNFillState:
         self.rec_exit[pk["sym"]] = max(
             self.rec_exit.get(pk["sym"], -1),
             float("inf") if ex is None else int(ex))
-        wk = self._week_key(pk["entry_s"])
-        self.run_net[wk] = (self.run_net.get(wk, 0.0)
-                            + float(pk["net"]))
+        # Live-form guard (2026-11-16 app repair): a live pick's
+        # net is unresolved (None) at record time; the week state
+        # accumulates resolved nets only (the cycle93ah _note
+        # precedent). Resolved-net behaviour is unchanged.
+        if pk["net"] is not None:
+            wk = self._week_key(pk["entry_s"])
+            self.run_net[wk] = (self.run_net.get(wk, 0.0)
+                                + float(pk["net"]))
 
     def process_slot(self, T, era, rows):
         made = self.arb.process_slot(T, era, rows)
@@ -2935,7 +2945,11 @@ class JanStackNFillState:
         out = []
         for pk in made:
             d = float(pk["mult"]) * float(pk["atr"])
-            loss = float(pk["net"]) <= 0
+            # Live-form guard (2026-11-16 app repair): net is
+            # None until the pick resolves; an unresolved pick is
+            # not a known loss (the cycle93ah is_loss precedent).
+            loss = (pk["net"] is not None
+                    and float(pk["net"]) <= 0)
             bra = loss and d >= BMR_DIST_MIN
             blk = loss and self.main_run >= 1
             brd = (loss and not bra and not blk
@@ -2997,11 +3011,13 @@ class JanStackNFillState:
             if dropped:
                 continue
             if (PAIR_LO is not None
+                    and pk["net"] is not None
                     and float(pk["net"]) <= 0.0
                     and PAIR_LO <= d
                     and (PAIR_HI is None or d < PAIR_HI)
                     and any(
-                        float(q["net"]) <= 0.0
+                        q["net"] is not None
+                        and float(q["net"]) <= 0.0
                         and PAIR_LO
                         <= float(q["mult"]) * float(q["atr"])
                         and (PAIR_HI is None
@@ -3020,8 +3036,13 @@ class JanStackNFillState:
             self._record(keep, "MAIN")
             recorded.add(pk["sym"])
             out.append(keep)
-            self.main_run = (self.main_run + 1
-                             if float(pk["net"]) <= 0 else 0)
+            # Live-form guard (2026-11-16 app repair): the
+            # loss-run counter moves only on a resolved net --
+            # +1 on a loss, reset on a win, unchanged while the
+            # pick is unresolved.
+            if pk["net"] is not None:
+                self.main_run = (self.main_run + 1
+                                 if float(pk["net"]) <= 0 else 0)
         wk = self._week_key(T)
         if self.run_net.get(wk, 0.0) < 0:
             add = self._best_add(rows, T,

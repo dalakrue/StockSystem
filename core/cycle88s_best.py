@@ -685,8 +685,13 @@ def walk_ledger():
 
 
 def fetch_cycle88s_m15_frames(state=None):
-    from core.cycle89_best import fetch_cycle89_m15_frames
-    return fetch_cycle89_m15_frames()
+    # 2026-11-16 app repair: fetch THIS system's own SYMBOLS
+    # through the shared route. The previous delegation ended at
+    # fetch_cycle89_m15_frames, which requests only the legacy
+    # 15-symbol subset -- 13 of this system's symbols silently
+    # received no M15 bars and could never fire.
+    from core.cycle78_best import fetch_cycle78_m15_frames
+    return fetch_cycle78_m15_frames(state=state, symbols=SYMBOLS)
 
 
 def evaluate_cycle88s_signals(frames: dict,
@@ -815,6 +820,12 @@ def _iso_week29(ts):
 
 
 def _is_sl_hit29(pick):
+    # Live-form guard (2026-11-16 app repair): an unresolved
+    # pick (net None at a live check) is not a confirmed SL
+    # hit; the backtest only ever calls this on resolved
+    # picks, whose behaviour is unchanged.
+    if pick["net"] is None:
+        return False
     return abs(float(pick["net"]) - (
         -(FIXED_SL + 2.5))) < 0.01
 
@@ -827,9 +838,19 @@ def _filed_take29(pa, pb):
     PW-INT. A single-parent slot takes that parent's
     pick, the R005 _Form precedent."""
     if pa is not None and pb is not None:
-        ka = (pa["sym"], int(pa["side"]), float(pa["net"]))
-        kb = (pb["sym"], int(pb["side"]), float(pb["net"]))
-        if ka == kb:
+        # Live-form guard (2026-11-16 app repair): at a live
+        # check both picks' nets are unresolved (None) and the
+        # float() key below raised TypeError. The identical
+        # take now requires resolved, equal nets; unresolved
+        # pairs fall through to the PREF rule -- the same rule
+        # the backtest applies whenever the two books' nets
+        # differ, which is the dominant case there too.
+        # Resolved-net behaviour is unchanged.
+        if (pa["sym"] == pb["sym"]
+                and int(pa["side"]) == int(pb["side"])
+                and pa["net"] is not None
+                and pb["net"] is not None
+                and float(pa["net"]) == float(pb["net"])):
             return pa, "identical", "pw"
         if PREF_GAPD.get(pb["sym"], 0.0) \
                 > PREF_PW.get(pa["sym"], 0.0):

@@ -1967,6 +1967,11 @@ class _Form:
                 m15_bars[sym] = b
         era = "disc" if _dt.datetime.utcfromtimestamp(
             T).year <= 2023 else "audit"
+        # Live-form settlement before the new slot (2026-11-16
+        # app repair; the cycle60i step does the same): picks
+        # dealt at earlier checks resolve on the bars now
+        # available, lifting their symbol blocks.
+        self.fill.resolve_pending(m15_bars)
         _np0 = len(self.fill.picks)
         self.fill.process_slot(T, era, m15_bars)
         picks = self.fill.picks[_np0:]
@@ -2036,8 +2041,13 @@ def walk_ledger():
 
 
 def fetch_cycle93ah_m15_frames(state=None):
-    from core.cycle89_best import fetch_cycle89_m15_frames
-    return fetch_cycle89_m15_frames()
+    # 2026-11-16 app repair: fetch THIS system's own SYMBOLS
+    # through the shared route. The previous delegation ended at
+    # fetch_cycle89_m15_frames, which requests only the legacy
+    # 15-symbol subset -- 13 of this system's symbols silently
+    # received no M15 bars and could never fire.
+    from core.cycle78_best import fetch_cycle78_m15_frames
+    return fetch_cycle78_m15_frames(state=state, symbols=SYMBOLS)
 
 
 def evaluate_cycle93ah_signals(frames: dict, check_time_utc,
@@ -2073,6 +2083,16 @@ class ArbFillState:
                        "src_pw": 0, "src_lvd": 0,
                        "ties": 0}
 
+    def resolve_pending(self, m15_bars):
+        # Live-form settlement (2026-11-16 app repair): the two
+        # ingredient books settle their own ledgers first -- the
+        # PARB precedent the NovStack docstring names. Without this
+        # call a live pick never resolves, its symbol stays blocked
+        # forever (max_exit = inf) and the panel dies out. No-op
+        # when every pick is already resolved (backtest form).
+        self.pw.resolve_pending(m15_bars)
+        self.lvd.resolve_pending(m15_bars)
+
     def process_slot(self, T, era, bars):
         rows_pw = _slot_rows(T, bars)
         rows_lvd = _slot_rows_lvd(T, bars)
@@ -2085,8 +2105,19 @@ class ArbFillState:
         if p_lvd is not None:
             assert p_lvd["entry_s"] == T
         if p_pw is not None and p_lvd is not None:
+            # Live-form guard (2026-11-16 app repair): at a live
+            # check both picks' walks are still unresolved, so both
+            # nets are None and the subtraction below raised
+            # TypeError, killing the slot. The identical branch now
+            # requires resolved nets; unresolved pairs fall through
+            # to the contested PREFS rule -- the same rule the
+            # backtest applies whenever the two books' nets differ,
+            # which is the dominant case there too. Resolved-net
+            # behaviour is unchanged.
             if p_pw["sym"] == p_lvd["sym"] \
                     and p_pw["side"] == p_lvd["side"] \
+                    and p_pw["net"] is not None \
+                    and p_lvd["net"] is not None \
                     and abs(p_pw["net"] - p_lvd["net"]) \
                     < 1e-9:
                 self.census["identical"] += 1
@@ -2141,6 +2172,11 @@ class ParbFillState:
         self.census = {"protected": 0, "refusals": 0,
                        "switch_slots": 0, "no_second": 0}
         self.seconds_trace = {}
+
+    def resolve_pending(self, m15_bars):
+        # Live-form settlement (2026-11-16 app repair): delegate
+        # to the arbitration layer's ingredient books.
+        self.arb.resolve_pending(m15_bars)
 
     def process_slot(self, T, era, bars):
         year = _dt2.datetime.utcfromtimestamp(T).year
@@ -2249,6 +2285,40 @@ class NovStackState:
             "noalt": 0, "dens_drop": 0,
             "adds": 0}
         self.census = self.stack_census
+
+    def resolve_pending(self, m15_bars):
+        # Live-form settlement (2026-11-16 app repair): the
+        # ingredient books settle their own ledgers first (the
+        # PARB precedent), then the recorded stream settles --
+        # each unresolved recorded pick is re-walked on the bars
+        # now available (FillState.resolve_pending's own walk)
+        # and the loss-run state is rebuilt from the recorded
+        # stream, exactly as from_dict rebuilds it. No-op when
+        # every recorded pick is already resolved.
+        self.parb.resolve_pending(m15_bars)
+        changed = False
+        for pick in self.picks:
+            if pick["exit"] is not None:
+                continue
+            bars = m15_bars.get(pick["sym"])
+            if bars is None:
+                continue
+            dist = FIXED_SL * _pip_of(pick["sym"])
+            xp, net = _trade_outcome(
+                bars, pick["sym"], pick["entry_s"],
+                pick["side"], dist, FIXED_SL / pick["atr"],
+                pick["atr"])
+            if xp is None:
+                continue
+            pick["exit"] = int(xp)
+            pick["net"] = float(net)
+            changed = True
+        if changed:
+            self.rec_exit = {}
+            self.run_net = {}
+            self.last_loss = False
+            for p in self.picks:
+                self._note(p)
 
     # -- persistence (candidate _Form) --
     def to_dict(self):

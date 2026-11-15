@@ -568,6 +568,13 @@ class _Form:
             if b is not None:
                 h1_bars[sym] = b
         m5_bars = {}
+        if not m5_frames:
+            # 2026-11-16 app repair: self-fetch M5 when the
+            # caller did not supply it (the app router never
+            # passes m5_frames), mirroring the M15 fallback
+            # above. An empty result keeps the previous
+            # behaviour exactly.
+            m5_frames = fetch_cycle86n_m5_frames()
         if m5_frames:
             for sym in SYMBOLS:
                 b = _bars_from_frame(m5_frames.get(sym))
@@ -649,8 +656,29 @@ def walk_ledger():
 
 
 def fetch_cycle86n_m15_frames(state=None):
-    from core.cycle89_best import fetch_cycle89_m15_frames
-    return fetch_cycle89_m15_frames()
+    # 2026-11-16 app repair: fetch THIS system's own SYMBOLS
+    # through the shared route. The previous delegation ended at
+    # fetch_cycle89_m15_frames, which requests only the legacy
+    # 15-symbol subset -- 13 of this system's symbols silently
+    # received no M15 bars and could never fire.
+    from core.cycle78_best import fetch_cycle78_m15_frames
+    return fetch_cycle78_m15_frames(state=state, symbols=SYMBOLS)
+
+
+def fetch_cycle86n_m5_frames(state=None):
+    # 2026-11-16 app repair: this design's shape scores read
+    # the M5 bar ending at each slot (the filed book was driven
+    # with M5 supplied), but the app router never passes
+    # m5_frames and the runtime had no M5 route -- the panel
+    # always ran the design with that input missing. Fetch this
+    # system's own SYMBOLS through the shared runtime route,
+    # exactly like the M15 fetcher above. Any failure returns {}
+    # and the step keeps its previous no-M5 behaviour.
+    try:
+        from core.check_candle_runtime import fetch_m5_frames
+        return fetch_m5_frames(state=state, symbols=SYMBOLS)
+    except Exception:
+        return {}
 
 
 def evaluate_cycle86n_signals(frames: dict, check_time_utc,
@@ -977,9 +1005,23 @@ class MarStackN3FillState:
             return []
         cand = [(i, r) for i, r in enumerate(rows)
                 if r["mult"] == 0.5]
-        order = [ip for ip in self._ranked(cand, ts)
+        ranked = self._ranked(cand, ts)
+        order = [ip for ip in ranked
                  if self._unblocked(ip[1]["sym"], ts)
                  and ip[1]["net"] is not None]
+        if not order and ranked and all(
+                ip[1]["net"] is None for ip in ranked):
+            # Live-form repair (2026-11-16 app migration): at a
+            # live check NO row's walk can resolve (every net is
+            # None), so the resolved-net candidacy filter above
+            # emptied the order at every slot and the panel could
+            # never fire. When no candidate carries a resolved
+            # net, deal from the unfiltered sMC order instead.
+            # Whenever any candidate IS resolved (the backtest
+            # form the filed book was graded in), the original
+            # filter applies unchanged.
+            order = [ip for ip in ranked
+                     if self._unblocked(ip[1]["sym"], ts)]
         if not order:
             e["unfilled_all_blocked"] += 1
             return []

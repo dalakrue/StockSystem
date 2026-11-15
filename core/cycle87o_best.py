@@ -705,9 +705,26 @@ def is_cycle87o_check_time(ts) -> bool:
 
 
 def panel_entries(frames: dict, check_time_utc,
+                  m15_frames: dict | None = None,
+                  open_symbols=(),
+                  m5_frames: dict | None = None,
                   state=None):
+    # 2026-11-16 app repair: this wrapper's old signature
+    # (frames, check, state) rejected the router's standard
+    # panel_entries(frames, check, open_symbols=...) call with
+    # TypeError, so the April panel could never evaluate through
+    # the app. Normalised to the family signature (the _Form.step
+    # underneath already had it); the state override is kept.
     st = state or _state()
-    return st.step(frames, check_time_utc, None)
+    out = st.step(frames, check_time_utc, m15_frames,
+                  open_symbols, m5_frames)
+    # The router requires a DataFrame (a bare list is discarded
+    # as empty); convert exactly like the family wrappers.
+    if isinstance(out, pd.DataFrame):
+        return out
+    if not out:
+        return pd.DataFrame()
+    return pd.DataFrame(out)
 
 
 def walk_ledger():
@@ -716,7 +733,12 @@ def walk_ledger():
 
 
 def fetch_cycle87o_m15_frames(state=None):
-    return {}
+    # 2026-11-16 app repair: this stub returned {} -- the system
+    # received NO M15 bars at all through the app route and could
+    # never fire. Fetch THIS system's own SYMBOLS through the
+    # shared route, like every other current system.
+    from core.cycle78_best import fetch_cycle78_m15_frames
+    return fetch_cycle78_m15_frames(state=state, symbols=SYMBOLS)
 
 
 def evaluate_cycle87o_signals(frames: dict,

@@ -489,12 +489,18 @@ class FillState:
         _yc = self.year_counts.setdefault(
             _yr, [0, 0])
         _yc[0] += 1
-        if pick["net"] > 0:
+        # Live-form guard (2026-11-16 app repair): a live
+        # pick's net is unresolved (None) at record time; the
+        # win count and week net accumulate resolved nets only
+        # (the cycle93ah _note precedent). Resolved-net
+        # behaviour is unchanged.
+        if pick["net"] is not None and pick["net"] > 0:
             _yc[1] += 1
         _wk = _dt.datetime.fromtimestamp(
             int(ts), _dt.timezone.utc).isocalendar()[1]
-        self.run_net[_wk] = self.run_net.get(
-            _wk, 0.0) + float(pick["net"])
+        if pick["net"] is not None:
+            self.run_net[_wk] = self.run_net.get(
+                _wk, 0.0) + float(pick["net"])
         if row[f"exit_{tag}"] is None:
             self.max_exit[row["sym"]] = float("inf")
         else:
@@ -757,11 +763,18 @@ class FillState:
                             f"net_{wtag}"]
                         _rn = rows[pick][
                             f"net_{tag}"]
-                        if (_yc[1] + (1 if _rn > 0
-                                      else 0)) \
+                        # Live-form guard (2026-11-16 app
+                        # repair): an unresolved net (None at
+                        # a live check) counts as not-a-win on
+                        # BOTH sides of the clause-P comparison,
+                        # so the clause simply does not refuse
+                        # when neither outcome is known yet.
+                        # Resolved-net behaviour is unchanged.
+                        if (_yc[1] + (1 if _rn is not None
+                                      and _rn > 0 else 0)) \
                                 / (_yc[0] + 1) \
-                                < (_yc[1] + (1 if _wn > 0
-                                             else 0)) \
+                                < (_yc[1] + (1 if _wn is not None
+                                             and _wn > 0 else 0)) \
                                 / (_yc[0] + 1) - 1e-12:
                             _refuse = True
                     if _refuse:
@@ -1133,8 +1146,13 @@ def walk_ledger():
 
 
 def fetch_cycle78l_m15_frames(state=None):
-    from core.cycle78i_best import fetch_cycle78i_m15_frames
-    return fetch_cycle78i_m15_frames()
+    # 2026-11-16 app repair: fetch THIS system's own SYMBOLS
+    # through the shared route. The previous delegation ended at
+    # fetch_cycle89_m15_frames, which requests only the legacy
+    # 15-symbol subset -- 13 of this system's symbols silently
+    # received no M15 bars and could never fire.
+    from core.cycle78_best import fetch_cycle78_m15_frames
+    return fetch_cycle78_m15_frames(state=state, symbols=SYMBOLS)
 
 
 def evaluate_cycle78l_signals(frames: dict,

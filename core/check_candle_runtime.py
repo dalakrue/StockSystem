@@ -14,6 +14,7 @@ import pandas as pd
 
 H1_MEMO_KEY = "check_h1_memo_20261027"
 M15_MEMO_KEY = "check_m15_memo_20261027"
+M5_MEMO_KEY = "check_m5_memo_20261116"
 RETRY_SECONDS = 15.0
 SUCCESS_SECONDS = 60.0
 FETCH_BUDGET_SECONDS = 20.0
@@ -138,7 +139,7 @@ def _direct_fetch(state, symbols, tf, *, deadline, force=False):
                 errors.append(f"{sym} {tf}: no API credit available; retry next refresh")
                 continue
             future = executor.submit(fetch_twelve, sym, lease.api_key,
-                                     interval="1h" if tf == "H1" else "15min", bars=2000,
+                                     interval="1h" if tf == "H1" else "5min" if tf == "M5" else "15min", bars=2000,
                                      force_live=force, timeout_seconds=min(4.0, remaining))
             jobs[future] = (sym, lease.alias)
         done, pending = wait(jobs, timeout=max(0.0, deadline - time.monotonic()))
@@ -278,7 +279,81 @@ def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=Fa
             if sym in raw_frames:
                 _persist_real(repo, raw_frames[sym], sym, "M15", errors)
     state["check_m15_last_errors"] = errors
-    return frames
+    # 2026-11-16 repair (app migration): the ported cycle modules
+    # convert frames through _bars_from_frame, which reads the time
+    # from a "Datetime" COLUMN; normalized frames carry the time only
+    # in the index, so every module silently received zero bars
+    # through this route and no M15-driven panel could ever fire.
+    # Return copies that carry the time as a column as well (index
+    # kept). Internal consumers are unaffected: the entry-candle
+    # synthesis re-normalizes its input, which pops a time column
+    # straight back into the index.
+    out = {}
+    for _sym, _f in frames.items():
+        try:
+            out[_sym] = _f.assign(Datetime=_f.index)
+        except Exception:
+            out[_sym] = _f
+    return out
+
+
+def fetch_m5_frames(state, symbols, *, deadline=None, force=False):
+    """Current M5 frames, repository-first like fetch_m15_frames.
+
+    Added 2026-11-16 (app migration repair): cycle86n's shape
+    scores read the single M5 bar ending at each check slot --
+    its filed book was driven with M5 supplied -- but the app
+    had no M5 route at all, so the panel always ran the design
+    with that input missing. Mirrors the M15 route: repository
+    cache first, direct provider fetch for the missing symbols,
+    memoised per required bar, persisted back to the repository,
+    and returned with the time also as a "Datetime" column (the
+    modules' _bars_from_frame reads the time from a column).
+    """
+    if state is None:
+        state = {}
+    symbols = tuple(symbols)
+    now = pd.Timestamp.now(tz="UTC").tz_localize(None)
+    required = now.floor("5min") - pd.Timedelta(minutes=5)
+    memo = state.setdefault(M5_MEMO_KEY, {})
+    frames, missing, errors = {}, [], []
+    repo = _repository()
+    for sym in symbols:
+        cached = memo.get(sym)
+        frame = cached.get("frame") if isinstance(cached, dict) else None
+        sufficient = frame is not None and required in frame.index
+        if force or not sufficient:
+            try:
+                raw = repo.load(sym, "M5", limit=400, completed_only=False) if repo else None
+                frame = _merge(frame, normalize_ohlc(raw), 400)
+            except Exception:
+                pass
+        sufficient = frame is not None and required in frame.index
+        if frame is not None:
+            frames[sym] = frame
+        failed_recently = (isinstance(cached, dict) and cached.get("required") == required
+                           and time.monotonic() - cached.get("attempt", 0) < RETRY_SECONDS)
+        if force or (not sufficient and not failed_recently):
+            missing.append(sym)
+    if missing:
+        deadline = deadline if deadline is not None else time.monotonic() + FETCH_BUDGET_SECONDS
+        raw_frames, errors = _direct_fetch(state, missing, "M5", deadline=deadline, force=force)
+        for sym in missing:
+            norm = normalize_ohlc(raw_frames.get(sym))
+            frame = _merge(frames.get(sym), norm, 400)
+            if frame is not None:
+                frames[sym] = frame
+            memo[sym] = dict(frame=frame, attempt=time.monotonic(), required=required)
+            if sym in raw_frames:
+                _persist_real(repo, raw_frames[sym], sym, "M5", errors)
+    state["check_m5_last_errors"] = errors
+    out = {}
+    for _sym, _f in frames.items():
+        try:
+            out[_sym] = _f.assign(Datetime=_f.index)
+        except Exception:
+            out[_sym] = _f
+    return out
 
 
 def check_refresh_interval_ms(now=None):

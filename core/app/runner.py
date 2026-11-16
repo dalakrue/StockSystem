@@ -68,7 +68,7 @@ def run_app():
         pass
 
     try:
-        st.set_page_config(page_title="ADX Quant Pro — Field 3", page_icon="⚡", layout="wide", initial_sidebar_state="expanded")
+        st.set_page_config(page_title="ADX Quant Pro — Field 3", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
     except Exception:
         pass
 

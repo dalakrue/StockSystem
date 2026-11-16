@@ -87,6 +87,46 @@ def inject_sidebar_policy_css() -> None:
       on top;
     * the same glass language is applied app-wide (cards, buttons,
       inputs, metrics, expanders) so the app reads as one product.
+
+    Sidebar fix #2 (2026-11-16, user report: "cannot close the
+    sidebar" on the live app after the overhaul).  Root causes found
+    in the OTHER theme layers this module does not own:
+
+    * ``core/pro_terminal_uiux`` puts ``animation: qxSidebarIn .38s
+      ease both`` on the sidebar section; the keyframes end at
+      ``transform: translateX(0)`` and the ``both`` fill mode keeps
+      that keyframe applied forever.  CSS animations outrank normal
+      author styles, so Streamlit's own collapsed-state
+      ``transform: translateX(-<width>px)`` (emotion, not
+      ``!important``) could never move the sidebar off-canvas.
+    * The overhaul styled the pre-1.64 reopen control
+      (``stSidebarCollapsedControl``).  Streamlit 1.66's frontend
+      has no such testid -- the reopen button is now
+      ``button[data-testid="stExpandSidebarButton"]`` in the app
+      header, and the collapsed state is marked with
+      ``data-collapsed="true"`` on the section (older versions used
+      ``aria-expanded="false"``).
+    * The overhaul also set the sidebar ``z-index: 999990``, exactly
+      the app header's own z-index (native sidebar is header+1 =
+      999991), leaving the sidebar's top strip -- where the collapse
+      button lives -- level with the header instead of above it.
+
+    The guarantee block below is therefore defensive: it kills any
+    animation on the section, forces the collapsed state fully
+    off-canvas for BOTH state attributes, restores the native
+    stacking order, and keeps every generation of the collapse /
+    reopen controls visible and clickable.  It only fires while
+    Streamlit itself reports the sidebar collapsed, so the open
+    glass-overlay look is unchanged.
+
+    Spec update (user, 2026-11-16 18:46 MMT): the sidebar now
+    starts COLLAPSED on every app open
+    (``core/app/runner.py`` sets
+    ``initial_sidebar_state="collapsed"``; nothing on the live path
+    re-expands it) and Streamlit's own reopen control is restyled
+    as the hamburger (☰) toggle he asked for -- a dark rounded
+    chip, top-left -- so the button that opens the sidebar is the
+    native control itself, not a look-alike.
     """
     init_sidebar_policy()
     st.markdown(
@@ -96,7 +136,8 @@ def inject_sidebar_policy_css() -> None:
 section[data-testid="stSidebar"]{
   position:fixed!important;top:0!important;left:0!important;
   height:100vh!important;max-height:100vh!important;
-  z-index:999990!important;
+  z-index:999991!important;
+  animation:none!important;
   background:
     linear-gradient(155deg,rgba(255,255,255,.34),rgba(186,230,253,.20) 48%,rgba(255,255,255,.14))!important;
   backdrop-filter:blur(28px) saturate(180%)!important;
@@ -121,16 +162,55 @@ section[data-testid="stSidebar"] [data-testid="stExpander"]{
 /* Main keeps the full width whether the sidebar is open or not:
    the sidebar floats over it. */
 section[data-testid="stMain"]{margin-left:0!important;width:100%!important;}
-/* The reopen control (visible while the sidebar is collapsed)
-   stays reachable and wears the same glass. */
+/* ---- Collapse guarantee + hamburger toggle (fix #2) ----
+   While Streamlit itself reports the sidebar collapsed, force it
+   fully off-canvas and non-interactive, whatever any other theme
+   layer says.  Both state hooks are covered: data-collapsed
+   (Streamlit >= 1.66) and aria-expanded on the section (older). */
+section[data-testid="stSidebar"][data-collapsed="true"],
+section[data-testid="stSidebar"][aria-expanded="false"]{
+  transform:translateX(-110%)!important;
+  min-width:0!important;width:0!important;max-width:0!important;
+  visibility:hidden!important;pointer-events:none!important;
+  box-shadow:none!important;border-right:0!important;
+}
+/* The in-sidebar collapse button (open state) stays visible and
+   clickable, on a soft chip so it is easy to find. */
+section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"],
+section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button{
+  pointer-events:auto!important;visibility:visible!important;opacity:1!important;
+  position:relative!important;z-index:1000002!important;
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"]{
+  background:rgba(255,255,255,.55)!important;border-radius:10px!important;
+}
+/* The reopen control IS the hamburger toggle (user order
+   2026-11-16: default closed, open via a clearly visible
+   hamburger button).  It is Streamlit's own native control --
+   button[data-testid="stExpandSidebarButton"] in the header on
+   Streamlit >= 1.66, div[data-testid="stSidebarCollapsedControl"]
+   on older versions -- restyled as a dark rounded chip with a
+   hamburger glyph, so the click still drives the native sidebar
+   state and truly opens the sidebar. */
+button[data-testid="stExpandSidebarButton"],
 div[data-testid="stSidebarCollapsedControl"]{
-  z-index:999991!important;
-  background:rgba(255,255,255,.55)!important;
-  backdrop-filter:blur(12px) saturate(160%)!important;
-  -webkit-backdrop-filter:blur(12px) saturate(160%)!important;
-  border:1px solid rgba(255,255,255,.6)!important;
-  border-radius:0 12px 12px 0!important;
-  box-shadow:4px 4px 16px rgba(15,23,42,.10)!important;
+  pointer-events:auto!important;visibility:visible!important;opacity:1!important;
+  position:relative!important;z-index:1000002!important;
+  min-width:2.75rem!important;width:2.75rem!important;height:2.75rem!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  background:rgba(15,23,42,.92)!important;color:#ffffff!important;
+  border:1px solid rgba(255,255,255,.35)!important;border-radius:12px!important;
+  box-shadow:0 6px 18px rgba(15,23,42,.28)!important;cursor:pointer!important;
+}
+button[data-testid="stExpandSidebarButton"]>*,
+div[data-testid="stSidebarCollapsedControl"]>*{display:none!important;}
+button[data-testid="stExpandSidebarButton"]::after,
+div[data-testid="stSidebarCollapsedControl"]::after{
+  content:"☰";font-size:1.35rem;line-height:1;color:#ffffff;font-weight:700;
+}
+button[data-testid="stExpandSidebarButton"]:hover,
+div[data-testid="stSidebarCollapsedControl"]:hover{
+  background:rgba(30,41,59,.96)!important;
 }
 /* Streamlit automatically renders every module in pages/ as a second
    navigation rail.  This app has its own single Field 3 workspace and its

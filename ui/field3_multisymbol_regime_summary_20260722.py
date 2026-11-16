@@ -2820,7 +2820,7 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
 
     Entry windows are H:00:00-H:04:59 UTC on the ACTIVE system's check
     hours (core.signal_mode.active_check_hours -- the current registry
-    cycle of the month; e.g. November cycle93ah: 13/15/17 UTC ->
+    cycle of the month; e.g. November cycle93ai: 13/15/17 UTC ->
     19:30/21:30/23:30 MMT). The backtest
     enters at the H:00 candle open, so the banner, clocks and countdown
     all follow H:00 -- never H:30.
@@ -2849,8 +2849,8 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
             "cycle67w": "August \u00b7 Cycle 67W (WSTACK-D15-F40)",
             "cycle91z": "September \u00b7 Cycle 91Z (SSTACK-F10)",
             "cycle92l": "October \u00b7 Cycle 92L (OSTACK-N5-F10)",
-            "cycle93ah": "November \u00b7 Cycle 93AH (NovStack-F60)",
-            "cycle94p": "December \u00b7 Cycle 94P (DSTACK-F8)",
+            "cycle93ai": "November \u00b7 Cycle 93AI (NovStack-BRA0-NFC-DENS0-F35)",
+            "cycle94q": "December \u00b7 Cycle 94Q (DSTACK-BMR0-NFC-DENS0-F10)",
         }.get(active_system(), active_system())
 
         def _mmt(ts):
@@ -10401,10 +10401,10 @@ _COMBINED_CFG = {
     11: {
         "sysid": "cycle93pcombined",
         "month_name": "November",
-        "best_id": "cycle93ah",
-        "best_label": "Cycle 93AH (NovStack-F60, RR 1:3, VALIDATED)",
-        "hours_mod": "core.cycle93ah_best",
-        "hours_attr": "CYCLE93AH_CHECK_HOURS",
+        "best_id": "cycle93ai",
+        "best_label": "Cycle 93AI (NovStack-BRA0-NFC-DENS0-F35, RR 1:3, EXT6 A3)",
+        "hours_mod": "core.cycle93ai_best",
+        "hours_attr": "CYCLE93AI_CHECK_HOURS",
         "state_key": "combined_nov_signals_latest_v1",
         "age_key": "combined_nov_candle_age_txt",
         "diag_key": "combined_nov_signals_diag_v1",
@@ -10415,10 +10415,10 @@ _COMBINED_CFG = {
     12: {
         "sysid": "cycle94combined",
         "month_name": "December",
-        "best_id": "cycle94p",
-        "best_label": "Cycle 94P (DSTACK-F8, RR 1:3, VALIDATED)",
-        "hours_mod": "core.cycle94p_best",
-        "hours_attr": "CYCLE94P_CHECK_HOURS",
+        "best_id": "cycle94q",
+        "best_label": "Cycle 94Q (DSTACK-BMR0-NFC-DENS0-F10, RR 1:3, EXT6 A3)",
+        "hours_mod": "core.cycle94q_best",
+        "hours_attr": "CYCLE94Q_CHECK_HOURS",
         "state_key": "combined_dec_signals_latest_v1",
         "age_key": "combined_dec_candle_age_txt",
         "diag_key": "combined_dec_signals_diag_v1",
@@ -11247,8 +11247,8 @@ _MONTH_PANEL_ORDER = [
     ("August", "cycle67combined", "67w", "C67W"),
     ("September", "cycle91combined", "91z", "C91Z"),
     ("October", "cycle92combined", "92l", "C92L"),
-    ("November", "cycle93pcombined", "93ah", "C93AH"),
-    ("December", "cycle94combined", "94p", "C94P"),
+    ("November", "cycle93pcombined", "93ai", "C93AI"),
+    ("December", "cycle94combined", "94q", "C94Q"),
 ]
 
 _SIGNAL_PANELS = {
@@ -11299,12 +11299,12 @@ _SIGNAL_PANELS = {
                 "download": render_dec_combined_download_buttons,
                 "state_key": _COMBINED_CFG[12]["state_key"], "age_key": _COMBINED_CFG[12]["age_key"],
                 "diag_key": _COMBINED_CFG[12]["diag_key"], "fail_key": _COMBINED_CFG[12]["fail_key"],
-                "label": "Cycle 94P (DSTACK-F8, RR 1:3, VALIDATED) \u2014 December system (Best only)"},
+                "label": "Cycle 94Q (DSTACK-BMR0-NFC-DENS0-F10, RR 1:3, EXT6 A3) \u2014 December system (Best only)"},
     "cycle93pcombined": {"render": _render_nov_combined_signals_table,
                 "download": render_nov_combined_download_buttons,
                 "state_key": _COMBINED_CFG[11]["state_key"], "age_key": _COMBINED_CFG[11]["age_key"],
                 "diag_key": _COMBINED_CFG[11]["diag_key"], "fail_key": _COMBINED_CFG[11]["fail_key"],
-                "label": "Cycle 93AH (NovStack-F60, RR 1:3, VALIDATED) \u2014 November system (Best only)"},
+                "label": "Cycle 93AI (NovStack-BRA0-NFC-DENS0-F35, RR 1:3, EXT6 A3) \u2014 November system (Best only)"},
     "cycle60bcombined": {"render": _render_jan_combined_signals_table,
                 "download": render_jan_combined_download_buttons,
                 "state_key": _COMBINED_CFG[1]["state_key"], "age_key": _COMBINED_CFG[1]["age_key"],
@@ -11328,9 +11328,9 @@ def render_multisymbol_regime_summary(
     The "Signal system" dropdown offers the 12 month panels and
     auto-defaults to the current month's system. All twelve cfg
     panels evaluate the month's CURRENT registry best cycle
-    (EXT35 set: Jan 60J, Feb 85R, Mar 86O, Apr 87P, May 88T,
-    Jun 89X, Jul 78M, Aug 67W, Sep 91Z, Oct 92L, Nov 93AH,
-    Dec 94P) through core.signal_mode (2026-11-16 migration;
+    (EXT35+EXT6 set: Jan 60J, Feb 85R, Mar 86O, Apr 87P, May 88T,
+    Jun 89X, Jul 78M, Aug 67W, Sep 91Z, Oct 92L, Nov 93AI,
+    Dec 94Q) through core.signal_mode (2026-11-16 migration;
     February and July were legacy in-app renderers before it).
     Each system runs its winner equations at its
     own check hours with exactly 1 entry per check. Each entry window's

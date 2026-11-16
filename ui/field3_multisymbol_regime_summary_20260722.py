@@ -3581,14 +3581,18 @@ def in_check_window(month, now=None):
     return False
 
 
-# Precheck cadence (user order 2026-11-16): the in-app precheck starts
-# 30 minutes before each check and refreshes every 9 minutes inside
-# that window -- refresh points at check-30, check-21, check-12 and
-# check-3 minutes, then the check itself. Outside the precheck and
-# check windows the page does not auto-refresh at all (Twelve Data
-# API tokens are not spent on an idle open page).
+# Precheck cadence (user order 2026-11-16, updated ~20:57 MMT the
+# same day): the in-app precheck starts 30 minutes before each check
+# and refreshes every 5 minutes inside that window -- refresh points
+# at check-30, check-25, check-20, check-15, check-10 and check-5
+# minutes, then the check itself. It does NOT stop after the first
+# read: every refresh recalculates on fresh data until the check
+# arrives. (This supersedes the 9-minute cadence set earlier that
+# day.) Outside the precheck and check windows the page does not
+# auto-refresh at all (Twelve Data API tokens are not spent on an
+# idle open page).
 _PRECHECK_LEAD_MINUTES = 30
-_PRECHECK_REFRESH_MINUTES = 9
+_PRECHECK_REFRESH_MINUTES = 5
 
 
 def _as_utc_dt(now):
@@ -3630,7 +3634,7 @@ def _month_check_instants(month, now_utc, days_back=1, days_ahead=8):
 def in_precheck_window(month, now=None):
     """True when `now` is inside [check - 30 min, check) for one of
     the month's checks -- the window in which the precheck runs and
-    the page may auto-refresh on the 9-minute cadence."""
+    the page may auto-refresh on the 5-minute cadence."""
     import datetime as _dt
     now_utc = _as_utc_dt(now)
     lead = _dt.timedelta(minutes=_PRECHECK_LEAD_MINUTES)
@@ -3646,7 +3650,7 @@ def _precheck_schedule(month, now=None):
     Returns a dict: next_check (aware UTC instant of the check the
     precheck targets -- the live one while its window is open),
     precheck_start (next_check - 30 min), phase ('before' |
-    'precheck' | 'live'), next_refresh (the next 9-minute cadence
+    'precheck' | 'live'), next_refresh (the next 5-minute cadence
     point, or the check itself; None outside the precheck window),
     and second counts to the check / precheck start / next refresh.
     """
@@ -3666,7 +3670,7 @@ def _precheck_schedule(month, now=None):
     elif now_utc < target:
         phase = "precheck"
         points = [start + _dt.timedelta(minutes=_PRECHECK_REFRESH_MINUTES * k)
-                  for k in range(1, 5)]
+                  for k in range(1, 6)]
         upcoming = [p for p in points if now_utc < p < target]
         next_refresh = upcoming[0] if upcoming else target
     else:
@@ -3952,7 +3956,22 @@ def _render_check_time_reminders(st, state):
     for _month_name, _sysname, _nn, _code in _panel_order:
         try:
             _mod = _il.import_module(f"core.cycle{_nn}_best")
-            _hours = getattr(_mod, f"CYCLE{_nn}_CHECK_HOURS")
+            # BUG FIX (2026-11-16): the lookup used the module code
+            # as-is ("CYCLE93ai_CHECK_HOURS"), but the modules name
+            # the constant in full upper case ("CYCLE93AI_CHECK_
+            # HOURS", "CYCLE60J_CHECK_HOURS") -- getattr raised for
+            # every current cycle and the silent `continue` below
+            # ate the whole section, so the heading rendered but
+            # the tick boxes never showed. Try the upper-case name
+            # first, then the plain CHECK_HOURS alias.
+            _hours = None
+            for _attr in (f"CYCLE{str(_nn).upper()}_CHECK_HOURS",
+                          "CHECK_HOURS"):
+                _hours = getattr(_mod, _attr, None)
+                if _hours:
+                    break
+            if not _hours:
+                continue
         except Exception:
             continue
         st.markdown(f"**{_month_name} \u2014 Cycle {_nn} ({_code})**")
@@ -3965,6 +3984,131 @@ def _render_check_time_reminders(st, state):
                 st.checkbox(_label, key=f"reminder::{_sysname}::{int(_h):02d}")
             except Exception:
                 pass
+
+
+_FLOAT_BAR_CSS = (
+    "<style>"
+    "div[data-testid='stVerticalBlock']:has(>"
+    "div[data-testid='stElementContainer'] .fx-float-anchor){"
+    "position:fixed;right:14px;bottom:14px;z-index:999990;"
+    "width:348px;max-width:94vw;max-height:74vh;overflow-y:auto;"
+    "background:rgba(255,255,255,.78);"
+    "border:1px solid rgba(148,163,184,.6);border-radius:14px;"
+    "box-shadow:0 10px 30px rgba(15,23,42,.18);"
+    "backdrop-filter:blur(14px) saturate(160%);"
+    "-webkit-backdrop-filter:blur(14px) saturate(160%);"
+    "padding:10px 12px;}"
+    "</style>")
+
+
+def _render_floating_controls(st, state):
+    """Floating control bar (user order 2026-11-16 ~20:56 MMT):
+    Refresh, the TEST preview toggle and the check-time reminders
+    in ONE floating glass bar. The reminders were migrated here
+    from the page bottom so they sit beside the refresh button,
+    as ordered; their tick boxes render inside the bar's panel
+    while it is open (open by default, so the ticks show) and
+    persist in session state exactly as before. If the CSS
+    positioning ever fails, the bar simply appears in the page
+    flow at the same place -- the controls work either way.
+    Never raises."""
+    try:
+        st.markdown(_FLOAT_BAR_CSS, unsafe_allow_html=True)
+        with st.container():
+            st.markdown("<span class='fx-float-anchor'></span>",
+                        unsafe_allow_html=True)
+            _c1, _c2, _c3 = st.columns(3)
+            with _c1:
+                if st.button("\U0001f504 Refresh",
+                             key="refresh_dashboard_btn",
+                             use_container_width=True):
+                    _force_dashboard_refresh(st, state)
+            with _c2:
+                if st.button("\U0001f9ea Test",
+                             key="fx_test_preview_btn",
+                             use_container_width=True):
+                    st.session_state["fx_show_test_preview"] = (
+                        not bool(st.session_state.get(
+                            "fx_show_test_preview")))
+            with _c3:
+                if st.button("\u23f0 Reminders",
+                             key="fx_reminders_btn",
+                             use_container_width=True):
+                    st.session_state["fx_show_reminders"] = (
+                        not bool(st.session_state.get(
+                            "fx_show_reminders", True)))
+            if st.session_state.get("fx_show_reminders", True):
+                _render_check_time_reminders(st, state)
+    except Exception:
+        pass
+
+
+def _render_test_preview(st, month_name, best_label):
+    """TEST preview (user order 2026-11-16 ~20:56 MMT): shows
+    EXACTLY how a check result and a precheck result are displayed
+    -- one fired-signal sample and one second-best no-fire sample
+    for each -- rendered with the same calls the live blocks use,
+    so he can see the display forms any time without waiting for
+    a window. Samples only; nothing here is a live signal.
+    Never raises."""
+    try:
+        import pandas as _pd
+        _sb = {"symbol": "AUDCHF", "direction": "BUY",
+               "entry": 0.56693, "sl": 0.56343, "tp": 0.57743,
+               "dec": 5, "near_pct": 100.0,
+               "near_text": ("Sample: the entry bar's close sits "
+                             "inside its 0.40-0.60 band"),
+               "fallback": False, "bar_utc": ""}
+        with st.container(border=True):
+            st.markdown("### \U0001f9ea TEST preview \u2014 how results "
+                        "are shown (samples only, NOT live)")
+            st.markdown(f"**\u2705 CHECK \u2014 fired signal sample "
+                        f"({month_name})**")
+            st.success(f"\U0001f7e2 BEST pick -- shown from the Best "
+                       f"system ({best_label}).")
+            _disp = _pd.DataFrame([{
+                "Quick look": "BEST \u00b7 EURUSD-B-T1.08890,S1.08130",
+                "Source": "BEST", "Symbol": "EURUSD",
+                "Direction": "BUY", "Strategy": str(best_label),
+                "Entry": "1.08320", "TP": "1.08890", "SL": "1.08130",
+                "Score": "0.92"}])
+            try:
+                st.table(_entry_row_colors(_disp))
+            except Exception:
+                # The preview must never half-render: if the table
+                # renderer itself is unavailable in this runtime
+                # (e.g. a broken pyarrow in a local test env), show
+                # the same sample row as one line and SAY so. The
+                # live check table is untouched by this fallback.
+                st.markdown(
+                    "**Sample row (table renderer unavailable in "
+                    "this runtime):** BEST \u00b7 EURUSD-B-T1.08890,"
+                    "S1.08130 \u2014 EURUSD BUY \u2014 Entry 1.08320 | "
+                    "TP 1.08890 | SL 1.08130")
+            st.markdown("**\u2705 CHECK \u2014 no-fire sample "
+                        "(second-best shown)**")
+            st.info(f"No entry at this check -- the Best system "
+                    f"({best_label}) fired nothing.")
+            _render_second_best(st, _sb)
+            st.markdown("**\U0001f50e PRECHECK \u2014 fired sample**")
+            st.markdown(
+                "**\U0001f50e POSSIBLE (pre-check \u2014 not the final "
+                "signal): BUY EURUSD** \u2014 entry ~1.08320 | SL "
+                "1.08130 | TP 1.08890 \u2014 chance ~85% (high)")
+            st.caption("Pre-check read from the still-forming signal "
+                       "candle. The final signal is computed at the "
+                       "check time and can differ.")
+            st.markdown("**\U0001f50e PRECHECK \u2014 no-fire sample "
+                        "(second-best shown)**")
+            st.markdown(
+                "**\U0001f50e POSSIBLE (pre-check \u2014 not the final "
+                "signal): none yet \u2014 second-best: BUY AUDCHF "
+                "\u00b7 nearly met 100%**")
+            st.caption("No equation fires yet on the still-forming "
+                       "signal candle.")
+            _render_second_best(st, _sb)
+    except Exception:
+        pass
 
 
 
@@ -10555,12 +10699,13 @@ def _auto_refresh_field3(st: Any, interval_ms: int = 30_000) -> None:
     """Window-confined auto-refresh (user order 2026-11-16).
 
     The page reruns itself ONLY inside the visible panel's precheck
-    window (check - 30 min -> check, on the 9-minute cadence points)
-    and its check window (check - 15 min -> check + 30 min, on the
-    aligned check interval as before). At every other time NO
-    auto-refresh is installed at all -- an idle open page spends no
-    Twelve Data API tokens. The previous behaviour (a rerun at
-    least every 30 s around the clock) is removed.
+    window (check - 30 min -> check, on the 5-minute cadence points,
+    continuously until the check) and its check window (check -
+    15 min -> check + 30 min, on the aligned check interval as
+    before). At every other time NO auto-refresh is installed at
+    all -- an idle open page spends no Twelve Data API tokens. The
+    previous behaviour (a rerun at least every 30 s around the
+    clock) is removed.
 
     Preferred: ``streamlit_autorefresh`` (pinned in requirements.txt).
     Fallback inside a window only: a ``<meta http-equiv="refresh">``
@@ -10581,7 +10726,7 @@ def _auto_refresh_field3(st: Any, interval_ms: int = 30_000) -> None:
             wait_s = sched.get("to_refresh_s")
             if wait_s is None:
                 return
-            wait_ms = max(5_000, min(540_000, int(wait_s * 1000)))
+            wait_ms = max(5_000, min(300_000, int(wait_s * 1000)))
         else:
             return
     except Exception:
@@ -11549,11 +11694,29 @@ def _compute_precheck_possible(month, state):
             # 19:30 check as "20:00".
             _chk_mmt = _c22_window_mmt_label(
                 int(_pd.Timestamp(check_label).hour))
+            # Second-best into the day-log entry (user order
+            # 2026-11-16 ~20:56 MMT): a no-entry precheck records
+            # its force-shown second-best (symbol + side +
+            # nearly-met %) on the row, so the day card's result
+            # includes it. Going forward only -- old rows keep
+            # their history untouched.
+            _sb_log = None
+            if result.get("status") == "none":
+                _sb_r = result.get("second_best") or {}
+                if _sb_r.get("symbol"):
+                    _sb_log = (f"{_sb_r.get('direction', '')} "
+                               f"{_sb_r['symbol']}").strip()
+                    _pct_r = _sb_r.get("near_pct")
+                    if isinstance(_pct_r, (int, float)):
+                        _sb_log += f" \u00b7 nearly met {_pct_r:.0f}%"
+                    elif _sb_r.get("near_text"):
+                        _sb_log += f" \u00b7 {str(_sb_r['near_text'])}"
             _record_pc(
                 int(month), _MS_PC[int(month)], _chk_mmt,
                 result.get("status"),
                 symbol=result.get("symbol"),
-                direction=result.get("direction"))
+                direction=result.get("direction"),
+                second_best=_sb_log)
         except Exception:
             pass
         return result
@@ -11565,7 +11728,7 @@ def _render_precheck_timer_box(st, month):
     """Clear glass timer box for the pre-check (user order
     2026-11-16): the next check time, the precheck start time
     (check - 30 min), and a live countdown -- to the precheck start
-    before the window, to the next 9-minute refresh inside it, and
+    before the window, to the next 5-minute refresh inside it, and
     a live marker during the check window. The countdown moves
     because the page auto-refreshes inside the precheck/check
     windows only. Display only; never raises."""
@@ -11604,7 +11767,7 @@ def _render_precheck_timer_box(st, month):
         else:
             status = (f"<b>⏳ PRECHECK STARTS IN</b><br>"
                       f"<span style='font-size:11px;'>{_cd(sched['to_start_s'])}"
-                      f" · then refreshes every 9 min</span>")
+                      f" · then refreshes every 5 min</span>")
         box = ("<div style='background:rgba(255,255,255,.55);"
                "border:1px solid rgba(255,255,255,.65);border-radius:12px;"
                "box-shadow:0 4px 14px rgba(15,23,42,.06);"
@@ -11663,8 +11826,21 @@ def _render_precheck_possible(st, state, month):
                        "still-forming signal candle. The final signal is "
                        "computed at the check time and can differ.")
         elif result["status"] == "none":
+            # Probability beside the result (user order 2026-11-16
+            # ~20:56 MMT): with no candidate, the headline itself
+            # carries the second-best and its nearly-met % -- the
+            # full force-show line still rides underneath.
+            _sb_h = result.get("second_best") or {}
+            _sb_head = ""
+            if _sb_h.get("symbol"):
+                _sb_head = (f" \u2014 second-best: "
+                            f"{_sb_h.get('direction', '')} "
+                            f"{_sb_h['symbol']}").rstrip()
+                _pct_h = _sb_h.get("near_pct")
+                if isinstance(_pct_h, (int, float)):
+                    _sb_head += f" \u00b7 nearly met {_pct_h:.0f}%"
             st.markdown("**\U0001f50e POSSIBLE (pre-check \u2014 not the "
-                        "final signal): none yet**")
+                        f"final signal): none yet{_sb_head}**")
             st.caption(f"No equation fires yet for the {_mmt} MMT check on "
                        "the still-forming signal candle.")
             # CHECK-TIME FORCE-SHOW (user requirement, restated
@@ -11690,11 +11866,19 @@ def _render_precheck_day_table(st):
     (Myanmar date), in check-time order.
 
     Read back from the persistent day log (core.precheck_day_log) on
-    every render, so the table never disappears within the day: it
+    every render, so the record never disappears within the day: it
     survives page refreshes and Streamlit reruns, and it starts empty
-    on a new Myanmar date. Display only; never raises."""
+    on a new Myanmar date. Display only; never raises.
+
+    CARDS, NOT A TABLE (user order 2026-11-16 ~20:56 MMT): the table
+    was hard to read on his screen, so each check time is now one
+    small glass BOX CARD with the same fields as clear stacked
+    lines (check time, system, result, runs, last run). A no-entry
+    card's result includes the second-best line recorded on the
+    row at evaluation time (rows recorded before that carry their
+    history unchanged)."""
     try:
-        import pandas as _pd
+        import html as _html
         from core.precheck_day_log import load_day, mmt_today
         _today = mmt_today()
         st.markdown(f"### \U0001F4CB Today's precheck signals "
@@ -11705,15 +11889,37 @@ def _render_precheck_day_table(st):
                        "precheck the app computes is added here and "
                        "stays for the whole day.")
             return
-        _disp = [{
-            "Check (MMT)": r.get("check", ""),
-            "System": r.get("system", ""),
-            "Result": r.get("result", ""),
-            "Runs": r.get("runs", 1),
-            "Last run (MMT)": r.get("last_run", ""),
-        } for r in rows]
-        st.dataframe(_pd.DataFrame(_disp),
-                     use_container_width=True, hide_index=True)
+        _cards = []
+        for r in rows:
+            _sb_line = ""
+            if r.get("second_best"):
+                _sb_line = (
+                    "<div style='margin-top:3px;'>Second-best: <b>"
+                    + _html.escape(str(r["second_best"])) + "</b></div>")
+            _cards.append(
+                "<div style='background:rgba(255,255,255,.55);"
+                "border:1px solid rgba(255,255,255,.65);"
+                "border-radius:12px;box-shadow:0 4px 14px "
+                "rgba(15,23,42,.06);backdrop-filter:blur(10px) "
+                "saturate(150%);-webkit-backdrop-filter:blur(10px) "
+                "saturate(150%);padding:10px 12px;flex:1 1 230px;"
+                "min-width:210px;color:#0f172a;'>"
+                f"<div style='font-size:17px;font-weight:800;'>"
+                f"\U0001f558 {_html.escape(str(r.get('check', '')))} MMT</div>"
+                f"<div style='margin-top:2px;'>System: <b>"
+                f"{_html.escape(str(r.get('system', '')))}</b></div>"
+                f"<div style='margin-top:2px;'>Result: <b>"
+                f"{_html.escape(str(r.get('result', '')))}</b></div>"
+                + _sb_line
+                + f"<div style='margin-top:4px;font-size:12px;"
+                  f"color:#475569;'>Runs: "
+                  f"{_html.escape(str(r.get('runs', 1)))} \u00b7 Last run "
+                  f"{_html.escape(str(r.get('last_run', '')))} MMT</div>"
+                "</div>")
+        st.markdown(
+            "<div style='display:flex;flex-wrap:wrap;gap:8px;margin:4px 0;'>"
+            + "".join(_cards) + "</div>",
+            unsafe_allow_html=True)
         st.caption("Precheck reads only \u2014 the final signal is "
                    "computed at the check time and can differ. Kept "
                    "for the whole day; a new day starts empty.")
@@ -11836,10 +12042,12 @@ def render_multisymbol_regime_summary(
     Each system runs its winner equations at its
     own check hours with exactly 1 entry per check. Each entry window's
     signals are persisted in session state and stay visible until the next
-    window arrives. The "Refresh the dashboard" button above the signals
-    table forces a fresh H1 + M15 fetch and re-evaluation; the reminders
-    section below the table lists the current month's check
-    times with persistent checkbox toggles.
+    window arrives. The page top is exactly two sections -- CHECK
+    SIGNAL, then PRECHECK SIGNAL (user order 2026-11-16 ~20:56 MMT);
+    a floating control bar carries the Refresh button (forces a
+    fresh H1 + M15 fetch and re-evaluation), the TEST preview
+    toggle and the check-time reminders with their persistent
+    checkbox toggles.
     """
     _auto_refresh_field3(st)
     from ui.monthly_equation_panel import render_monthly_panel
@@ -11899,16 +12107,44 @@ def render_multisymbol_regime_summary(
     _render_cycle12_check_banner(st, state.get(_panel["age_key"]))
     _render_symbols_loaded_box(st, context, state)
 
-    # Refresh button at the TOP of the ranking/signals table: forces a
-    # fresh data fetch (H1 + M15) and a re-evaluation of the panel.
-    try:
-        if st.button("\U0001f504 Refresh the dashboard", key="refresh_dashboard_btn"):
-            _force_dashboard_refresh(st, state)
-    except Exception:
-        pass
+    _active_month = next(
+        (i + 1 for i, _row in enumerate(_MONTH_PANEL_ORDER)
+         if _row[1] == _active), None)
 
+    # Floating control bar (user order 2026-11-16 ~20:56 MMT):
+    # Refresh + TEST preview + check-time reminders in one floating
+    # glass bar (the reminders migrated here, beside Refresh).
+    _render_floating_controls(st, state)
+
+    # ===== SECTION 1 -- CHECK SIGNAL (top) =====
+    # Layout law (user order 2026-11-16 ~20:56 MMT): the page top is
+    # exactly ONE section for the check and ONE for the precheck,
+    # clearly separated and labelled. The signals table's "Quick
+    # look" column is classified here, in its own section: it is
+    # the CHECK entry written in one line -- it belongs to CHECK,
+    # not to the precheck.
+    st.markdown("## \u2705 CHECK SIGNAL \u2014 the final signal, "
+                "at the check time")
+    st.caption("This is the CHECK system: the final signal, computed "
+               "at the check time. The 'Quick look' column in its "
+               "table is the check entry written in one line "
+               "(SYMBOL-side-T<tp>,S<sl>) \u2014 Quick look belongs "
+               "to this CHECK section.")
     payload = _panel["render"](st, state)
 
+    # Downloads sit BELOW the signals table (full-width, mobile-friendly).
+    if payload is not None:
+        st.markdown("<div style='margin-top:4px;'></div>", unsafe_allow_html=True)
+        _panel["download"](st, payload)
+
+    # ===== SECTION 2 -- PRECHECK SIGNAL =====
+    st.markdown("## \U0001f50e PRECHECK SIGNAL \u2014 early read "
+                "before the check")
+    st.caption("This is the PRECHECK system: an early read on the "
+               "still-forming candle. Inside its window (check "
+               "\u2212 30 min) it recalculates on fresh data every "
+               "5 minutes until the check \u2014 it does not stop "
+               "after the first read.")
     # POSSIBLE (pre-check) block for this panel's next check
     # (additive display only, user order 2026-10-28). The timer box
     # (user order 2026-11-16) heads the section: next check time,
@@ -11916,28 +12152,30 @@ def render_multisymbol_regime_summary(
     # visible; the pre-check signal itself appears inside its
     # window (T-30 -> check + 30).
     try:
-        _precheck_month = next(
-            (i + 1 for i, _row in enumerate(_MONTH_PANEL_ORDER)
-             if _row[1] == _active), None)
-        if _precheck_month is not None:
-            _render_precheck_timer_box(st, _precheck_month)
-            _render_precheck_possible(st, state, _precheck_month)
+        if _active_month is not None:
+            _render_precheck_timer_box(st, _active_month)
+            _render_precheck_possible(st, state, _active_month)
     except Exception:
         pass
 
-    # Today's precheck signals -- all-day table under the check signal
-    # (user order 2026-11-16): every precheck run of the day, kept for
-    # the whole Myanmar day.
+    # Today's precheck signals -- all-day CARDS under the precheck
+    # section (user order 2026-11-16): every precheck run of the
+    # day, kept for the whole Myanmar day.
     _render_precheck_day_table(st)
 
-    # Downloads sit BELOW the signals table (full-width, mobile-friendly).
-    if payload is not None:
-        st.markdown("<div style='margin-top:4px;'></div>", unsafe_allow_html=True)
-        _panel["download"](st, payload)
+    # TEST preview (user order 2026-11-16 ~20:56 MMT): toggled from
+    # the floating bar; shows exactly how a check result and a
+    # precheck result are displayed, fired and no-fire forms.
+    if st.session_state.get("fx_show_test_preview"):
+        _cfg_t = _COMBINED_CFG.get(_active_month or 0) or {}
+        _render_test_preview(st, _cfg_t.get("month_name", ""),
+                             _cfg_t.get("best_label", ""))
 
     _render_eval_history(st, state, _active)
 
-    _render_check_time_reminders(st, state)
+    # Check-time reminders: rendered inside the floating control
+    # bar above (migrated from the page bottom, user order
+    # 2026-11-16 ~20:56 MMT).
 
 
 # ============================================================================

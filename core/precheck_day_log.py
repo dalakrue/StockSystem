@@ -81,13 +81,21 @@ def _save(rows: list) -> None:
 
 
 def record_precheck(month, system, check_hhmm, status, symbol=None,
-                    direction=None, note=None, run_at_utc=None) -> None:
+                    direction=None, note=None, run_at_utc=None,
+                    second_best=None) -> None:
     """Record one precheck computation. Never raises.
 
     month: 1..12; system: the registry cycle id that was evaluated
     (e.g. "cycle93ah"); check_hhmm: the targeted check time in Myanmar
     time ("19:30"); status: "pick" | "none"; symbol/direction for a
-    pick. The row is keyed by (run date in MMT, month, check time)."""
+    pick. The row is keyed by (run date in MMT, month, check time).
+
+    second_best (user order 2026-11-16 ~20:56 MMT): for a no-entry
+    precheck, the force-shown second-best as one short text line
+    (symbol + side + nearly-met %), stored on the row so the day
+    card's result includes it. Rows recorded before this field
+    existed simply have no "second_best" key -- history is left
+    exactly as it was."""
     try:
         if run_at_utc is None:
             run_at_utc = _dt.datetime.now(_dt.timezone.utc)
@@ -109,16 +117,25 @@ def record_precheck(month, system, check_hhmm, status, symbol=None,
                 found = row
                 break
         if found is None:
-            rows.append({
+            _row = {
                 "date": date, "month": int(month), "system": str(system),
                 "check": str(check_hhmm), "result": result,
                 "first_run": run_hhmm, "last_run": run_hhmm, "runs": 1,
-            })
+            }
+            if second_best:
+                _row["second_best"] = str(second_best)
+            rows.append(_row)
         else:
             found["system"] = str(system)
             found["result"] = result
             found["last_run"] = run_hhmm
             found["runs"] = int(found.get("runs", 1)) + 1
+            if second_best:
+                found["second_best"] = str(second_best)
+            elif status == "pick":
+                # A later run of the same check fired -- the stored
+                # second-best of an earlier no-entry read is stale.
+                found.pop("second_best", None)
         cutoff = (_dt.datetime.now(_dt.timezone.utc).astimezone(_MMT)
                   - _dt.timedelta(days=_KEEP_DAYS)).strftime("%Y-%m-%d")
         rows = [r for r in rows if str(r.get("date", "")) >= cutoff]
@@ -129,7 +146,9 @@ def record_precheck(month, system, check_hhmm, status, symbol=None,
 
 def load_day(date: str | None = None) -> list:
     """Rows recorded on one Myanmar date (default: today), in check-time
-    order. Each row: check, system, result, runs, first_run, last_run."""
+    order. Each row: check, system, result, runs, first_run, last_run,
+    and -- for no-entry prechecks recorded since 2026-11-16 -- a
+    "second_best" text line (symbol + side + nearly-met %)."""
     try:
         if date is None:
             date = mmt_today()

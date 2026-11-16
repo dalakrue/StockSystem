@@ -3363,6 +3363,25 @@ def _record_eval_history(sysname, payload, replace=True):
                     })
                 except Exception:
                     continue
+        # APP FILL (user order 2026-11-17): a filled entry is
+        # recorded WITH its window, flagged "filled", so the
+        # 24-hour day view shows it as the window's entry --
+        # with its FILLED quick-look string, never as a fired
+        # pick -- and later windows today can see the symbol
+        # was already entered.
+        _fe = payload.get("filled_entry")
+        if isinstance(_fe, dict) and _fe.get("symbol"):
+            try:
+                entries.append({
+                    "symbol": str(_fe.get("symbol", "")),
+                    "direction": str(_fe.get("direction", "")),
+                    "entry": _num(_fe.get("entry")),
+                    "tp": _num(_fe.get("tp")),
+                    "sl": _num(_fe.get("sl")),
+                    "quick": str(_fe.get("quick", "")),
+                    "filled": True})
+            except Exception:
+                pass
 
         def _int_or_none(v):
             try:
@@ -4259,6 +4278,17 @@ def _render_test_preview(st, month_name, best_label, month=None):
                 "No entry at this check \u2014 the Best system "
                 "fired nothing.")
             _render_second_best(st, _sb)
+            st.markdown("**\u2705 CHECK \u2014 filled entry sample "
+                        "(second-best taken)**")
+            _sb_filled = dict(_sb)
+            _sb_filled["filled"] = True
+            _sb_filled["quick"] = _filled_quick(_sb_filled)
+            _render_check_filled_box(st, _sb_filled, _chk_mmt,
+                                     best_label)
+            st.caption("Filled entry sample: when no equation "
+                       "fires, the second-best is taken as a real "
+                       "entry (fill rule, user order 2026-11-17). "
+                       "Samples only, NOT live.")
             st.markdown("**\U0001f50e PRECHECK \u2014 fired sample**")
             _render_precheck_result(st, {
                 "status": "pick", "check_label": _chk_label,
@@ -11170,16 +11200,56 @@ def _combined_check_hours(month):
     return tuple(getattr(mod, cfg["hours_attr"]))
 
 
+def _sb_display_dict(_sb):
+    """Convert one raw nearest-candidate row (a cycle module's
+    {sym, side, entry_px, sl_pips, near_pct, near_text, bar_s,
+    fallback}) into the panel's second-best display dict, with
+    entry/SL/TP levels at the design's fixed SL (TP = 3x SL).
+    Shared by _compute_second_best and the ranked-candidate
+    walk so every conversion is identical."""
+    import pandas as _pd
+    from core.cycle12_best import pip_size as _sb_pip
+    _sym = str(_sb["sym"]).upper()
+    _side = "BUY" if int(_sb["side"]) > 0 else "SELL"
+    _entry = float(_sb["entry_px"])
+    _sl_p = float(_sb["sl_pips"])
+    _tp_p = 3.0 * _sl_p
+    _pip = float(_sb_pip(_sym))
+    if _side == "BUY":
+        _tp_x = _entry + _tp_p * _pip
+        _sl_x = _entry - _sl_p * _pip
+    else:
+        _tp_x = _entry - _tp_p * _pip
+        _sl_x = _entry + _sl_p * _pip
+    _dec = 3 if _pip >= 0.01 else 5
+    _bar_txt = ""
+    try:
+        _bar_txt = _pd.Timestamp(
+            int(_sb["bar_s"]), unit="s", tz="UTC").strftime(
+                "%Y-%m-%d %H:%M UTC")
+    except Exception:
+        _bar_txt = ""
+    return {"symbol": _sym, "direction": _side,
+            "entry": round(_entry, _dec),
+            "tp": round(_tp_x, _dec),
+            "sl": round(_sl_x, _dec), "dec": _dec,
+            "near_pct": _sb.get("near_pct"),
+            "near_text": str(_sb.get("near_text") or ""),
+            "fallback": bool(_sb.get("fallback")),
+            "bar_utc": _bar_txt}
+
+
 def _compute_second_best(month, frames, check_label):
     """CHECK-TIME FORCE-SHOW (user requirement, restated
     2026-11-16 19:52 MMT): for a window whose equation fired
     nothing, compute the second-best / nearest-met candidate
     from the month design's own scoring (each cycle module
-    exposes nearest_candidate()). Display data ONLY -- never a
-    signal, never traded. Returns a display dict or None (only
-    when no candidate bar could be read at all)."""
+    exposes nearest_candidate()). Returns a display dict or
+    None (only when no candidate bar could be read at all).
+    The panel's APP FILL rule (user order 2026-11-17) may
+    promote this candidate to the window's filled entry; this
+    computation itself is unchanged."""
     import importlib as _il_sb
-    import pandas as _pd
     try:
         _row = _MONTH_PANEL_ORDER[int(month) - 1]
         _mod = _il_sb.import_module(f"core.cycle{_row[2]}_best")
@@ -11189,35 +11259,7 @@ def _compute_second_best(month, frames, check_label):
         _sb = _fn(frames, check_label)
         if not _sb:
             return None
-        from core.cycle12_best import pip_size as _sb_pip
-        _sym = str(_sb["sym"]).upper()
-        _side = "BUY" if int(_sb["side"]) > 0 else "SELL"
-        _entry = float(_sb["entry_px"])
-        _sl_p = float(_sb["sl_pips"])
-        _tp_p = 3.0 * _sl_p
-        _pip = float(_sb_pip(_sym))
-        if _side == "BUY":
-            _tp_x = _entry + _tp_p * _pip
-            _sl_x = _entry - _sl_p * _pip
-        else:
-            _tp_x = _entry - _tp_p * _pip
-            _sl_x = _entry + _sl_p * _pip
-        _dec = 3 if _pip >= 0.01 else 5
-        _bar_txt = ""
-        try:
-            _bar_txt = _pd.Timestamp(
-                int(_sb["bar_s"]), unit="s", tz="UTC").strftime(
-                    "%Y-%m-%d %H:%M UTC")
-        except Exception:
-            _bar_txt = ""
-        return {"symbol": _sym, "direction": _side,
-                "entry": round(_entry, _dec),
-                "tp": round(_tp_x, _dec),
-                "sl": round(_sl_x, _dec), "dec": _dec,
-                "near_pct": _sb.get("near_pct"),
-                "near_text": str(_sb.get("near_text") or ""),
-                "fallback": bool(_sb.get("fallback")),
-                "bar_utc": _bar_txt}
+        return _sb_display_dict(_sb)
     except Exception:
         return None
 
@@ -11249,10 +11291,159 @@ def _render_second_best(st, sb):
             st.caption(
                 str(sb["near_text"]) + ". Shown because no "
                 "equation fired at this check -- by rule the "
-                "second-best is displayed; it is never a "
-                "signal and is never traded.")
+                "second-best is displayed.")
     except Exception:
         return
+
+
+def _filled_quick(sb):
+    """One-line quick-look string for a filled entry, mirroring
+    the fired picks' 'BEST \u00b7 SYM-B-TP,SSL' shape with a
+    FILLED tag so a filled entry is never mistaken for a fired
+    pick in any list that shows quick-look strings."""
+    try:
+        _d = int(sb.get("dec", 5))
+        _side = "B" if str(sb.get("direction")) == "BUY" else "S"
+        return (f"FILLED \u00b7 {sb['symbol']}-{_side}-"
+                f"T{float(sb['tp']):.{_d}f},S{float(sb['sl']):.{_d}f}")
+    except Exception:
+        return "FILLED"
+
+
+def _ranked_second_bests(month, frames, check_label):
+    """The month's ranked second-best candidates, best first --
+    ONLY if the cycle module exposes a ranking through a
+    nearest_candidates() function. Every current module exposes
+    only the single nearest_candidate(), so this returns [] and
+    the day-scope walk simply does not engage; no ranking is
+    ever invented here."""
+    import importlib as _il_r
+    try:
+        _row = _MONTH_PANEL_ORDER[int(month) - 1]
+        _mod = _il_r.import_module(f"core.cycle{_row[2]}_best")
+        _fn = getattr(_mod, "nearest_candidates", None)
+        if _fn is None:
+            return []
+        _raw = _fn(frames, check_label)
+        _out = []
+        for _sb in (_raw or []):
+            try:
+                _out.append(_sb_display_dict(_sb))
+            except Exception:
+                continue
+        return _out
+    except Exception:
+        return []
+
+
+def _compute_filled_entry(state, cfg, month, payload, frames,
+                          check_label, day):
+    """APP FILL (user order 2026-11-17 00:06 MMT): promote a
+    no-fire window's second-best to the window's FILLED ENTRY --
+    the second-best is TAKEN as a real entry, so every check
+    delivers an entry (3 entries per day). The caller invokes
+    this only for windows whose data is complete (never for
+    data-failure windows: the data was not there to take an
+    entry from).
+
+    Day-scope one-open rule: when the second-best's symbol was
+    already today's entry for this month (fired or filled) at an
+    earlier check -- read from the panel's own stored day state
+    (the persistent eval history, this session's day record and
+    the previously stored payload) -- walk to the next-ranked
+    candidate IF the module exposes a ranking; when none is
+    exposed (every current module), keep the second-best and
+    flag it already_today, so the box carries the plain note
+    'symbol already entered today'. Returns the filled-entry
+    display dict (the second-best dict plus filled/quick and
+    any flags), or None. Never raises."""
+    import pandas as _pd
+    try:
+        sb = payload.get("second_best")
+        if not isinstance(sb, dict) or not sb.get("symbol"):
+            return None
+        _day0 = _pd.Timestamp(day).normalize()
+        _win = None
+        try:
+            _win = _pd.Timestamp(payload.get("window_utc"))
+            if _win.tzinfo is not None:
+                _win = _win.tz_localize(None)
+        except Exception:
+            _win = None
+        used = set()
+        # (a) the persistent eval history: today's earlier
+        # windows for this system, fired and filled alike.
+        try:
+            for _r in _load_eval_history(cfg["sysid"], hours=24):
+                try:
+                    _rw = _pd.Timestamp(_r["window_utc"])
+                    if _rw.tzinfo is not None:
+                        _rw = _rw.tz_localize(None)
+                except Exception:
+                    continue
+                if _win is not None and _rw == _win:
+                    continue
+                if _rw.normalize() != _day0:
+                    continue
+                for _e in (_r.get("entries") or []):
+                    _s = str(_e.get("symbol", "")).upper()
+                    if _s:
+                        used.add(_s)
+        except Exception:
+            pass
+        # (b) this session's day record for the system.
+        try:
+            _dr = (state.get(cfg["state_key"] + ":day_entries")
+                   if isinstance(state, dict) else None)
+            if (isinstance(_dr, dict)
+                    and _dr.get("day") == _day0.strftime("%Y-%m-%d")):
+                used.update(str(_s).upper()
+                            for _s in (_dr.get("symbols") or []))
+        except Exception:
+            pass
+        # (c) the previously stored payload, when it is an
+        # earlier window of the same day.
+        try:
+            _prev = (state.get(cfg["state_key"])
+                     if isinstance(state, dict) else None)
+            if (isinstance(_prev, dict)
+                    and _prev.get("window_utc") is not None):
+                _pw = _pd.Timestamp(_prev["window_utc"])
+                if _pw.tzinfo is not None:
+                    _pw = _pw.tz_localize(None)
+                if (_pw.normalize() == _day0
+                        and (_win is None or _pw != _win)):
+                    _d0 = _prev.get("signals")
+                    if (isinstance(_d0, _pd.DataFrame)
+                            and not _d0.empty
+                            and "Symbol" in _d0.columns):
+                        used.update(str(_s).upper()
+                                    for _s in _d0["Symbol"])
+                    _f0 = _prev.get("filled_entry")
+                    if isinstance(_f0, dict) and _f0.get("symbol"):
+                        used.add(str(_f0["symbol"]).upper())
+        except Exception:
+            pass
+        filled = dict(sb)
+        filled["filled"] = True
+        filled["quick"] = _filled_quick(filled)
+        if str(sb["symbol"]).upper() in used:
+            _nxt = None
+            for _cand in _ranked_second_bests(month, frames,
+                                              check_label):
+                if str(_cand.get("symbol", "")).upper() not in used:
+                    _nxt = _cand
+                    break
+            if _nxt is not None:
+                filled = dict(_nxt)
+                filled["filled"] = True
+                filled["quick"] = _filled_quick(filled)
+                filled["walked_from"] = str(sb["symbol"])
+            else:
+                filled["already_today"] = True
+        return filled
+    except Exception:
+        return None
 
 
 def _evaluate_combined_window(state, month, hour_utc, day=None):
@@ -11363,6 +11554,51 @@ def _evaluate_combined_window(state, month, hour_utc, day=None):
             # and the line is labelled as from that bar.
             payload["second_best"] = _compute_second_best(
                 month, frames, check_label)
+            # APP FILL (user order 2026-11-17 00:06 MMT): a
+            # no-fire window with COMPLETE data takes its
+            # second-best as a real FILLED ENTRY, stamped on the
+            # payload (filled=True + the filled_entry dict), so
+            # the stored result and every re-render keep the
+            # label. Data-failure windows are NOT filled -- the
+            # data was not there to take an entry from; they keep
+            # the force-show line only.
+            if not _payload_data_failed(payload):
+                try:
+                    _fill = _compute_filled_entry(
+                        state, cfg, month, payload, frames,
+                        check_label, day)
+                except Exception:
+                    _fill = None
+                if _fill:
+                    payload["filled"] = True
+                    payload["filled_entry"] = _fill
+        # Session day record (APP FILL day-scope): the symbols
+        # this system has entered today (fired or filled), kept
+        # in session state so a later window today can apply the
+        # one-open day rule even before the persistent history
+        # is read back.
+        try:
+            _dr_key = cfg["state_key"] + ":day_entries"
+            _dr = state.get(_dr_key)
+            _today = _pd.Timestamp(day).strftime("%Y-%m-%d")
+            if not isinstance(_dr, dict) or _dr.get("day") != _today:
+                _dr = {"day": _today, "symbols": []}
+            _syms = list(_dr.get("symbols") or [])
+            if (isinstance(disp, _pd.DataFrame) and not disp.empty
+                    and "Symbol" in disp.columns):
+                for _s in disp["Symbol"]:
+                    _su = str(_s).upper()
+                    if _su not in _syms:
+                        _syms.append(_su)
+            _fe_dr = payload.get("filled_entry")
+            if isinstance(_fe_dr, dict) and _fe_dr.get("symbol"):
+                _su = str(_fe_dr["symbol"]).upper()
+                if _su not in _syms:
+                    _syms.append(_su)
+            _dr["symbols"] = _syms
+            state[_dr_key] = _dr
+        except Exception:
+            pass
         _record_eval_history(cfg["sysid"], payload)
         try:
             state[cfg["state_key"]] = payload
@@ -11503,6 +11739,71 @@ def _render_check_empty_box(st, window_mmt, system_label, headline,
         return
 
 
+def _render_check_filled_box(st, filled, window_mmt, system_label):
+    """One glass box card for a FILLED check entry (APP FILL,
+    user order 2026-11-17 00:06 MMT): the window's second-best
+    TAKEN as the entry because no equation fired. Same
+    stacked-line shape as a fired pick's box -- the quick-look
+    line FIRST (tagged FILLED), then check time, system, and
+    the ENTRY line, whose headline reads 'ENTRY \u2014 FILLED
+    (second-best)' where a fired pick's reads 'ENTRY'. The
+    second-best information (nearly-met %) stays visible on
+    the box: the force-show line has become the entry itself.
+    Never raises."""
+    try:
+        import html as _html
+        if not isinstance(filled, dict) or not filled.get("symbol"):
+            return
+        _d = int(filled.get("dec", 5))
+        _quick = str(filled.get("quick") or _filled_quick(filled))
+        _lines = [
+            f"<div style='font-size:16px;font-weight:800;'>"
+            f"{_html.escape(_quick)}</div>",
+            f"<div style='margin-top:2px;'>Check time: <b>"
+            f"{_html.escape(str(window_mmt))} MMT</b></div>",
+            f"<div style='margin-top:2px;'>System: <b>"
+            f"{_html.escape(str(system_label))}</b></div>",
+            f"<div style='margin-top:2px;'>ENTRY \u2014 FILLED "
+            f"(second-best) \u2014 <b>"
+            f"{_html.escape(str(filled.get('direction', '')))} "
+            f"{_html.escape(str(filled.get('symbol', '')))}</b> "
+            f"\u00b7 Entry {float(filled['entry']):.{_d}f} | TP "
+            f"{float(filled['tp']):.{_d}f} | SL "
+            f"{float(filled['sl']):.{_d}f}</div>",
+        ]
+        _pct = filled.get("near_pct")
+        if isinstance(_pct, (int, float)):
+            _lines.append(
+                f"<div style='margin-top:2px;'>Second-best "
+                f"\u00b7 nearly met: {_pct:.0f}%</div>")
+        if filled.get("near_text"):
+            _lines.append(
+                f"<div style='margin-top:2px;font-size:12px;"
+                f"color:#475569;'>"
+                f"{_html.escape(str(filled['near_text']))}</div>")
+        if filled.get("fallback"):
+            _lines.append(
+                f"<div style='margin-top:2px;font-size:12px;"
+                f"color:#475569;'>Ranked from the last completed "
+                f"bar, ending "
+                f"{_html.escape(str(filled.get('bar_utc', '')))} "
+                f"\u2014 the check bar could not be read "
+                f"completely.</div>")
+        if filled.get("already_today"):
+            _lines.append(
+                f"<div style='margin-top:2px;'>\u26a0\ufe0f "
+                f"Symbol already entered today \u2014 kept as "
+                f"this check's filled entry.</div>")
+        st.markdown(
+            "<div style='display:flex;flex-wrap:wrap;gap:8px;"
+            "margin:4px 0;'>"
+            "<div style='" + _CHECK_BOX_CARD_STYLE + "'>"
+            + "".join(_lines) + "</div></div>",
+            unsafe_allow_html=True)
+    except Exception:
+        return
+
+
 def _render_combined_signals_table(st, state, month):
     """Month signals table (best-only since 2026-11-06).
 
@@ -11628,6 +11929,33 @@ def _render_combined_signals_table(st, state, month):
                     f"Price data incomplete for this window \u2014 only "
                     f"{n_eval}/{_C22_N_REQ} symbols are ready. Check "
                     f"calculation is incomplete.")
+                # CHECK-TIME FORCE-SHOW: the second-best line
+                # rides under the data-failure error (labelled
+                # with its bar when it came from the last
+                # completed bar). A data-failure window is NOT
+                # filled -- no entry is taken from it.
+                _render_second_best(st, payload.get("second_best"))
+            elif payload.get("filled_entry"):
+                # APP FILL (user order 2026-11-17 00:06 MMT): no
+                # equation fired, so the second-best is TAKEN as
+                # this check's entry -- the force-show line has
+                # become the filled entry itself, shown as an
+                # entry box with its levels and nearly-met %.
+                st.success(
+                    f"\U0001F7E2 ENTRY \u2014 FILLED (second-best) "
+                    f"-- no equation fired at this check, so the "
+                    f"second-best is taken as the entry "
+                    f"(fill rule).")
+                _render_check_filled_box(
+                    st, payload.get("filled_entry"),
+                    payload.get("window_mmt"), cfg["best_label"])
+                st.caption(
+                    "Filled entry (user order 2026-11-17): the "
+                    "second-best is traded as a real entry, so "
+                    "every check delivers an entry \u2014 3 "
+                    "entries per day. Filled entries are NOT part "
+                    "of the validated books; the validated record "
+                    "is the fired picks.")
             else:
                 st.info(f"No entry at this check -- the Best system "
                         f"({cfg['best_label']}) fired nothing.")
@@ -11636,13 +11964,13 @@ def _render_combined_signals_table(st, state, month):
                     "NOSIGNAL \u2014 no entry at this check",
                     "No entry at this check \u2014 the Best system "
                     "fired nothing.")
-            # CHECK-TIME FORCE-SHOW (user requirement, restated
-            # 2026-11-16 19:52 MMT): a bare no-entry is never the
-            # whole output -- the second-best / nearest-met line
-            # rides under both the plain no-entry note and the
-            # data-failure error (labelled with its bar when it
-            # came from the last completed bar).
-            _render_second_best(st, payload.get("second_best"))
+                # CHECK-TIME FORCE-SHOW (user requirement,
+                # restated 2026-11-16 19:52 MMT): a bare
+                # no-entry is never the whole output -- the
+                # second-best / nearest-met line rides under the
+                # plain no-entry note (this branch remains for
+                # windows with no candidate to fill from).
+                _render_second_best(st, payload.get("second_best"))
         return payload
     except Exception:
         _p = state.get(_COMBINED_CFG[month]["state_key"])
@@ -12187,6 +12515,32 @@ def _render_precheck_result(st, result):
                         f"final signal): none yet{_sb_head}**")
             st.caption(f"No equation fires yet for the {_mmt} MMT check on "
                        "the still-forming signal candle.")
+            if _sb_h.get("symbol"):
+                # APP FILL (user order 2026-11-17 00:06 MMT): the
+                # no-fire precheck read presents its second-best
+                # as the POSSIBLE FILLED ENTRY -- the same
+                # candidate, with its levels and nearly-met %,
+                # that becomes the check's filled entry if no
+                # equation fires at the check.
+                try:
+                    _d_pf = int(_sb_h.get("dec", 5))
+                    _pct_pf = _sb_h.get("near_pct")
+                    _pct_pf_txt = (
+                        f" \u00b7 nearly met {_pct_pf:.0f}%"
+                        if isinstance(_pct_pf, (int, float)) else "")
+                    st.markdown(
+                        f"**\U0001f50e Possible filled entry "
+                        f"\u2014 second-best: "
+                        f"{_sb_h.get('direction', '')} "
+                        f"{_sb_h['symbol']}** \u2014 entry "
+                        f"~{float(_sb_h['entry']):.{_d_pf}f} | SL "
+                        f"{float(_sb_h['sl']):.{_d_pf}f} | TP "
+                        f"{float(_sb_h['tp']):.{_d_pf}f}"
+                        f"{_pct_pf_txt} \u2014 taken as the "
+                        f"filled entry if no equation fires at "
+                        f"the {_mmt} check.")
+                except Exception:
+                    pass
             # CHECK-TIME FORCE-SHOW (user requirement, restated
             # 2026-11-16 19:52 MMT): the second-best / nearest-met
             # line rides under the "none yet" note -- never a

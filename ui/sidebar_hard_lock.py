@@ -125,8 +125,13 @@ def inject_sidebar_policy_css() -> None:
     ``initial_sidebar_state="collapsed"``; nothing on the live path
     re-expands it) and Streamlit's own reopen control is restyled
     as the hamburger (☰) toggle he asked for -- a dark rounded
-    chip, top-left -- so the button that opens the sidebar is the
-    native control itself, not a look-alike.
+    chip -- so the button that opens the sidebar is the native
+    control itself, not a look-alike. Button-box move (user,
+    2026-11-16 23:10 MMT): the chip moved with the floating
+    control bar to the UPPER RIGHT (fixed, top:14px, beside the
+    bar); on a narrow screen it takes the top-right corner and
+    the bar sits below it. The collapse guarantee and the
+    default-closed state are unchanged.
     """
     init_sidebar_policy()
     st.markdown(
@@ -191,16 +196,35 @@ section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"]{
    Streamlit >= 1.66, div[data-testid="stSidebarCollapsedControl"]
    on older versions -- restyled as a dark rounded chip with a
    hamburger glyph, so the click still drives the native sidebar
-   state and truly opens the sidebar. */
+   state and truly opens the sidebar.
+   UPPER RIGHT (user order 2026-11-16 23:10 MMT): the chip moved
+   out of its old top-left place, up with the floating control
+   bar -- it sits beside the bar (top-right), keeping the dark
+   rounded chip look from sidebar fix #2. The sidebar still
+   starts CLOSED on every app open (initial_sidebar_state=
+   "collapsed" in core/app/runner.py) and the collapse guarantee
+   above stays intact, so there is always a working way to open
+   and close the sidebar: this chip opens it, the in-sidebar
+   collapse button closes it. On a narrow screen the chip takes
+   the top-right corner and the bar sits below it. Honest limit
+   (as with fix #2): AppTest does not apply CSS, so this move is
+   verified by code inspection -- please confirm with one tap. */
 button[data-testid="stExpandSidebarButton"],
 div[data-testid="stSidebarCollapsedControl"]{
   pointer-events:auto!important;visibility:visible!important;opacity:1!important;
-  position:relative!important;z-index:1000002!important;
+  position:fixed!important;top:14px!important;right:464px!important;left:auto!important;
+  z-index:1000002!important;
   min-width:2.75rem!important;width:2.75rem!important;height:2.75rem!important;
   display:flex!important;align-items:center!important;justify-content:center!important;
   background:rgba(15,23,42,.92)!important;color:#ffffff!important;
   border:1px solid rgba(255,255,255,.35)!important;border-radius:12px!important;
   box-shadow:0 6px 18px rgba(15,23,42,.28)!important;cursor:pointer!important;
+}
+@media (max-width:760px){
+  button[data-testid="stExpandSidebarButton"],
+  div[data-testid="stSidebarCollapsedControl"]{
+    right:14px!important;
+  }
 }
 button[data-testid="stExpandSidebarButton"]>*,
 div[data-testid="stSidebarCollapsedControl"]>*{display:none!important;}

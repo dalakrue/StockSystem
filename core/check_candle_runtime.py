@@ -18,6 +18,15 @@ M5_MEMO_KEY = "check_m5_memo_20261116"
 RETRY_SECONDS = 15.0
 SUCCESS_SECONDS = 60.0
 FETCH_BUDGET_SECONDS = 20.0
+# Deep-history sufficiency for the M15 route. The 1600-bar figure
+# was a Twelve Data-era heuristic (one API call returned 2000
+# bars); the designs' true needs are far smaller -- 32-bar slot
+# features and 48 h / 192-bar pending resolution, with the
+# persisted cycle state carrying the rest -- and the Dukascopy
+# feed assembles 10 days (~840 M15 bars) per symbol. 400 bars
+# (~4.8 trading days) is the floor at which a frame counts as
+# deep enough that only the missing tail is fetched.
+MIN_DEEP_BARS = 400
 
 
 def utc_naive(value):
@@ -88,7 +97,7 @@ def entry_candle_from_m15(frame, entry, *, asof=None):
     row = pd.DataFrame([dict(Open=float(part.Open.iloc[0]), High=float(part.High.max()),
                              Low=float(part.Low.min()), Close=float(part.Close.iloc[-1]))],
                        index=pd.DatetimeIndex([entry]))
-    row.attrs["entry_source"] = "TWELVE_DATA_M15_HOUR_OPEN"
+    row.attrs["entry_source"] = "DUKASCOPY_M15_HOUR_OPEN"
     row.attrs["is_partial_hour"] = now < entry + pd.Timedelta(hours=1)
     return row
 
@@ -106,7 +115,7 @@ def _persist_real(repo, raw, sym, tf, errors):
         return
     try:
         from core.data.candle_repository import normalize_frame
-        normalized = normalize_frame(raw, symbol=sym, timeframe=tf, provider="TWELVE_DATA")
+        normalized = normalize_frame(raw, symbol=sym, timeframe=tf, provider="DUKASCOPY")
         # Only complete real candles; partial H1 fallback never enters this path.
         normalized = normalized.loc[normalized.is_complete]
         repo.upsert(normalized, require_complete=True)
@@ -114,54 +123,43 @@ def _persist_real(repo, raw, sym, tf, errors):
         errors.append(f"{sym} {tf}: cache write {type(exc).__name__}")
 
 
-def _direct_fetch(state, symbols, tf, *, deadline, force=False):
-    """Reserve credits on the UI thread; workers never touch session state.
+def _dukascopy_rows(raw):
+    """Repository rows for the signal path: Dukascopy candles only.
 
-    No sleeps or inner retry loop. Return at the page budget even if a provider
-    request hangs. Late workers can only update their connector cache; they
-    cannot mutate panel frames, the repository, or session state.
+    The repository is a shared cache; rows persisted by the old
+    Twelve Data route (or any other provider) must never enter a
+    check / precheck evaluation (user order 2026-11-16: same
+    candles as the chain, no silent substitution). Rows without a
+    provider tag are excluded -- the safe direction.
     """
-    from core.twelve_data_key_pool import TwelveDataKeyPool
-    from core.connectors.data_parts.fetchers import fetch_twelve
-    pool = TwelveDataKeyPool.from_state(state)
-    errors, jobs, frames = [], {}, {}
+    if raw is None or not isinstance(raw, pd.DataFrame) or raw.empty:
+        return raw
+    if "provider" not in raw.columns:
+        return raw.iloc[0:0]
+    keep = raw["provider"].astype(str).str.upper() == "DUKASCOPY"
+    return raw.loc[keep]
+
+
+def _direct_fetch(state, symbols, tf, *, deadline, force=False):
+    """Evaluation candles from the Dukascopy tick feed (user order
+    2026-11-16 21:51 MMT -- the app must suggest like Everest's
+    chain, which reads Dukascopy only).
+
+    Same contract as the Twelve Data route this replaces: return
+    (frames, errors) by the page budget even if a download hangs;
+    every failure is named per symbol. The feed (core/
+    dukascopy_feed.py) downloads .bi5 tick hours keylessly,
+    aggregates BID M5/M15/H1, caches the assembly in `state`
+    across the window's refreshes (tail-only after the first
+    assembly), and hard-stops the whole refresh on a 429/503,
+    mirroring the chain's rate-limit law. No Twelve Data candles
+    enter an evaluation through this route anymore.
+    """
     if not symbols:
-        return frames, errors
-    executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="check-candles")
-    try:
-        for sym in symbols:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                errors.append(f"{sym} {tf}: refresh budget reached")
-                break
-            lease = pool.reserve_key(symbol=sym, timeframe=tf)
-            if lease is None:
-                errors.append(f"{sym} {tf}: no API credit available; retry next refresh")
-                continue
-            future = executor.submit(fetch_twelve, sym, lease.api_key,
-                                     interval="1h" if tf == "H1" else "5min" if tf == "M5" else "15min", bars=2000,
-                                     force_live=force, timeout_seconds=min(4.0, remaining))
-            jobs[future] = (sym, lease.alias)
-        done, pending = wait(jobs, timeout=max(0.0, deadline - time.monotonic()))
-        for future in pending:
-            future.cancel()
-            errors.append(f"{jobs[future][0]} {tf}: provider deadline reached")
-        for future in done:
-            sym, alias = jobs[future]
-            try:
-                raw, ok, message = future.result()
-                if ok and isinstance(raw, pd.DataFrame) and not raw.empty:
-                    pool.mark_success(alias)
-                    frames[sym] = raw
-                else:
-                    pool.mark_failure(alias, str(message))
-                    # Provider bodies/exceptions may contain a URL with credentials.
-                    errors.append(f"{sym} {tf}: provider returned no usable candles")
-            except Exception as exc:
-                errors.append(f"{sym} {tf}: {type(exc).__name__}")
-    finally:
-        executor.shutdown(wait=False, cancel_futures=True)
-    return frames, errors
+        return {}, []
+    from core.dukascopy_feed import fetch_frames
+    return fetch_frames(state, symbols, tf, deadline=deadline,
+                        force=force)
 
 
 def _record_load_status(state, tf, frames, requested=()):
@@ -174,9 +172,10 @@ def _record_load_status(state, tf, frames, requested=()):
     data. Fields tracked: "candles" ("cannot_load" for a requested
     symbol that returned no frame) and "volume" ("cannot_load" when
     the frame has no Volume column or every value is 0/NaN --
-    Twelve Data returns no volume for FX and the connector fills a
-    missing column with 0, so an all-zero column means volume did
-    NOT load; it is not real zero volume). A frame whose volume has
+    a provider that returns no volume for FX fills a missing
+    column with 0, so an all-zero column means volume did NOT
+    load; it is not real zero volume. Dukascopy frames carry real
+    tick volume and report "loaded"). A frame whose volume has
     any positive value (e.g. a repository frame with real volume)
     reports "loaded". Never raises; never changes any frame.
     """
@@ -235,7 +234,7 @@ def fetch_check_frames(state, symbols, need_candles=None):
     repo = _repository()
     for sym in symbols:
         try:
-            frame = normalize_ohlc(repo.load(sym, "H1", limit=400, completed_only=False), 50) if repo else None
+            frame = normalize_ohlc(_dukascopy_rows(repo.load(sym, "H1", limit=400, completed_only=False)), 50) if repo else None
         except Exception as exc:
             frame = None
             errors.append(f"{sym} H1: cache read {type(exc).__name__}")
@@ -298,14 +297,14 @@ def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=Fa
     for sym in symbols:
         cached = memo.get(sym)
         frame = cached.get("frame") if isinstance(cached, dict) else None
-        sufficient = frame is not None and required in frame.index and (need_entry is not None or len(frame) >= 1600)
+        sufficient = frame is not None and required in frame.index and (need_entry is not None or len(frame) >= MIN_DEEP_BARS)
         if force or not sufficient:
             try:
-                raw = repo.load(sym, "M15", limit=2000, completed_only=False) if repo else None
+                raw = _dukascopy_rows(repo.load(sym, "M15", limit=2000, completed_only=False)) if repo else None
                 frame = _merge(frame, normalize_ohlc(raw), 5000)
             except Exception:
                 pass
-        sufficient = frame is not None and required in frame.index and (need_entry is not None or len(frame) >= 1600)
+        sufficient = frame is not None and required in frame.index and (need_entry is not None or len(frame) >= MIN_DEEP_BARS)
         if frame is not None:
             frames[sym] = frame
         failed_recently = (isinstance(cached, dict) and cached.get("required") == required
@@ -370,7 +369,7 @@ def fetch_m5_frames(state, symbols, *, deadline=None, force=False):
         sufficient = frame is not None and required in frame.index
         if force or not sufficient:
             try:
-                raw = repo.load(sym, "M5", limit=400, completed_only=False) if repo else None
+                raw = _dukascopy_rows(repo.load(sym, "M5", limit=400, completed_only=False)) if repo else None
                 frame = _merge(frame, normalize_ohlc(raw), 400)
             except Exception:
                 pass

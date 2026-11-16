@@ -2512,9 +2512,12 @@ def _sb_sides_at(Tu, m15_bars):
             side01 = 1 if side > 0 else 0
             code = (((SYM_IDX[sym] * 24 + hour) * 2 + side01)
                     * 7 + MULT_IDX_BY_SYM[sym]) * 3 + bucket
+            _gap = 0.0 if BAND_LO < adj < BAND_HI else (
+                BAND_LO - adj if adj <= BAND_LO else adj - BAND_HI)
             out.append({"sym": sym, "side": side,
                         "entry_px": float(c[idx]),
                         "pct": _sb_band_pct(adj, BAND_LO, BAND_HI),
+                        "gap": float(_gap),
                         "score": float(WIN_TABLE.get(
                             code, WIN_PRIOR))})
     return out
@@ -2556,12 +2559,14 @@ def nearest_candidate(frames, check_time_utc, m15_frames=None,
                 k += 1
         if not cand:
             return None
-        best = None
-        for r in cand:
-            _key = (r["pct"], r["score"])
-            if best is None or _key > best[0]:
-                best = (_key, r)
-        r = best[1]
+        # Ranking aligned with the chain's near-miss read
+        # (user law 2026-11-16; live_trader/near_miss.py):
+        # nearest-met % first, then the gap still to travel
+        # into the band, then symbol, BUY before SELL -- so
+        # the app's force-show names the SAME second-best
+        # the chain delivers for a no-fire check.
+        r = min(cand, key=lambda r: (-r["pct"], r["gap"],
+                                     r["sym"], -r["side"]))
         pct = r["pct"]
         if pct >= 100.0:
             txt = ("inside the entry band (100%) -- held back by "

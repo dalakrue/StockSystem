@@ -175,50 +175,21 @@ def _render_market_time_metrics(*, query_mt5: bool=True) -> dict[str, Any]:
 
 def _render_market_connector_section(*, include_multi_symbol_controls: bool=False, foreground_container: Any | None=None, load_progress_container: Any | None=None):
     with st.container(border=True):
-        st.markdown('### 🔌 API Source Connector Panel')
-        st.caption('Foreground symbol router: cache first, then Twelve Data key pool, then Finnhub candle fallback, then last-known valid cache. API connection success is separated from candle-data success.')
+        # UI overhaul (user order 2026-11-16): compact connector --
+        # the provider choice and the Twelve Data key pool are the
+        # working controls. Removed from the display (state and
+        # routing unchanged): the router prose, the three provider
+        # metric cards, the MT5 offset input (its state default is
+        # still seeded in _render_settings) and the advanced
+        # fallback connector panel.
+        st.markdown('### 🔌 Data Connection')
         provider_choice_options = ['AUTO_SYMBOL_ROUTER', 'TWELVE_DATA_KEY_POOL']
         current_choice = str(st.session_state.get('foreground_main_provider_choice_20260708') or 'AUTO_SYMBOL_ROUTER')
         if current_choice not in provider_choice_options:
             current_choice = 'AUTO_SYMBOL_ROUTER'
         selected_choice = st.selectbox('Main Provider Choice', provider_choice_options, index=provider_choice_options.index(current_choice), key='foreground_main_provider_choice_20260708', help='AUTO_SYMBOL_ROUTER keeps local cache first and Twelve Data key pool as the first live candle API.')
         st.session_state['connector_mode'] = 'twelve_pool'
-        active_provider = str(st.session_state.get('active_market_provider_20260705') or 'TWELVE_DATA_KEY_POOL')
-        fallback_provider = str(st.session_state.get('fallback_market_provider_20260705') or 'FINNHUB / LOCAL_CACHE')
-        p1, p2, p3 = st.columns(3)
-        p1.metric('Selected Router Mode', selected_choice)
-        p2.metric('First Live Candle API', 'TWELVE_DATA_KEY_POOL')
-        p3.metric('Fallback Provider', fallback_provider)
-        st.number_input('MT5 broker chart UTC offset (display only)', min_value=-12.0, max_value=14.0, step=0.5, key='mt5_broker_utc_offset_hours_20260622', help='MT5 Python tick timestamps are UTC. Set the exact broker-chart offset. All Lunch Date/Weekday/Hour columns are rebuilt from this same broker clock.')
         _render_twelve_key_pool_section()
-        try:
-            from ui.sidebar_fallback_panel import _render_connector
-            _render_connector(key_prefix='settings_market_20260619', show_secret_inputs=False, show_symbol_selector=False)
-        except Exception as exc:
-            try:
-                from core.complete_repair_20260705 import log_internal_error
-                incident = log_internal_error('settings.market_connector', exc)
-            except Exception:
-                incident = 'connector-render'
-            st.warning(f'The advanced connection panel could not load. The safe connection controls remain available. Support reference: {incident}.')
-            source_options = ['twelve_pool', 'twelve', 'fallback', 'safe_demo']
-            current_source = str(st.session_state.get('connector_mode') or 'twelve_pool')
-            if current_source in {'finnhub', 'mt5', 'doo_bridge'}:
-                current_source = 'twelve_pool'
-            if current_source not in source_options:
-                current_source = 'twelve_pool'
-            st.session_state['connector_mode'] = st.selectbox('API source', source_options, index=source_options.index(current_source), key='settings_market_emergency_source_20260702')
-            selected = st.session_state.get('multi_symbol_selected_20260701') or []
-            symbol = str(selected[0] if selected else st.session_state.get('multi_symbol_main_symbol_20260702') or st.session_state.get('symbol') or 'XAUUSD').strip().upper().replace('/', '').replace(' ', '')
-            set_legacy_calculation_symbol(st.session_state, symbol, connector=True)
-            st.caption(f'Emergency connector uses Main Core Symbol: {symbol}')
-            timeframe_options = ['M1', 'M2', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'CUSTOM']
-            current_tf = str(st.session_state.get('timeframe') or 'H1').upper()
-            if current_tf not in timeframe_options:
-                current_tf = 'H1'
-            st.session_state['timeframe'] = st.selectbox('Timeframe', timeframe_options, index=timeframe_options.index(current_tf), key='settings_market_emergency_timeframe_20260702')
-            st.session_state['connector_bars'] = int(st.number_input('Candles / bars', min_value=100, max_value=5000, value=min(5000, max(220, int(st.session_state.get('connector_bars', 600) or 600))), step=100, key='settings_market_emergency_bars_20260702'))
-            st.warning('The visible emergency connector is active. Fix the renderer error above for one-click connection, but symbol/timeframe/candle setup remains available.')
         if include_multi_symbol_controls:
             from ui.multi_symbol_settings_20260701 import render_multi_symbol_selectors, render_calculation_mode_selector
             groups = render_multi_symbol_selectors(st.session_state, foreground_container=foreground_container, load_progress_container=load_progress_container)
@@ -230,7 +201,7 @@ def _render_twelve_key_pool_section() -> None:
     """Settings-tab Twelve Data multi-key pool connector (all available keys)."""
     with st.container(border=True):
         st.markdown('#### Twelve Data Key Pool')
-        st.caption('Add up to 6 Twelve Data API keys here (keys 7–8 can also come from environment variables / Streamlit Secrets). The app detects every valid key automatically and rotates OHLC downloads across all of them in parallel. Each key keeps its own minute credit counter, cooldown, 429 handling, and masked status.')
+        st.caption('Paste up to 6 keys; downloads rotate across all valid keys automatically.')
         try:
             from core.secure_api_startup_20260619 import resolve_api_key
             resolved_key_1 = str(resolve_api_key('second_api', st.session_state) or '').strip()
@@ -371,7 +342,8 @@ def _render_settings() -> None:
         st.session_state['settings_top_load_all_requested_20260823'] = True
         st.session_state['settings_top_super_quick_requested_20260823'] = True
         st.session_state['startup_top30_load_status_20260824'] = 'QUEUED'
-    st.markdown('### ⚙️ Settings')
+    # UI overhaul (2026-11-16): the duplicate in-body Settings
+    # heading is gone -- render_settings_sidebar owns the one title.
     st.markdown('#### ⚡ Quick Actions')
     top_progress_slot_20260823 = st.empty()
     quick_action_cols = st.columns(3)
@@ -399,14 +371,13 @@ def _render_settings() -> None:
     foreground_loading_slot_20260823 = st.empty()
     try:
         from core.mobile_lite_mode_20260628 import render_mobile_mode_control
-        with st.expander('Open / Close — Extreme Mobile Lite Mode', expanded=bool(st.session_state.get('phone_mode'))):
+        with st.expander('Extreme Mobile Lite Mode', expanded=bool(st.session_state.get('phone_mode'))):
             render_mobile_mode_control(st, st.session_state, key='settings_mobile_lite_20260628')
             st.caption('Mobile Lite disables decorative UI, bounds tables and loads one field at a time. Calculation values remain identical.')
     except Exception as mobile_mode_exc:
         st.caption(f'Mobile Lite control unavailable: {mobile_mode_exc}')
-    st.caption('Load symbols at the selected timeframe first, then press Super Quick Run Calculation.')
-    _render_market_time_metrics(query_mt5=False)
-    st.markdown('### Run Calculation Console — Top of Settings')
+    # UI overhaul (2026-11-16): the feed-freshness metric strip and
+    # the console heading are removed from the sidebar display.
     try:
         connector_controls = _render_market_connector_section(include_multi_symbol_controls=True, foreground_container=foreground_loading_slot_20260823, load_progress_container=top_load_progress_slot_20260824)
         if not isinstance(connector_controls, tuple) or len(connector_controls) != 2:
@@ -434,15 +405,9 @@ def _render_settings() -> None:
     except Exception as runtime_sync_exc:
         configured_union_20260706 = []
         st.session_state['runtime_selection_sync_error_20260705'] = f'{type(runtime_sync_exc).__name__}: {runtime_sync_exc}'
-    previous_status = st.session_state.get('settings_run_status_20260617')
-    if isinstance(previous_status, Mapping):
-        canonical_ok = bool((previous_status.get('canonical') or {}).get('ok'))
-        previous_used = bool(st.session_state.get('settings_used_previous_canonical_20260622'))
-        top = st.columns(3)
-        top[0].metric('All-in-One Run', 'FULLY WORKED' if canonical_ok else 'PREVIOUS VALID USED' if previous_used else 'CHECK')
-        top[1].metric('Published Generation', str(previous_status.get('calculation_generation', st.session_state.get('canonical_calculation_generation_20260617', '-'))))
-        top[2].metric('Auto-Open Field 3', 'READY' if canonical_ok or previous_used else 'WAITING')
-    st.caption('Select and load symbols above. Super Quick uses the validated loaded candles and publishes the compact result without the full research rebuild.')
+    # UI overhaul (2026-11-16): the previous-run metric cards are
+    # removed from the sidebar display (run status stays in state
+    # and in the Diagnostics section below).
     try:
         from core.instant_run_engine_20260705 import ACTIVE_STATUSES as _INSTANT_ACTIVE_STATUSES, current_job as _current_instant_job
         _instant_lock_job = _current_instant_job(st.session_state, restore=True)
@@ -474,21 +439,12 @@ def _render_settings() -> None:
         cumulative_load_status_20260707 = loaded_universe_status(st.session_state, configured_groups_for_run_20260707, timeframe_for_load_20260707)
     except Exception as cumulative_exc_20260707:
         cumulative_load_status_20260707 = {'ready': False, 'loaded_symbols': [], 'message': f'Cumulative load status unavailable: {type(cumulative_exc_20260707).__name__}: {cumulative_exc_20260707}'}
-    load_summary_cols = st.columns(4)
-    for slot, title, status in ((load_summary_cols[0], 'Selector 1 Load', first_load_status_20260707), (load_summary_cols[1], 'Selector 2 Load', second_load_status_20260707), (load_summary_cols[2], 'Selector 3 Load', third_load_status_20260707)):
-        loaded_count = len(status.get('loaded_symbols') or [])
-        failed_count = len(status.get('failed_symbols') or [])
-        slot.metric(title, f'{loaded_count} READY', delta=f'{failed_count} rejected' if failed_count else str(status.get('status') or 'NOT_LOADED'))
+    # UI overhaul (2026-11-16): the per-selector load metric cards,
+    # their captions and the global loaded-symbols selector are
+    # removed from the sidebar display; the counts still drive the
+    # run gating below exactly as before.
     cumulative_ready_count_20260727 = len(cumulative_load_status_20260707.get('loaded_symbols') or [])
     cumulative_failed_count_20260727 = max(0, configured_count_20260707 - cumulative_ready_count_20260727)
-    load_summary_cols[3].metric('All Run Buttons', f'{cumulative_ready_count_20260727} READY', delta=f'{cumulative_failed_count_20260727} not ready' if cumulative_failed_count_20260727 else 'ALL LOADED')
-    st.caption(f'The three left cards are load diagnostics only. Super Quick, Quick, and Full all calculate the same {cumulative_ready_count_20260727}-symbol loaded universe; the buttons differ only in calculation depth.')
-    try:
-        from core.canonical_symbol_selection_20260709 import render_selector as _render_global_loaded_selector
-        _render_global_loaded_selector(st, st.session_state, surface='settings_global', title='Global Multi-Symbol Display Selector — Loaded Symbols Only', expanded=True)
-    except Exception as global_selector_exc_20260722:
-        st.session_state['settings_global_symbol_selector_error_20260722'] = f'{type(global_selector_exc_20260722).__name__}: {global_selector_exc_20260722}'
-    st.caption(f"Cumulative calculation universe: {len(cumulative_load_status_20260707.get('loaded_symbols') or [])} loaded symbol(s). All three buttons calculate this same loaded universe; only calculation depth changes.")
     run_disabled_20260707 = not bool(cumulative_load_status_20260707.get('loaded_symbols'))
     super_requested_from_top = bool(st.session_state.pop('settings_top_super_quick_requested_20260823', False))
     # Middle Standard ranking gate: the ranking table is only produced when
@@ -507,7 +463,6 @@ def _render_settings() -> None:
             f"({cumulative_failed_count_20260727} failed). The Middle Standard ranking table is only "
             "published at 20/20 — press '🔁 Retry Failed Symbols' at the top to load the missing symbols first."
         )
-    st.caption('Super Quick runs from the top Quick Actions control after validated candles are loaded.')
     quick_clicked = False
     full_clicked = False
     load_update_clicked = False
@@ -580,24 +535,28 @@ def _render_settings() -> None:
                     st.session_state[_lock_key] = False
                 st.error(f'Super Quick stopped safely before the slow calculation queue was started. {error_text}')
                 return
-    st.markdown('### Connections, API Keys and Provider Health')
-    _render_mobile_api_key_center()
-    _render_finnhub_connector_section()
-    try:
-        from ui.optional_provider_connectors_20260705 import render_optional_provider_connectors
-        render_optional_provider_connectors(st.session_state)
-    except Exception as optional_connector_exc:
-        st.caption(f'Optional provider controls unavailable: {type(optional_connector_exc).__name__}')
-    try:
-        from ui.provider_health_panel_20260705 import render_provider_health_panel
-        render_provider_health_panel(st.session_state)
-    except Exception as provider_panel_exc:
-        st.caption(f'Provider health panel unavailable: {type(provider_panel_exc).__name__}')
+    # UI overhaul (2026-11-16): the key centre, Finnhub, optional
+    # providers and provider health fold into ONE collapsed section
+    # (all functions kept; the key pool above stays the primary
+    # paste route).
+    with st.expander('Connections & provider health', expanded=False):
+        _render_mobile_api_key_center()
+        _render_finnhub_connector_section()
+        try:
+            from ui.optional_provider_connectors_20260705 import render_optional_provider_connectors
+            render_optional_provider_connectors(st.session_state)
+        except Exception as optional_connector_exc:
+            st.caption(f'Optional provider controls unavailable: {type(optional_connector_exc).__name__}')
+        try:
+            from ui.provider_health_panel_20260705 import render_provider_health_panel
+            render_provider_health_panel(st.session_state)
+        except Exception as provider_panel_exc:
+            st.caption(f'Provider health panel unavailable: {type(provider_panel_exc).__name__}')
     if reset_col.button('🔄 Reset UI', key='settings_reset_ui_20260617', use_container_width=True):
         st.session_state['active_page'] = 'Settings'
         st.session_state['active_subpage'] = ''
         _safe_rerun()
-    with st.expander('Open / Close — Trade Timer / Sound Alert', expanded=True):
+    with st.expander('Trade Timer / Sound Alert', expanded=False):
         try:
             from ui.sidebar_fallback_panel import _render_timer
             _render_timer(key_prefix='settings_timer_20260619')
@@ -605,12 +564,12 @@ def _render_settings() -> None:
             st.warning(f'Trade timer skipped safely: {exc}')
     status = st.session_state.get('settings_run_status_20260617')
     if isinstance(status, dict):
-        cols = st.columns(5)
-        cols[0].metric('Last Run', 'READY' if status.get('ok') else 'PARTIAL')
-        cols[1].metric('Generation', str(status.get('calculation_generation', '-')))
-        cols[2].metric('Lunch Metric', 'READY' if (status.get('metric') or {}).get('ok') else 'CHECK')
-        cols[3].metric('PowerBI', 'READY' if (status.get('powerbi') or {}).get('ok') else 'CHECK')
-        cols[4].metric('Built At', str(status.get('built_at', '-')))
+        # UI overhaul (2026-11-16): one summary line instead of five
+        # metric cards; the detail expanders below are unchanged.
+        st.caption(
+            f"Last run: {'READY' if status.get('ok') else 'PARTIAL'} · "
+            f"generation {status.get('calculation_generation', '-')} · "
+            f"built {status.get('built_at', '-')}")
         if status.get('errors'):
             with st.expander('Open / Close — Last calculation status', expanded=False):
                 st.dataframe(pd.DataFrame({'Status': list(status.get('errors') or [])}), use_container_width=True, hide_index=True)
@@ -649,7 +608,7 @@ def render_settings_sidebar() -> None:
     """Render the complete Settings control surface in the native sidebar."""
     with st.sidebar:
         st.markdown('## ⚙️ Settings')
-        st.caption('API, timeframe, candle history, symbol loading, keys, and Super Quick calculation')
+        st.caption('Keys, symbol loading and calculation')
         _render_settings()
 
 

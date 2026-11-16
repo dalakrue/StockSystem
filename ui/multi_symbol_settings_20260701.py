@@ -178,7 +178,8 @@ def _apply_pending_before_widget(state: MutableMapping[str, Any], group_name: st
         state[item["widget_key"]] = list(selected)
 
 
-def _render_group_card(state: MutableMapping[str, Any], group_name: str) -> list[str]:
+def _render_group_card(state: MutableMapping[str, Any], group_name: str,
+                       display: bool = True) -> list[str]:
     definitions, _ = _group_defs()
     item = definitions[group_name]
     fixed = (
@@ -189,6 +190,11 @@ def _render_group_card(state: MutableMapping[str, Any], group_name: str) -> list
     state[item["state_key"]] = list(fixed)
     # Widget state is seeded before instantiation and never modified afterwards.
     state[item["widget_key"]] = list(fixed)
+    if not display:
+        # UI overhaul (user order 2026-11-16): the groups are FIXED
+        # (disabled multiselects) -- the card was pure display. The
+        # Settings sidebar keeps the state seeding and drops the card.
+        return list(fixed)
     with st.container(border=True):
         st.markdown(f"### 🌐 {item['title']}")
         if group_name == "THIRD":
@@ -254,11 +260,11 @@ def render_multi_symbol_selectors(
 
     # Backward compatibility marker only: "Reload Failed Symbols" was removed from
     # the UI because failed symbols are now handled by the unified canonical loader.
-    st.markdown("### Three Multi-Symbol Selectors")
-    st.caption("The app is locked to one canonical 28-symbol FX universe. XAUUSD and all other symbols are excluded at the loader boundary.")
-    groups["FIRST"] = _render_group_card(state, "FIRST")
-    groups["SECOND"] = _render_group_card(state, "SECOND")
-    groups["THIRD"] = _render_group_card(state, "THIRD")
+    # UI overhaul (user order 2026-11-16): the three fixed group cards
+    # are no longer rendered in the sidebar -- state seeding only.
+    groups["FIRST"] = _render_group_card(state, "FIRST", display=False)
+    groups["SECOND"] = _render_group_card(state, "SECOND", display=False)
+    groups["THIRD"] = _render_group_card(state, "THIRD", display=False)
     groups = configured_groups(state)
     configured_union = union_symbols(groups["FIRST"], groups["SECOND"], groups["THIRD"])
     state[CONFIGURED_UNION_KEY] = configured_union
@@ -298,61 +304,30 @@ def render_multi_symbol_selectors(
                 "message": f"Canonical loader unavailable: {type(universe_exc).__name__}: {universe_exc}",
             }
 
-        st.markdown("### Foreground Loading Workers")
-        st.caption("Twelve Key 1 Worker")
-        st.caption("Assigned selector: Selector 1")
-        st.caption("Twelve Key 2 Worker")
-        st.caption("Assigned selector: Selector 2")
-        st.caption("Shared Key-Pool Worker")
-        st.caption("Assigned selector: Selector 3")
-        st.caption("Top action: Load All Selected")
-
-        st.markdown("### Foreground Symbol Loading Control Center")
-        # Persistent progress location. The actual progress widget is created
-        # when Load All Selected starts; this anchor keeps the progress area in
-        # the same page and prevents it appearing below unrelated controls.
-        if state.get("foreground_load_progress_text_20260824"):
-            st.info(state.get("foreground_load_progress_text_20260824"))
-        st.caption("Foreground pipeline: cache first → Selector 1 uses Twelve Key 1 → Selector 2 uses Twelve Key 2 → Selector 3 uses the shared configured key pool. All successful loads merge into one Field 3/Field 10 board.")
-        st.caption("Top action: Load All Selected runs the same three-worker pipeline below and shows live progress in this page.")
-        st.markdown("#### Canonical Top-30 Universe Preview")
-        summary = st.columns(5)
-        summary[0].metric("Selector 1", len(groups["FIRST"]))
-        summary[1].metric("Selector 2", len(groups["SECOND"]))
-        summary[2].metric("Selector 3", len(groups["THIRD"]))
-        summary[3].metric("Canonical Unique", len(canonical_selected))
-        summary[4].metric("Limit", str(MAX_CANONICAL_SYMBOLS))
-        if len(configured_union) > len(canonical_selected):
-            skipped = [symbol for symbol in configured_union if symbol not in canonical_selected]
-            st.warning("Only the first 30 deduplicated symbols are used. Skipped: " + " → ".join(skipped))
-        if canonical_selected:
-            st.caption("Canonical ranking order: " + " → ".join(canonical_selected))
-        else:
-            st.info("Select at least one symbol across the three selectors.")
-
+        # UI overhaul (user order 2026-11-16): the sidebar shows ONE
+        # compact load-status line plus the recovery toggle and the
+        # Clear action. Removed from the display (functions kept):
+        # the Foreground Loading Workers captions, the Control Center
+        # prose, the Canonical Top-30 preview metric circles, the
+        # canonical ranking-order paragraph, the per-symbol status
+        # table, the provider-summary metrics, the per-worker JSON
+        # cards, and the per-selector load/retry button rows -- the
+        # top Quick Actions (Load All / Super Quick / Retry Failed)
+        # are the essential action set and drive the same machinery
+        # through the request flags popped below.
         rows = list(canonical_status.get("status_rows") or [])
-        if rows:
-            st.dataframe(rows, use_container_width=True, hide_index=True)
-
         success_statuses_20260708 = {"CACHE_SUCCESS", "TWELVE_SUCCESS", "FINNHUB_SUCCESS", "EMERGENCY_CACHE_SUCCESS"}
         loaded_now_count_20260708 = int(canonical_status.get("loaded_now_count") or sum(
             1 for row in rows if str(row.get("Load Status") or "").upper() in success_statuses_20260708
         ))
         failed_now_count_20260708 = max(0, len(canonical_selected) - loaded_now_count_20260708)
-        provider_summary_20260708 = canonical_status.get("provider_summary") if isinstance(canonical_status.get("provider_summary"), dict) else {}
-        load_status_cols_20260708 = st.columns(4)
-        load_status_cols_20260708[0].metric("Loaded", f"{loaded_now_count_20260708} / {len(canonical_selected)}")
-        load_status_cols_20260708[1].metric("Failed", f"{failed_now_count_20260708} / {len(canonical_selected)}")
-        load_status_cols_20260708[2].metric("Twelve Key 1", int(provider_summary_20260708.get("TWELVE_KEY_1") or 0))
-        load_status_cols_20260708[3].metric("Twelve Key 2", int(provider_summary_20260708.get("TWELVE_KEY_2") or 0))
-        st.caption(
-            "Provider summary: "
-            f"LOCAL_CACHE: {int(provider_summary_20260708.get('LOCAL_CACHE') or 0)} · "
-            f"TWELVE_DATA_KEY_POOL: {int(provider_summary_20260708.get('TWELVE_DATA_KEY_POOL') or 0)} · "
-            f"FINNHUB: {int(provider_summary_20260708.get('FINNHUB') or 0)} · "
-            f"LAST_KNOWN_VALID_CACHE: {int(provider_summary_20260708.get('LAST_KNOWN_VALID_CACHE') or 0)} · "
-            f"NONE: {int(provider_summary_20260708.get('NONE') or 0)}"
-        )
+        if state.get("foreground_load_progress_text_20260824"):
+            st.info(state.get("foreground_load_progress_text_20260824"))
+        _load_line = (f"**Symbols loaded: {loaded_now_count_20260708}"
+                      f" / {len(canonical_selected)}**")
+        if failed_now_count_20260708:
+            _load_line += f" · {failed_now_count_20260708} not loaded yet"
+        st.markdown(_load_line)
 
         load_locked = bool(
             state.get("multi_symbol_load_in_progress_20260707")
@@ -368,118 +343,26 @@ def render_multi_symbol_selectors(
             help="Recommended ON. Failed symbols automatically try the opposite configured key and then the shared pool while preserving all READY rows.",
         )
 
-        worker_cols = st.columns(3)
-        workers = state.get(SELECTOR_WORKER_STATE_KEY) if isinstance(state.get(SELECTOR_WORKER_STATE_KEY), dict) else {}
-        for col, group_name, title, assigned_key in (
-            (worker_cols[0], "FIRST", "Twelve Key 1 Worker", "TWELVE_KEY_1"),
-            (worker_cols[1], "SECOND", "Twelve Key 2 Worker", "TWELVE_KEY_2"),
-            (worker_cols[2], "THIRD", "Shared Key-Pool Worker", "TWELVE_DATA_KEY_POOL"),
-        ):
-            selected_for_worker = groups.get(group_name) or []
-            worker = workers.get(group_name) if isinstance(workers.get(group_name), dict) else {
-                "Assigned selector": "Selector 1" if group_name == "FIRST" else "Selector 2" if group_name == "SECOND" else "Selector 3",
-                "Assigned key": assigned_key,
-                "Selected symbols": " → ".join(selected_for_worker),
-                "Loaded count": 0,
-            }
-            with col.container(border=True):
-                st.markdown(f"#### {title}")
-                st.caption(f"Assigned selector: {'Selector 1' if group_name == 'FIRST' else 'Selector 2' if group_name == 'SECOND' else 'Selector 3'}")
-                st.json({
-                    "Selected symbols": " → ".join(selected_for_worker),
-                    "Loaded count": worker.get("Loaded count", 0),
-                    "Failed count": worker.get("Failed count", 0),
-                    "Remaining local minute credits": worker.get("Remaining local minute credits", 0),
-                    "Cooldown seconds": worker.get("Cooldown seconds", 0),
-                    "Last request time": worker.get("Last request time", ""),
-                    "Last error": worker.get("Last error", ""),
-                    "Symbols skipped because of quota": worker.get("Symbols skipped because of quota", ""),
-                    "Symbols skipped because of circuit breaker": worker.get("Symbols skipped because of circuit breaker", ""),
-                })
-
-        button_cols_20260708 = st.columns(5)
-        load_s1_clicked = button_cols_20260708[0].button(
-            "Load Selector 1 with Twelve Key 1",
-            key="selector_owned_load_selector_1_key_1_20260708",
-            use_container_width=True,
-            disabled=load_locked or not bool(groups.get("FIRST")),
-            help="Loads Selector 1 with Key 1 first, then automatically retries unresolved symbols through the other configured key and shared pool without erasing successful rows.",
-        )
-        load_s2_clicked = button_cols_20260708[1].button(
-            "Load Selector 2 with Twelve Key 2",
-            key="selector_owned_load_selector_2_key_2_20260708",
-            use_container_width=True,
-            disabled=load_locked or not bool(groups.get("SECOND")),
-            help="Loads Selector 2 with Key 2 first, then automatically retries unresolved symbols through the other configured key and shared pool without erasing successful rows.",
-        )
-        load_s3_clicked = button_cols_20260708[2].button(
-            "Load Selector 3 with Key Pool",
-            key="selector_owned_load_selector_3_pool_20260722",
-            use_container_width=True,
-            disabled=load_locked or not bool(groups.get("THIRD")),
-            help="Loads Selector 3 using any currently available configured Twelve Data key, with exact-symbol cache first.",
-        )
-        # The all-selected action is intentionally rendered at the top of the
-        # Settings sidebar.  Keep this slot as a compact status marker so the
-        # legacy five-column layout remains stable without showing a duplicate
-        # button lower in the page.
+        # Per-selector load/retry buttons are no longer rendered
+        # (see the overhaul note above); the flags stay defined so
+        # the transaction logic below is unchanged.
+        load_s1_clicked = load_s2_clicked = load_s3_clicked = False
+        retry_s1_clicked = retry_s2_clicked = retry_s3_clicked = False
+        force_retry_clicked = False
+        # The all-selected action is rendered at the top of the
+        # Settings sidebar (Quick Actions).
         load_all_clicked = bool(state.pop("settings_top_load_all_requested_20260823", False)) and bool(canonical_selected)
         # Top Quick Actions "Retry Failed Symbols" button: retries only the
         # symbols that failed the Twelve Data load, then the completion loop
         # drives the universe to 20/20 before any ranking calculation.
         retry_failed_clicked = bool(state.pop("settings_top_retry_failed_requested_20261007", False)) and bool(canonical_selected)
-        button_cols_20260708[3].caption("Top action: Load All Selected")
-        clear_clicked = button_cols_20260708[4].button(
+        clear_clicked = st.button(
             "Clear Load State",
             key="canonical_12_symbol_clear_load_state_20260708",
             use_container_width=True,
             disabled=load_locked,
             help="Clears only the foreground load board/session state. It does not delete saved candles.",
         )
-
-        retry_cols_20260708 = st.columns(5)
-        retry_s1_clicked = retry_cols_20260708[0].button(
-            "Reload Failed from Selector 1 only",
-            key="selector_owned_reload_failed_selector_1_20260708",
-            use_container_width=True,
-            disabled=load_locked or not bool(groups.get("FIRST")),
-            help="Retries only failed Selector 1 rows and preserves READY rows.",
-        )
-        retry_s2_clicked = retry_cols_20260708[1].button(
-            "Reload Failed from Selector 2 only",
-            key="selector_owned_reload_failed_selector_2_20260708",
-            use_container_width=True,
-            disabled=load_locked or not bool(groups.get("SECOND")),
-            help="Retries only failed Selector 2 rows and preserves READY rows.",
-        )
-        retry_s3_clicked = retry_cols_20260708[2].button(
-            "Reload Failed from Selector 3 only",
-            key="selector_owned_reload_failed_selector_3_20260722",
-            use_container_width=True,
-            disabled=load_locked or not bool(groups.get("THIRD")),
-            help="Retries only failed Selector 3 rows through the shared key pool and preserves READY rows.",
-        )
-        force_retry_clicked = retry_cols_20260708[3].button(
-            "Force Clear Circuit Breaker + Retry Failed",
-            key="selector_owned_force_clear_circuit_retry_failed_20260708",
-            use_container_width=True,
-            disabled=load_locked or not bool(canonical_selected),
-            help="Clears stale local circuit-breaker state for failed rows, then retries only failed symbols. It does not reload READY rows.",
-        )
-        try:
-            import pandas as _pd
-            export_df = _pd.DataFrame(rows)
-            retry_cols_20260708[4].download_button(
-                "Export Provider Trace CSV",
-                data=export_df.to_csv(index=False).encode("utf-8"),
-                file_name=f"provider_trace_{timeframe}.csv",
-                mime="text/csv",
-                use_container_width=True,
-                disabled=export_df.empty,
-                key="canonical_12_symbol_export_provider_trace_20260708",
-            )
-        except Exception:
-            retry_cols_20260708[4].caption("Export unavailable")
 
         if clear_clicked:
             from core.multi_symbol_load_manager_20260707 import (
@@ -523,16 +406,11 @@ def render_multi_symbol_selectors(
                 "Clearing circuit breakers and retrying failed symbols…" if force_retry_clicked else
                 "Loading all selected symbols with three independent workers…"
             )
-            st.info("Loading progress is live: Twelve Key 1 Worker + Twelve Key 2 Worker + Shared Key-Pool Worker are running through the canonical top-30 universe.")
             progress_bar = st.progress(0.0, text=action_label)
             # Keep a second, compact progress bar at the top Quick Actions
-            # row.  It is intentionally allowed to duplicate the detailed
-            # loader bar so mobile users never need to scroll for completion.
+            # row so mobile users never need to scroll for completion.
             top_progress_bar = load_progress_container
             progress_text = st.empty()
-            live_rows = st.empty()
-
-            _last_live_board_percent = {"value": -20.0}
 
             def _load_progress(snapshot: Any) -> None:
                 if not isinstance(snapshot, dict):
@@ -547,18 +425,6 @@ def render_multi_symbol_selectors(
                 if top_progress_bar is not None and hasattr(top_progress_bar, "progress"):
                     top_progress_bar.progress(min(1.0, max(0.0, percent / 100.0)), text=f"{percent:.1f}% loaded · {completed}/{total} symbols")
                 progress_text.caption(f"{current} — {stage} · {completed}/{total} symbols · {elapsed:.1f}s elapsed")
-                # Rebuilding the full canonical board on every provider sub-stage
-                # was a major UI bottleneck on phones. Refresh it only at 20-point
-                # intervals; the final board is always rendered after completion.
-                if percent - _last_live_board_percent["value"] >= 20.0 or percent >= 99.9:
-                    _last_live_board_percent["value"] = percent
-                    try:
-                        current_status = merge_selector_load_results(state, groups, timeframe)
-                        current_rows = list(current_status.get("status_rows") or [])
-                        if current_rows:
-                            live_rows.dataframe(current_rows, use_container_width=True, hide_index=True)
-                    except Exception:
-                        pass
 
             try:
                 if load_s1_clicked:
@@ -700,15 +566,6 @@ def render_multi_symbol_selectors(
                         "Top-30 data loaded, but Super Quick was not published: "
                         f"{type(auto_calc_exc).__name__}: {auto_calc_exc}"
                     )
-                st.caption(
-                    "Provider summary: "
-                    f"Twelve Key 1 {int(summary.get('TWELVE_KEY_1') or 0)}, "
-                    f"Twelve Key 2 {int(summary.get('TWELVE_KEY_2') or 0)}, "
-                    f"Legacy pool {int(summary.get('TWELVE_DATA_KEY_POOL') or 0)}, "
-                    f"Cache {int(summary.get('LOCAL_CACHE') or 0)}, "
-                    f"Emergency {int(summary.get('LAST_KNOWN_VALID_CACHE') or 0)}, "
-                    f"None {int(summary.get('NONE') or 0)}"
-                )
                 st.rerun()
             except Exception as load_exc:
                 progress_bar.empty()
@@ -719,20 +576,16 @@ def render_multi_symbol_selectors(
 
         loaded_now = normalize_selected(canonical_status.get("loaded_symbols") or [], limit=None)
         failed_now = normalize_selected(canonical_status.get("failed_symbols") or [], limit=None)
+        # UI overhaul (2026-11-16): count lines only -- the old
+        # arrow-joined symbol lists were sidebar clutter.
         if loaded_now and not failed_now and len(loaded_now) == len(canonical_selected):
-            st.success("Canonical loaded universe ready: " + " → ".join(loaded_now))
+            st.success(f"All {len(loaded_now)} symbols loaded and ready.")
         elif loaded_now:
-            st.warning("Canonical universe is usable with warnings: " + " → ".join(loaded_now))
+            st.warning(f"{len(loaded_now)} of {len(canonical_selected)} symbols loaded.")
             if failed_now:
-                st.caption("No usable data yet: " + " → ".join(failed_now))
+                st.caption(f"{len(failed_now)} symbol(s) have no usable data yet.")
         else:
-            st.info(str(canonical_status.get("message") or "Press the main load button before calculating."))
-
-        # Preserve the old cumulative database discovery as audit history only.
-        completed = normalize_selected(state.get(COMPLETED_UNION_KEY) or [], limit=None)
-        if completed:
-            with st.expander("Historical completed-symbol archive (not used for the next run)", expanded=False):
-                st.caption(" → ".join(completed))
+            st.info(str(canonical_status.get("message") or "Press Load All Selected before calculating."))
     return groups
 
 

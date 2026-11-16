@@ -2859,9 +2859,9 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
                 t = t.tz_localize("UTC")
             return (t.tz_convert("UTC") + _pd.Timedelta(hours=6, minutes=30)).tz_localize(None)
 
-        mmt_now = _mmt(now_pd).strftime("%H:%M")
-        mmt_date = _mmt(now_pd).strftime("%m-%d")
-        utc_now = now_pd.strftime("%H:%M")
+        # Clock boxes removed (user order 2026-11-16): the header strip
+        # carries only the NEXT ENTRY countdown, the candle-age state
+        # and Best N -- no MMT/UTC wall clocks.
 
         # Candle-age box: driven by the caller (Cycle 22 H1 fetch); never
         # renders empty -- falls back to a neutral placeholder.
@@ -2906,18 +2906,29 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
             _bn_txt = str(_bn_val) if _bn_val else "\u2014"
         bestn_box = (f"\U0001f3af <b>Best N {_bn_txt}</b><br>"
                      f"<span style='font-size:11px;'>position sizing</span>")
-        box = ("<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;"
+        # Glass styling (UI overhaul, user order 2026-11-16): frosted
+        # translucent boxes over the page gradient instead of flat
+        # white cards.
+        box = ("<div style='background:rgba(255,255,255,.55);"
+               "border:1px solid rgba(255,255,255,.65);border-radius:12px;"
+               "box-shadow:0 4px 14px rgba(15,23,42,.06);"
+               "backdrop-filter:blur(10px) saturate(150%);"
+               "-webkit-backdrop-filter:blur(10px) saturate(150%);"
                "padding:6px 10px;text-align:center;min-width:86px;flex:1 1 0;'>"
                "<span style='font-size:13px;color:#0f172a;'>{}</span></div>")
+        _title_rgba = ("rgba(220,252,231,.55)" if title_bg == "#dcfce7"
+                       else "rgba(241,245,249,.55)")
         st.markdown(
-            f"<div style='background:{title_bg};border:1px solid {title_bd};border-radius:10px;"
+            f"<div style='background:{_title_rgba};"
+            f"border:1px solid {title_bd};border-radius:14px;"
+            f"box-shadow:0 8px 24px rgba(15,23,42,.07);"
+            f"backdrop-filter:blur(14px) saturate(160%);"
+            f"-webkit-backdrop-filter:blur(14px) saturate(160%);"
             f"padding:10px 12px;margin:6px 0 8px 0;'>"
             f"<div style='font-size:16px;font-weight:800;color:#0f172a;margin-bottom:8px;'>{title}"
             f"<span style='font-weight:400;font-size:12px;color:#475569;'> · {sys_name}</span></div>"
             f"<div style='display:flex;flex-wrap:wrap;gap:6px;'>"
             + box.format(status_box)
-            + box.format(f"🇲🇲 <b>{mmt_now}</b> MMT<br><span style='font-size:11px;'>{mmt_date}</span>")
-            + box.format(f"🌍 <b>{utc_now}</b> UTC")
             + box.format(age_box)
             + box.format(bestn_box)
             + f"</div></div>",
@@ -3004,21 +3015,65 @@ def _normalize_c22_frame(df):
     return normalize_ohlc(df, min_bars=50)
 
 
-def _render_symbols_loaded_box(st, context):
-    """Small clean box: how many symbols were successfully loaded."""
+def _render_symbols_loaded_box(st, context, state=None):
+    """Small clean box: how many symbols were successfully loaded.
+
+    Count fix (user order 2026-11-16): the chip used to read
+    ``completed_symbols or loaded_symbols`` from the DB universe --
+    the completed *calculation* generation covers only the
+    20-symbol sidebar universe, so the chip stuck at "20/28" even
+    when all 28 panel symbols had loaded history. The display now
+    counts every required symbol that ANY truthful source reports
+    as holding loaded history: the DB universe's loaded and
+    completed sets, the canonical loader's loaded set in session
+    state, and the check runtime's own per-symbol load record
+    (written from the actual frames used). Display only -- the
+    20/28 readiness floor and all evaluation logic are untouched.
+    """
     try:
-        loaded = list(context.completed_symbols or context.loaded_symbols or [])
+        required = [str(s).upper() for s in _CYCLE22_REQUIRED_SYMBOLS]
+        req_set = set(required)
+        have = set()
+        for src in (getattr(context, "loaded_symbols", None),
+                    getattr(context, "completed_symbols", None)):
+            for sym in (src or ()):
+                s = str(sym).upper()
+                if s in req_set:
+                    have.add(s)
+        if state is None:
+            try:
+                state = st.session_state
+            except Exception:
+                state = None
+        if isinstance(state, Mapping):
+            for sym in (state.get("canonical_loaded_symbols") or ()):
+                s = str(sym).upper()
+                if s in req_set:
+                    have.add(s)
+            book = state.get("check_data_load_status")
+            if isinstance(book, dict):
+                for _tf, per_sym in book.items():
+                    if not isinstance(per_sym, dict):
+                        continue
+                    for sym, entry in per_sym.items():
+                        s = str(sym).upper()
+                        if (s in req_set and isinstance(entry, dict)
+                                and entry.get("candles") == "loaded"):
+                            have.add(s)
         failed = context.failed_symbols if isinstance(
             getattr(context, "failed_symbols", None), dict) else {}
-        # TRUE universe (2026-11-06 fix): the denominator is the
-        # app's canonical 28-symbol universe, never a per-render
-        # watch-list count (which misread as a cold-boot state).
-        n_ok, n_cfg, n_fail = len(loaded), len(_CYCLE22_REQUIRED_SYMBOLS), len(failed)
-        txt = f"📊 <b>{n_ok}/{n_cfg}</b> symbols with loaded history (universe: {n_cfg})"
+        n_fail = sum(1 for s in failed if str(s).upper() in req_set
+                     and str(s).upper() not in have)
+        n_ok, n_cfg = len(have), len(required)
+        txt = f"📊 <b>{n_ok}/{n_cfg}</b> symbols with loaded history"
         if n_fail:
             txt += f" <span style='color:#b91c1c;'>({n_fail} failed)</span>"
         st.markdown(
-            "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;"
+            "<div style='background:rgba(255,255,255,.55);"
+            "border:1px solid rgba(255,255,255,.65);border-radius:10px;"
+            "box-shadow:0 4px 14px rgba(15,23,42,.06);"
+            "backdrop-filter:blur(10px) saturate(150%);"
+            "-webkit-backdrop-filter:blur(10px) saturate(150%);"
             "padding:5px 12px;margin:0 0 6px 0;display:inline-block;'>"
             f"<span style='font-size:13px;color:#0f172a;'>{txt}</span></div>",
             unsafe_allow_html=True,
@@ -3526,6 +3581,108 @@ def in_check_window(month, now=None):
     return False
 
 
+# Precheck cadence (user order 2026-11-16): the in-app precheck starts
+# 30 minutes before each check and refreshes every 9 minutes inside
+# that window -- refresh points at check-30, check-21, check-12 and
+# check-3 minutes, then the check itself. Outside the precheck and
+# check windows the page does not auto-refresh at all (Twelve Data
+# API tokens are not spent on an idle open page).
+_PRECHECK_LEAD_MINUTES = 30
+_PRECHECK_REFRESH_MINUTES = 9
+
+
+def _as_utc_dt(now):
+    """Coerce None / naive / pandas Timestamp to an aware UTC datetime."""
+    import datetime as _dt
+    if now is None:
+        return _dt.datetime.now(_dt.timezone.utc)
+    ts = now
+    try:
+        import pandas as _pd
+        if isinstance(ts, _pd.Timestamp):
+            ts = ts.to_pydatetime()
+    except Exception:
+        pass
+    if getattr(ts, "tzinfo", None) is None:
+        ts = ts.replace(tzinfo=_dt.timezone.utc)
+    return ts.astimezone(_dt.timezone.utc)
+
+
+def _month_check_instants(month, now_utc, days_back=1, days_ahead=8):
+    """The month's check instants (aware UTC) around `now_utc`,
+    weekday-only -- the same rule as in_check_window."""
+    import datetime as _dt
+    try:
+        hours = _month_check_hours_utc(month)
+    except Exception:
+        return []
+    out = []
+    for day_off in range(-int(days_back), int(days_ahead) + 1):
+        day = (now_utc + _dt.timedelta(days=day_off)).date()
+        if day.weekday() >= 5:
+            continue
+        for h in hours:
+            out.append(_dt.datetime(day.year, day.month, day.day, int(h),
+                                    tzinfo=_dt.timezone.utc))
+    return sorted(out)
+
+
+def in_precheck_window(month, now=None):
+    """True when `now` is inside [check - 30 min, check) for one of
+    the month's checks -- the window in which the precheck runs and
+    the page may auto-refresh on the 9-minute cadence."""
+    import datetime as _dt
+    now_utc = _as_utc_dt(now)
+    lead = _dt.timedelta(minutes=_PRECHECK_LEAD_MINUTES)
+    for check in _month_check_instants(month, now_utc):
+        if check - lead <= now_utc < check:
+            return True
+    return False
+
+
+def _precheck_schedule(month, now=None):
+    """Timing picture for the month's relevant check, or None.
+
+    Returns a dict: next_check (aware UTC instant of the check the
+    precheck targets -- the live one while its window is open),
+    precheck_start (next_check - 30 min), phase ('before' |
+    'precheck' | 'live'), next_refresh (the next 9-minute cadence
+    point, or the check itself; None outside the precheck window),
+    and second counts to the check / precheck start / next refresh.
+    """
+    import datetime as _dt
+    now_utc = _as_utc_dt(now)
+    lead = _dt.timedelta(minutes=_PRECHECK_LEAD_MINUTES)
+    target = None
+    for check in _month_check_instants(month, now_utc):
+        if now_utc <= check + _dt.timedelta(minutes=30):
+            target = check
+            break
+    if target is None:
+        return None
+    start = target - lead
+    if now_utc < start:
+        phase, next_refresh = "before", None
+    elif now_utc < target:
+        phase = "precheck"
+        points = [start + _dt.timedelta(minutes=_PRECHECK_REFRESH_MINUTES * k)
+                  for k in range(1, 5)]
+        upcoming = [p for p in points if now_utc < p < target]
+        next_refresh = upcoming[0] if upcoming else target
+    else:
+        phase, next_refresh = "live", None
+    return {
+        "next_check": target,
+        "precheck_start": start,
+        "phase": phase,
+        "next_refresh": next_refresh,
+        "to_check_s": max(0, int((target - now_utc).total_seconds())),
+        "to_start_s": max(0, int((start - now_utc).total_seconds())),
+        "to_refresh_s": (max(0, int((next_refresh - now_utc).total_seconds()))
+                         if next_refresh is not None else None),
+    }
+
+
 def _next_check_window_start_mmt(month, now=None):
     """MMT label ('Fri 21:15') of the next live-evaluation window
     start (check - 15 min) strictly after `now`, or '' if none is
@@ -3646,6 +3803,87 @@ def _payload_data_failed(payload):
             or bool((payload.get("diag") or {}).get("evaluation_error")))
     except Exception:
         return False
+
+
+def _load_status_summary(state):
+    """Structured summary of what the data layer could NOT load
+    (user order 2026-11-16): the runtime records per-field load
+    status in state["check_data_load_status"] (see
+    core.check_candle_runtime._record_load_status) -- e.g. VOLUME,
+    which Twelve Data does not provide for FX (the connector fills
+    a missing volume column with 0, so an all-zero column means
+    volume did not load). The check and precheck views render this
+    WITH the signal, so a load failure is shown plainly instead of
+    a signal silently standing next to substituted data. Candle
+    failures are listed per timeframe too (a symbol without candles
+    already cannot fire and shows "No data" in the ranking; this
+    names it up front). Never raises."""
+    out = {"volume_cannot_load": {}, "candles_cannot_load": {},
+           "fetch_errors": []}
+    try:
+        book = (state or {}).get("check_data_load_status") or {}
+        for tf in sorted(book):
+            syms = book.get(tf) or {}
+            for sym in sorted(syms):
+                fields = syms.get(sym) or {}
+                if fields.get("volume") == "cannot_load":
+                    out["volume_cannot_load"].setdefault(tf, []).append(sym)
+                if fields.get("candles") == "cannot_load":
+                    out["candles_cannot_load"].setdefault(tf, []).append(sym)
+        errs = []
+        for _k in ("check_m15_last_errors", "check_m5_last_errors"):
+            errs += [str(e) for e in ((state or {}).get(_k) or [])]
+        out["fetch_errors"] = errs[:8]
+    except Exception:
+        pass
+    return out
+
+
+def _sym_list_text(syms, cap=6):
+    syms = list(syms or [])
+    if len(syms) <= cap:
+        return ", ".join(syms)
+    return ", ".join(syms[:cap]) + f", \u2026 (+{len(syms) - cap} more)"
+
+
+def _data_load_status_lines(summary):
+    """Plain-language lines naming what could not be loaded."""
+    lines = []
+    try:
+        summary = summary or {}
+        for tf, syms in sorted((summary.get("volume_cannot_load")
+                                or {}).items()):
+            if syms:
+                lines.append(
+                    f"Volume ({tf}) could not be loaded for "
+                    f"{len(syms)} symbol(s): {_sym_list_text(syms)}. "
+                    f"Twelve Data does not provide usable volume \u2014 "
+                    f"nothing shown here uses real volume.")
+        for tf, syms in sorted((summary.get("candles_cannot_load")
+                                or {}).items()):
+            if syms:
+                lines.append(
+                    f"Candles ({tf}) could not be loaded for "
+                    f"{len(syms)} symbol(s): {_sym_list_text(syms)}. "
+                    f"Those symbols cannot give a signal at this check.")
+        errs = summary.get("fetch_errors") or []
+        if errs:
+            lines.append("Data fetch notes: "
+                         + "; ".join(str(e) for e in errs[:4]))
+    except Exception:
+        pass
+    return lines
+
+
+def _render_data_load_status(st, summary):
+    """Render the load-failure warning (nothing when all loaded)."""
+    try:
+        lines = _data_load_status_lines(summary)
+        if lines:
+            st.warning("\u26a0\ufe0f **Data that could not be loaded** "
+                       "\u2014 " + " ".join(lines))
+    except Exception:
+        pass
 
 
 def _force_dashboard_refresh(st, state):
@@ -10295,28 +10533,72 @@ def render_cycle274_download_buttons(st, payload):
         return
 
 
+def _visible_panel_month(st: Any) -> int:
+    """The month whose panel is on screen (the Signal system
+    selection), falling back to the current calendar month."""
+    try:
+        import datetime as _dtm
+        sel = None
+        try:
+            sel = st.session_state.get("signal_system")
+        except Exception:
+            sel = None
+        for i, _row in enumerate(_MONTH_PANEL_ORDER):
+            if _row[1] == sel:
+                return i + 1
+        return _dtm.datetime.now(_dtm.timezone.utc).month
+    except Exception:
+        return 1
+
+
 def _auto_refresh_field3(st: Any, interval_ms: int = 30_000) -> None:
-    """Rerun the Field 3 page every 30 s so the countdown and Cycle 22
-    signals update without a manual reload.
+    """Window-confined auto-refresh (user order 2026-11-16).
+
+    The page reruns itself ONLY inside the visible panel's precheck
+    window (check - 30 min -> check, on the 9-minute cadence points)
+    and its check window (check - 15 min -> check + 30 min, on the
+    aligned check interval as before). At every other time NO
+    auto-refresh is installed at all -- an idle open page spends no
+    Twelve Data API tokens. The previous behaviour (a rerun at
+    least every 30 s around the clock) is removed.
 
     Preferred: ``streamlit_autorefresh`` (pinned in requirements.txt).
-    Fallback: a ``<meta http-equiv="refresh">`` tag.
-
-    Safe against fetch storms: the startup auto-load skips when a completed
-    generation already exists (once per session), and the per-window Cycle 22
-    evaluation is memoized by window key, so extra reruns are cheap.
+    Fallback inside a window only: a ``<meta http-equiv="refresh">``
+    tag with the same interval.
     """
     try:
-        from core.check_candle_runtime import check_refresh_interval_ms
+        month = _visible_panel_month(st)
+        sched = _precheck_schedule(month)
+        if sched is None:
+            return
+        if sched["phase"] == "live" or in_check_window(month):
+            try:
+                from core.check_candle_runtime import check_refresh_interval_ms
+                wait_ms = min(interval_ms, check_refresh_interval_ms())
+            except Exception:
+                wait_ms = interval_ms
+        elif sched["phase"] == "precheck":
+            wait_s = sched.get("to_refresh_s")
+            if wait_s is None:
+                return
+            wait_ms = max(5_000, min(540_000, int(wait_s * 1000)))
+        else:
+            return
+    except Exception:
+        return
+    try:
         from streamlit_autorefresh import st_autorefresh
 
-        st_autorefresh(interval=min(interval_ms, check_refresh_interval_ms()),
-                       limit=None, key="field3_c22_refresh")
+        st_autorefresh(interval=int(wait_ms), limit=None,
+                       key="field3_c22_refresh")
     except Exception:
-        st.markdown(
-            '<meta http-equiv="refresh" content="30">',
-            unsafe_allow_html=True,
-        )
+        try:
+            st.markdown(
+                f'<meta http-equiv="refresh" content="{max(5, int(wait_ms // 1000))}">',
+                unsafe_allow_html=True,
+            )
+        except Exception:
+            pass
 
 
 
@@ -10616,6 +10898,10 @@ def _evaluate_combined_window(state, month, hour_utc, day=None):
             "source_system": source_system,
         }
         payload["ranking"] = _c22_build_check_ranking(entries, entries, frames, need)
+        # Data-load honesty (user order 2026-11-16): stamp what the
+        # data layer could not load (per field/timeframe) onto the
+        # payload, so the check view shows it WITH this signal.
+        payload["data_load_status"] = _load_status_summary(state)
         _record_eval_history(cfg["sysid"], payload)
         try:
             state[cfg["state_key"]] = payload
@@ -10749,6 +11035,15 @@ def _render_combined_signals_table(st, state, month):
                                 cfg["best_id"], live_tag),
             unsafe_allow_html=True,
         )
+        # Data-load honesty (user order 2026-11-16): if anything the
+        # signal stands on could not be loaded (e.g. Volume), say so
+        # here, with the signal -- never silently. The payload's own
+        # stamped status describes the data THIS window was built
+        # from; fall back to the live state summary for payloads
+        # stored before the stamp existed.
+        _render_data_load_status(
+            st, payload.get("data_load_status")
+            or _load_status_summary(state))
         disp = payload.get("signals")
         has_disp = isinstance(disp, _pd.DataFrame) and not disp.empty
         if has_disp:
@@ -11047,8 +11342,6 @@ def _compute_precheck_possible(month, state):
     import pandas as _pd
     try:
         from core.signal_mode import evaluate_combined_entries
-        if not in_check_window(int(month)):
-            return None
         _mname, _sysid, _nn, _code = _MONTH_PANEL_ORDER[int(month) - 1]
         _mod = _il.import_module(f"core.cycle{_nn}_best")
         check_hours = getattr(_mod, f"CYCLE{str(_nn).upper()}_CHECK_HOURS")
@@ -11056,12 +11349,23 @@ def _compute_precheck_possible(month, state):
         check_label = _precheck_next_check(check_hours, _pd.Timestamp(now_utc))
         if check_label is None:
             return None
+        # Gate (extended, user order 2026-11-16): the precheck runs
+        # from 30 minutes BEFORE the check (the precheck window --
+        # live fetching for precheck purposes starts at T-30) as well
+        # as inside the check window itself, exactly as before. At
+        # all other times it stays silent and fetches nothing.
+        if not in_check_window(int(month)):
+            _entry_naive = check_label - _pd.Timedelta(minutes=30)
+            if not (_entry_naive - _pd.Timedelta(minutes=_PRECHECK_LEAD_MINUTES)
+                    <= _pd.Timestamp(now_utc) < _entry_naive):
+                return None
         sig_stamp = check_label - _pd.Timedelta(hours=1, minutes=30)
         ent_stamp = check_label - _pd.Timedelta(minutes=30)
         frames, _latest_ts, _diag = _fetch_c22_frames(
             state, need_candles=[sig_stamp])
         if not frames:
-            return {"status": "no_data", "check_label": check_label}
+            return {"status": "no_data", "check_label": check_label,
+                    "data_load_status": _load_status_summary(state)}
         try:
             fp = (int(month), str(check_label), tuple(
                 (sym, str(frames[sym].index.max()),
@@ -11104,6 +11408,11 @@ def _compute_precheck_possible(month, state):
                       "entry": top[2], "tp": _tp_x, "sl": _sl_x,
                       "dec": 3 if _pip >= 0.01 else 5,
                       "pct": pct, "grade": grade, "second": top[5]}
+        # Data-load honesty (user order 2026-11-16): stamp what
+        # could not be loaded onto the fresh result (cached copies
+        # carry it too; a fingerprint hit means the data has not
+        # moved, so the stamp stays accurate).
+        result["data_load_status"] = _load_status_summary(state)
         if fp is not None:
             try:
                 cache = state.get(_PRECHECK_STATE_KEY)
@@ -11138,6 +11447,77 @@ def _compute_precheck_possible(month, state):
         return result
     except Exception:
         return None
+
+
+def _render_precheck_timer_box(st, month):
+    """Clear glass timer box for the pre-check (user order
+    2026-11-16): the next check time, the precheck start time
+    (check - 30 min), and a live countdown -- to the precheck start
+    before the window, to the next 9-minute refresh inside it, and
+    a live marker during the check window. The countdown moves
+    because the page auto-refreshes inside the precheck/check
+    windows only. Display only; never raises."""
+    try:
+        import pandas as _pd
+        sched = _precheck_schedule(month)
+        if sched is None:
+            return
+
+        def _mmt(ts, fmt="%H:%M"):
+            t = _pd.Timestamp(ts)
+            try:
+                return t.tz_convert("Asia/Yangon").strftime(fmt)
+            except Exception:
+                return (t.tz_convert("UTC")
+                        + _pd.Timedelta(hours=6, minutes=30)).strftime(fmt)
+
+        def _cd(s):
+            s = max(0, int(s))
+            return f"{s // 3600:02d}:{(s % 3600) // 60:02d}:{s % 60:02d}"
+
+        chk = sched["next_check"]
+        chk_txt = (f"{_mmt(chk)} MMT<br>"
+                   f"<span style='font-size:11px;'>{_mmt(chk, '%a %d %b')}</span>")
+        start_txt = (f"{_mmt(sched['precheck_start'])} MMT<br>"
+                     f"<span style='font-size:11px;'>30 min before the check</span>")
+        if sched["phase"] == "precheck":
+            status = (f"<b>\U0001f7e2 PRECHECK LIVE</b><br>"
+                      f"<span style='font-size:11px;'>next refresh in "
+                      f"{_cd(sched.get('to_refresh_s') or 0)} · check in "
+                      f"{_cd(sched['to_check_s'])}</span>")
+        elif sched["phase"] == "live":
+            status = (f"<b>\U0001f7e2 CHECK WINDOW LIVE</b><br>"
+                      f"<span style='font-size:11px;'>the final signal is "
+                      f"computed in the panel above</span>")
+        else:
+            status = (f"<b>⏳ PRECHECK STARTS IN</b><br>"
+                      f"<span style='font-size:11px;'>{_cd(sched['to_start_s'])}"
+                      f" · then refreshes every 9 min</span>")
+        box = ("<div style='background:rgba(255,255,255,.55);"
+               "border:1px solid rgba(255,255,255,.65);border-radius:12px;"
+               "box-shadow:0 4px 14px rgba(15,23,42,.06);"
+               "backdrop-filter:blur(10px) saturate(150%);"
+               "-webkit-backdrop-filter:blur(10px) saturate(150%);"
+               "padding:6px 10px;text-align:center;min-width:110px;flex:1 1 0;'>"
+               "<span style='font-size:13px;color:#0f172a;'>{}</span></div>")
+        st.markdown(
+            "<div style='background:rgba(255,255,255,.38);"
+            "border:1px solid rgba(148,163,184,.55);border-radius:14px;"
+            "box-shadow:0 8px 24px rgba(15,23,42,.07);"
+            "backdrop-filter:blur(14px) saturate(160%);"
+            "-webkit-backdrop-filter:blur(14px) saturate(160%);"
+            "padding:10px 12px;margin:10px 0 8px 0;'>"
+            "<div style='font-size:15px;font-weight:800;color:#0f172a;"
+            "margin-bottom:8px;'>\U0001f50e Pre-check timer</div>"
+            "<div style='display:flex;flex-wrap:wrap;gap:6px;'>"
+            + box.format(f"<b>NEXT CHECK</b><br>{chk_txt}")
+            + box.format(f"<b>PRECHECK STARTS</b><br>{start_txt}")
+            + box.format(status)
+            + "</div></div>",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        return
 
 
 def _render_precheck_possible(st, state, month):
@@ -11180,6 +11560,10 @@ def _render_precheck_possible(st, state, month):
                         "loaded yet**")
             st.caption(f"The pre-check for the {_mmt} MMT check appears "
                        "once candle data is loaded.")
+        # Data-load honesty (user order 2026-11-16): the precheck
+        # block shows the same load-failure warning as the check
+        # view when anything it stands on could not be loaded.
+        _render_data_load_status(st, result.get("data_load_status"))
     except Exception:
         return
 
@@ -11396,7 +11780,7 @@ def render_multisymbol_regime_summary(
         _mnow3 = _dtm3.datetime.now(_dtm3.timezone.utc).month
         _panel = _SIGNAL_PANELS[_MONTH_PANEL_ORDER[_mnow3 - 1][1]]
     _render_cycle12_check_banner(st, state.get(_panel["age_key"]))
-    _render_symbols_loaded_box(st, context)
+    _render_symbols_loaded_box(st, context, state)
 
     # Refresh button at the TOP of the ranking/signals table: forces a
     # fresh data fetch (H1 + M15) and a re-evaluation of the panel.
@@ -11409,12 +11793,17 @@ def render_multisymbol_regime_summary(
     payload = _panel["render"](st, state)
 
     # POSSIBLE (pre-check) block for this panel's next check
-    # (additive display only, user order 2026-10-28).
+    # (additive display only, user order 2026-10-28). The timer box
+    # (user order 2026-11-16) heads the section: next check time,
+    # precheck start (check - 30 min) and the countdown, always
+    # visible; the pre-check signal itself appears inside its
+    # window (T-30 -> check + 30).
     try:
         _precheck_month = next(
             (i + 1 for i, _row in enumerate(_MONTH_PANEL_ORDER)
              if _row[1] == _active), None)
         if _precheck_month is not None:
+            _render_precheck_timer_box(st, _precheck_month)
             _render_precheck_possible(st, state, _precheck_month)
     except Exception:
         pass

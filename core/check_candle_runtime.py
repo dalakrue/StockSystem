@@ -164,6 +164,50 @@ def _direct_fetch(state, symbols, tf, *, deadline, force=False):
     return frames, errors
 
 
+def _record_load_status(state, tf, frames, requested=()):
+    """Honest per-field load status (user order 2026-11-16).
+
+    Records into state["check_data_load_status"][tf][symbol] what
+    the data layer could and could not load, judged from the actual
+    frames used, so the check/precheck views can SHOW a load failure
+    instead of silently presenting a signal next to substituted
+    data. Fields tracked: "candles" ("cannot_load" for a requested
+    symbol that returned no frame) and "volume" ("cannot_load" when
+    the frame has no Volume column or every value is 0/NaN --
+    Twelve Data returns no volume for FX and the connector fills a
+    missing column with 0, so an all-zero column means volume did
+    NOT load; it is not real zero volume). A frame whose volume has
+    any positive value (e.g. a repository frame with real volume)
+    reports "loaded". Never raises; never changes any frame.
+    """
+    try:
+        if not isinstance(state, dict):
+            return
+        book = state.setdefault("check_data_load_status", {})
+        if not isinstance(book, dict):
+            return
+        slot = book.setdefault(tf, {})
+        frames = frames or {}
+        for sym in requested or ():
+            if sym not in frames:
+                slot[sym] = {"candles": "cannot_load"}
+        for sym, frame in frames.items():
+            entry = dict(slot.get(sym) or {})
+            entry["candles"] = "loaded"
+            vol = "cannot_load"
+            try:
+                if frame is not None and "Volume" in frame.columns:
+                    vals = pd.to_numeric(frame["Volume"], errors="coerce")
+                    if bool((vals.fillna(0) > 0).any()):
+                        vol = "loaded"
+            except Exception:
+                vol = "cannot_load"
+            entry["volume"] = vol
+            slot[sym] = entry
+    except Exception:
+        pass
+
+
 def _merge(old, new, limit=400):
     if old is None:
         return new.tail(limit) if new is not None else None
@@ -237,6 +281,7 @@ def fetch_check_frames(state, symbols, need_candles=None):
                 ready=len(ready_symbols), required=len(symbols),
                 missing_symbols=[s for s in symbols if s not in ready_symbols],
                 entry_sources=sources, live_errors=errors[:8])
+    _record_load_status(state, "H1", frames, symbols)
     result = frames, latest, diag
     state[H1_MEMO_KEY] = dict(key=key, at=time.monotonic(), result=result)
     return result
@@ -279,6 +324,7 @@ def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=Fa
             if sym in raw_frames:
                 _persist_real(repo, raw_frames[sym], sym, "M15", errors)
     state["check_m15_last_errors"] = errors
+    _record_load_status(state, "M15", frames, symbols)
     # 2026-11-16 repair (app migration): the ported cycle modules
     # convert frames through _bars_from_frame, which reads the time
     # from a "Datetime" COLUMN; normalized frames carry the time only
@@ -347,6 +393,7 @@ def fetch_m5_frames(state, symbols, *, deadline=None, force=False):
             if sym in raw_frames:
                 _persist_real(repo, raw_frames[sym], sym, "M5", errors)
     state["check_m5_last_errors"] = errors
+    _record_load_status(state, "M5", frames, symbols)
     out = {}
     for _sym, _f in frames.items():
         try:

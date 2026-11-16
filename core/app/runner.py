@@ -326,10 +326,25 @@ def run_app():
         runtime_context = {"active_page": tab, "active_subpage": "", "canonical_status": "DATA NOT READY", "incident_id": incident}
 
     try:
-        if should_enable_full_autorefresh(st.session_state, tab, str(runtime_context.get("active_subpage", ""))):
+        # Window confinement (user order 2026-11-16): no auto-refresh
+        # outside the current month's precheck window (check - 30 min)
+        # and check window -- an idle open page must not spend Twelve
+        # Data API tokens. The Field 3 panel installs its own
+        # cadence-aligned refresh inside those windows; this slower
+        # 10-minute safety refresh is confined to the same windows.
+        _in_live_window = False
+        try:
+            import datetime as _dt_win
+            from ui.field3_multisymbol_regime_summary_20260722 import (
+                in_check_window as _icw, in_precheck_window as _ipw)
+            _month_win = _dt_win.datetime.now(_dt_win.timezone.utc).month
+            _in_live_window = bool(_icw(_month_win) or _ipw(_month_win))
+        except Exception:
+            _in_live_window = False
+        if _in_live_window and should_enable_full_autorefresh(st.session_state, tab, str(runtime_context.get("active_subpage", ""))):
             st_autorefresh(interval=600000, key="ten_min_refresh")
         else:
-            st.session_state["ten_min_refresh_disabled_reason_20260617"] = "Phone low-heat mode or non-live/closed page"
+            st.session_state["ten_min_refresh_disabled_reason_20260617"] = "Outside precheck/check windows, phone low-heat mode, or non-live/closed page"
     except Exception:
         pass
 

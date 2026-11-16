@@ -10805,6 +10805,91 @@ def _combined_check_hours(month):
     return tuple(getattr(mod, cfg["hours_attr"]))
 
 
+def _compute_second_best(month, frames, check_label):
+    """CHECK-TIME FORCE-SHOW (user requirement, restated
+    2026-11-16 19:52 MMT): for a window whose equation fired
+    nothing, compute the second-best / nearest-met candidate
+    from the month design's own scoring (each cycle module
+    exposes nearest_candidate()). Display data ONLY -- never a
+    signal, never traded. Returns a display dict or None (only
+    when no candidate bar could be read at all)."""
+    import importlib as _il_sb
+    import pandas as _pd
+    try:
+        _row = _MONTH_PANEL_ORDER[int(month) - 1]
+        _mod = _il_sb.import_module(f"core.cycle{_row[2]}_best")
+        _fn = getattr(_mod, "nearest_candidate", None)
+        if _fn is None:
+            return None
+        _sb = _fn(frames, check_label)
+        if not _sb:
+            return None
+        from core.cycle12_best import pip_size as _sb_pip
+        _sym = str(_sb["sym"]).upper()
+        _side = "BUY" if int(_sb["side"]) > 0 else "SELL"
+        _entry = float(_sb["entry_px"])
+        _sl_p = float(_sb["sl_pips"])
+        _tp_p = 3.0 * _sl_p
+        _pip = float(_sb_pip(_sym))
+        if _side == "BUY":
+            _tp_x = _entry + _tp_p * _pip
+            _sl_x = _entry - _sl_p * _pip
+        else:
+            _tp_x = _entry - _tp_p * _pip
+            _sl_x = _entry + _sl_p * _pip
+        _dec = 3 if _pip >= 0.01 else 5
+        _bar_txt = ""
+        try:
+            _bar_txt = _pd.Timestamp(
+                int(_sb["bar_s"]), unit="s", tz="UTC").strftime(
+                    "%Y-%m-%d %H:%M UTC")
+        except Exception:
+            _bar_txt = ""
+        return {"symbol": _sym, "direction": _side,
+                "entry": round(_entry, _dec),
+                "tp": round(_tp_x, _dec),
+                "sl": round(_sl_x, _dec), "dec": _dec,
+                "near_pct": _sb.get("near_pct"),
+                "near_text": str(_sb.get("near_text") or ""),
+                "fallback": bool(_sb.get("fallback")),
+                "bar_utc": _bar_txt}
+    except Exception:
+        return None
+
+
+def _render_second_best(st, sb):
+    """Render the force-show second-best line. Labelled as
+    second-best / NOT a signal throughout (the word SIGNAL
+    stays reserved for main picks)."""
+    if not sb:
+        return
+    try:
+        _d = int(sb.get("dec", 5))
+        _pct = sb.get("near_pct")
+        _pct_txt = ""
+        if isinstance(_pct, (int, float)):
+            _pct_txt = f" -- nearly met: {_pct:.0f}%"
+        _fb_txt = ""
+        if sb.get("fallback"):
+            _fb_txt = (" (the check bar could not be read "
+                       "completely -- ranked from the last "
+                       "completed bar, ending "
+                       f"{sb.get('bar_utc', '')})")
+        st.warning(
+            "SECOND-BEST (nearest-met) -- NOT a signal: "
+            f"{sb['direction']} {sb['symbol']} -- entry "
+            f"{sb['entry']:.{_d}f} | SL {sb['sl']:.{_d}f} | TP "
+            f"{sb['tp']:.{_d}f}{_pct_txt}{_fb_txt}")
+        if sb.get("near_text"):
+            st.caption(
+                str(sb["near_text"]) + ". Shown because no "
+                "equation fired at this check -- by rule the "
+                "second-best is displayed; it is never a "
+                "signal and is never traded.")
+    except Exception:
+        return
+
+
 def _evaluate_combined_window(state, month, hour_utc, day=None):
     """Evaluate one combined (best-first) window for September/December.
 
@@ -10902,6 +10987,17 @@ def _evaluate_combined_window(state, month, hour_utc, day=None):
         # data layer could not load (per field/timeframe) onto the
         # payload, so the check view shows it WITH this signal.
         payload["data_load_status"] = _load_status_summary(state)
+        if not (isinstance(disp, _pd.DataFrame)
+                and not disp.empty):
+            # CHECK-TIME FORCE-SHOW (user requirement, restated
+            # 2026-11-16 19:52 MMT): no equation fired -- the
+            # payload must carry the second-best / nearest-met
+            # candidate, never a bare no-entry. Also computed
+            # when the window was voided as a data failure: the
+            # module then falls back to the last completed bar
+            # and the line is labelled as from that bar.
+            payload["second_best"] = _compute_second_best(
+                month, frames, check_label)
         _record_eval_history(cfg["sysid"], payload)
         try:
             state[cfg["state_key"]] = payload
@@ -11067,8 +11163,14 @@ def _render_combined_signals_table(st, state, month):
                          f"Refreshing automatically; if it persists, check the data connection. {_diag_notes(payload)}")
             else:
                 st.info(f"No entry at this check -- the Best system "
-                        f"({cfg['best_label']}) had no entry. "
-                        "(Best only: there is no second-best system.)")
+                        f"({cfg['best_label']}) fired nothing.")
+            # CHECK-TIME FORCE-SHOW (user requirement, restated
+            # 2026-11-16 19:52 MMT): a bare no-entry is never the
+            # whole output -- the second-best / nearest-met line
+            # rides under both the plain no-entry note and the
+            # data-failure error (labelled with its bar when it
+            # came from the last completed bar).
+            _render_second_best(st, payload.get("second_best"))
         return payload
     except Exception:
         _p = state.get(_COMBINED_CFG[month]["state_key"])
@@ -11386,6 +11488,16 @@ def _compute_precheck_possible(month, state):
         top = _precheck_top(entries)
         if top is None:
             result = {"status": "none", "check_label": check_label}
+            # CHECK-TIME FORCE-SHOW (user requirement, restated
+            # 2026-11-16 19:52 MMT): a bare "none yet" is never
+            # the whole output -- attach the second-best /
+            # nearest-met candidate, computed on the same
+            # synthetic frames this precheck evaluated.
+            result["second_best"] = _compute_second_best(
+                int(month),
+                _precheck_build_frames(frames, sig_stamp,
+                                       ent_stamp, 0.0),
+                check_label)
         else:
             same = 0
             for _d in (-0.5, -0.25, 0.25, 0.5):
@@ -11555,6 +11667,11 @@ def _render_precheck_possible(st, state, month):
                         "final signal): none yet**")
             st.caption(f"No equation fires yet for the {_mmt} MMT check on "
                        "the still-forming signal candle.")
+            # CHECK-TIME FORCE-SHOW (user requirement, restated
+            # 2026-11-16 19:52 MMT): the second-best / nearest-met
+            # line rides under the "none yet" note -- never a
+            # bare none.
+            _render_second_best(st, result.get("second_best"))
         else:
             st.markdown("**\U0001f50e POSSIBLE (pre-check): no data "
                         "loaded yet**")

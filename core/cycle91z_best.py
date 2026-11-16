@@ -846,3 +846,92 @@ def select_cycle91z_entries(signals: pd.DataFrame,
     if signals is None or not len(signals):
         return signals
     return signals
+
+# ---- CHECK-TIME FORCE-SHOW: second-best / nearest-met candidate
+# (user requirement, restated 2026-11-16 19:52 MMT). DISPLAY
+# ONLY: exposes the candidate that came closest to meeting this
+# design's entry condition at a check where the design itself
+# took no pick, so the panel can force-show it instead of a bare
+# "no entry". Reads the same bars the live form reads; never
+# touches the persisted state; never changes any selection maths.
+def _sb_band_pct(adj, lo, hi):
+    if lo < adj < hi:
+        return 100.0
+    if adj <= lo:
+        return (adj / lo * 100.0) if lo > 0 else 100.0
+    return ((1.0 - adj) / (1.0 - hi) * 100.0) if hi < 1.0 else 100.0
+
+
+def _sb_latest_bar_end(m15_bars, T):
+    best = None
+    for _sym, _b in m15_bars.items():
+        try:
+            _ts = _b[0]
+            _i = int(np.searchsorted(_ts, T - 900,
+                                     side="right")) - 1
+            if _i >= 0:
+                _end = int(_ts[_i]) + 900
+                if _end <= T and (best is None or _end > best):
+                    best = _end
+        except Exception:
+            continue
+    return best
+
+
+def nearest_candidate(frames, check_time_utc, m15_frames=None,
+                      m5_frames=None):
+    """Nearest-met candidate at a check: for every symbol/side,
+    how far the entry bar's band position (pos_adj) travelled
+    toward this design's per-symbol entry band, as a % (100 =
+    inside the band; then the design's score/stack rules are
+    what held it back). Falls back to the latest completed bar
+    when the check bar cannot be read. None only when no
+    candidate bar can be read at all."""
+    try:
+        chk = pd.Timestamp(check_time_utc)
+        T = int(chk.timestamp())
+        T -= T % 3600  # entries fire at H:00 UTC (as step())
+        if m15_frames is None:
+            m15_frames = fetch_cycle91z_m15_frames()
+        m15_bars = {}
+        for sym in SYMBOLS:
+            b = _bars_from_frame(
+                m15_frames.get(sym) if m15_frames else None)
+            if b is not None:
+                m15_bars[sym] = b
+        Tu = T
+        rows = _slot_rows(Tu, m15_bars)
+        if not rows:
+            alt = _sb_latest_bar_end(m15_bars, T)
+            if alt is not None and alt < T:
+                Tu = alt
+                rows = _slot_rows(Tu, m15_bars)
+            k = 0
+            while not rows and k < 8:
+                Tu -= 900
+                rows = _slot_rows(Tu, m15_bars)
+                k += 1
+        if not rows:
+            return None
+        best = None
+        for r in rows:
+            _lo, _hi = BANDS[EQUATIONS[r["sym"]]["band"]]
+            _pct = _sb_band_pct(r["pos_adj"], _lo, _hi)
+            _key = (_pct, float(r["score"]))
+            if best is None or _key > best[0]:
+                best = (_key, r, _pct)
+        r, pct = best[1], best[2]
+        if pct >= 100.0:
+            txt = ("inside its entry band (100%) -- held back by "
+                   "the design's score/stack rules, not the band")
+        else:
+            txt = ("nearly met its entry band -- %.0f%% of the "
+                   "way in (bar position vs its own band)" % pct)
+        return {"sym": r["sym"], "side": int(r["side"]),
+                "entry_px": float(r["entry_px"]),
+                "sl_pips": float(FIXED_SL),
+                "near_pct": round(float(pct), 1),
+                "near_text": txt, "bar_s": int(Tu),
+                "fallback": bool(Tu != T)}
+    except Exception:
+        return None

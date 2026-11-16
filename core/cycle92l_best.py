@@ -959,3 +959,103 @@ def select_cycle92l_entries(signals: pd.DataFrame,
     if signals is None or not len(signals):
         return signals
     return signals
+
+# ---- CHECK-TIME FORCE-SHOW: second-best / nearest-met candidate
+# (user requirement, restated 2026-11-16 19:52 MMT). DISPLAY
+# ONLY: exposes the candidate that came closest to meeting this
+# design's entry condition at a check where the design itself
+# took no pick, so the panel can force-show it instead of a bare
+# "no entry". Reads the same bars the live form reads; never
+# touches the persisted state; never changes any selection maths.
+def _sb_latest_bar_end(m15_bars, T):
+    best = None
+    for _sym, _b in m15_bars.items():
+        try:
+            _ts = _b[0]
+            _i = int(np.searchsorted(_ts, T - 900,
+                                     side="right")) - 1
+            if _i >= 0:
+                _end = int(_ts[_i]) + 900
+                if _end <= T and (best is None or _end > best):
+                    best = _end
+        except Exception:
+            continue
+    return best
+
+
+def nearest_candidate(frames, check_time_utc, m15_frames=None,
+                      m5_frames=None):
+    """Nearest-met candidate at a check. This design gates
+    candidates on a filed cell win-rate (WIN_GATE) and ranks by
+    score (cell expectancy + shape agreement); the nearest-met
+    candidate is the highest-scoring gate-passing symbol/side
+    -- or, when none passed the gate, the highest-scoring one
+    overall, labelled as such. Falls back to the latest
+    completed bar when the check bar cannot be read. None only
+    when no candidate bar can be read at all."""
+    try:
+        chk = pd.Timestamp(check_time_utc)
+        T = int(chk.timestamp())
+        T -= T % 3600  # entries fire at H:00 UTC (as step())
+        if m15_frames is None:
+            m15_frames = fetch_cycle92l_m15_frames()
+        m15_bars = {}
+        for sym in SYMBOLS:
+            b = _bars_from_frame(
+                m15_frames.get(sym) if m15_frames else None)
+            if b is not None:
+                m15_bars[sym] = b
+        h1_bars = {}
+        for sym in SYMBOLS:
+            b = _bars_from_frame(
+                frames.get(sym) if frames else None)
+            if b is not None:
+                h1_bars[sym] = b
+        m5_bars = {}
+        if not m5_frames:
+            m5_frames = fetch_cycle92l_m5_frames()
+        if m5_frames:
+            for sym in SYMBOLS:
+                b = _bars_from_frame(m5_frames.get(sym))
+                if b is not None:
+                    m5_bars[sym] = b
+        Tu = T
+        rows = _slot_rows(Tu, m15_bars, h1_bars, m5_bars)
+        if not rows:
+            alt = _sb_latest_bar_end(m15_bars, T)
+            if alt is not None and alt < T:
+                Tu = alt
+                rows = _slot_rows(Tu, m15_bars, h1_bars, m5_bars)
+            k = 0
+            while not rows and k < 8:
+                Tu -= 900
+                rows = _slot_rows(Tu, m15_bars, h1_bars, m5_bars)
+                k += 1
+        if not rows:
+            return None
+        pool = [r for r in rows if r.get("eligible")] or rows
+        best = None
+        for r in pool:
+            _key = (float(r["score"]),)
+            if best is None or _key > best[0]:
+                best = (_key, r)
+        r = best[1]
+        if r.get("eligible"):
+            txt = ("passed the design's win gate (filed cell "
+                   "win-rate %.0f%%) with the top score %.2f -- "
+                   "the design's fill rules took no pick"
+                   % (float(r["cell_win"]) * 100.0,
+                      float(r["score"])))
+        else:
+            txt = ("no candidate passed the design's win gate; "
+                   "closest by score %.2f (filed cell win-rate "
+                   "%.0f%%)" % (float(r["score"]),
+                                 float(r["cell_win"]) * 100.0))
+        return {"sym": r["sym"], "side": int(r["side"]),
+                "entry_px": float(r["entry_px"]),
+                "sl_pips": float(FIXED_SL),
+                "near_pct": None,
+                "near_text": txt, "bar_s": int(Tu),
+                "fallback": bool(Tu != T)}
+    except Exception:
+        return None

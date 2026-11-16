@@ -1472,3 +1472,96 @@ def select_cycle67w_entries(signals: pd.DataFrame,
     if signals is None or not len(signals):
         return signals
     return signals
+
+# ---- CHECK-TIME FORCE-SHOW: second-best / nearest-met candidate
+# (user requirement, restated 2026-11-16 19:52 MMT). DISPLAY
+# ONLY: exposes the candidate that came closest to meeting this
+# design's entry condition at a check where the design itself
+# took no pick, so the panel can force-show it instead of a bare
+# "no entry". Reads the same bars the live form reads; never
+# touches the persisted state; never changes any selection maths.
+def _sb_latest_bar_end(m15_bars, T):
+    best = None
+    for _sym, _b in m15_bars.items():
+        try:
+            _ts = _b[0]
+            _i = int(np.searchsorted(_ts, T - 900,
+                                     side="right")) - 1
+            if _i >= 0:
+                _end = int(_ts[_i]) + 900
+                if _end <= T and (best is None or _end > best):
+                    best = _end
+        except Exception:
+            continue
+    return best
+
+
+def nearest_candidate(frames, check_time_utc, m15_frames=None,
+                      m5_frames=None):
+    """Nearest-met candidate at a check. This design's
+    candidates are ranked by their filed conditioned cells
+    (tercile-conditioned win-rate, then expectancy -- the same
+    order its fill uses); the nearest-met candidate is the
+    symbol/side sitting in the strongest filed cell at this
+    check. Falls back to the latest completed bar when the
+    check bar cannot be read. None only when no candidate bar
+    can be read at all."""
+    try:
+        chk = pd.Timestamp(check_time_utc)
+        T = int(chk.timestamp())
+        T -= T % 3600  # entries fire at H:00 UTC (as step())
+        if m15_frames is None:
+            m15_frames = fetch_cycle67w_m15_frames()
+        m15_bars = {}
+        for sym in SYMBOLS:
+            b = _bars_from_frame(
+                m15_frames.get(sym) if m15_frames else None)
+            if b is not None:
+                m15_bars[sym] = b
+        h1_bars = {}
+        for sym in SYMBOLS:
+            b = _bars_from_frame(
+                frames.get(sym) if frames else None)
+            if b is not None:
+                h1_bars[sym] = b
+        Tu = T
+        rows = _slot_rows(Tu, m15_bars, h1_bars)
+        if not rows:
+            alt = _sb_latest_bar_end(m15_bars, T)
+            if alt is not None and alt < T:
+                Tu = alt
+                rows = _slot_rows(Tu, m15_bars, h1_bars)
+            k = 0
+            while not rows and k < 8:
+                Tu -= 900
+                rows = _slot_rows(Tu, m15_bars, h1_bars)
+                k += 1
+        if not rows:
+            return None
+        best = None
+        for r in rows:
+            _ck = r.get("cond_key", -1)
+            _key = (float(CELL_WIN.get(_ck, -1.0)),
+                    float(CELL_EXP.get(_ck, -1.0)))
+            if best is None or _key > best[0]:
+                best = (_key, r)
+        r = best[1]
+        _win = float(CELL_WIN.get(r.get("cond_key", -1), -1.0))
+        if _win >= 0:
+            txt = ("strongest filed cell this check (cell "
+                   "win-rate %.1f%%, expectancy %.2f) -- the "
+                   "design's fill rules took no pick"
+                   % (_win,
+                      float(CELL_EXP.get(r.get("cond_key", -1),
+                                         0.0))))
+        else:
+            txt = ("no candidate sat in a filed cell at this "
+                   "check; first candidate shown")
+        return {"sym": r["sym"], "side": int(r["side"]),
+                "entry_px": float(r["entry_px"]),
+                "sl_pips": float(FIXED_SL),
+                "near_pct": None,
+                "near_text": txt, "bar_s": int(Tu),
+                "fallback": bool(Tu != T)}
+    except Exception:
+        return None

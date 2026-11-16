@@ -2451,3 +2451,130 @@ class NovStackState:
                 self.stack_census["adds"] += 1
                 out.append(len(self.picks) - 1)
         return out
+
+# ---- CHECK-TIME FORCE-SHOW: second-best / nearest-met candidate
+# (user requirement, restated 2026-11-16 19:52 MMT). DISPLAY
+# ONLY: exposes the candidate that came closest to meeting this
+# design's entry condition at a check where the design itself
+# took no pick, so the panel can force-show it instead of a bare
+# "no entry". Reads the same bars the live form reads; never
+# touches the persisted state; never changes any selection maths.
+def _sb_band_pct(adj, lo, hi):
+    if lo < adj < hi:
+        return 100.0
+    if adj <= lo:
+        return (adj / lo * 100.0) if lo > 0 else 100.0
+    return ((1.0 - adj) / (1.0 - hi) * 100.0) if hi < 1.0 else 100.0
+
+
+def _sb_latest_bar_end(m15_bars, T):
+    best = None
+    for _sym, _b in m15_bars.items():
+        try:
+            _ts = _b[0]
+            _i = int(np.searchsorted(_ts, T - 900,
+                                     side="right")) - 1
+            if _i >= 0:
+                _end = int(_ts[_i]) + 900
+                if _end <= T and (best is None or _end > best):
+                    best = _end
+        except Exception:
+            continue
+    return best
+
+
+def _sb_sides_at(Tu, m15_bars):
+    """Every symbol/side's band progress at bar-end Tu, computed
+    exactly as _slot_rows computes its gated rows -- except the
+    band gate itself is reported as a % instead of applied, so
+    out-of-band sides stay visible for the force-show."""
+    hour = (Tu % 86400) // 3600
+    out = []
+    for sym in SYMBOLS:
+        b = m15_bars.get(sym)
+        if b is None:
+            continue
+        ts, o, h, l, c = b
+        idx = int(np.searchsorted(ts, Tu - 900))
+        if idx >= len(ts) or int(ts[idx]) != Tu - 900:
+            continue
+        if idx < 31:
+            continue
+        if _atr14(h, l, c, idx) is None:
+            continue
+        pos = _pos32(h, l, c, idx)
+        if pos is None:
+            continue
+        for side in (1, -1):
+            adj = pos if side > 0 else 1.0 - pos
+            bucket = 0 if adj < BUCKET_E1 else (
+                1 if adj < BUCKET_E2 else 2)
+            side01 = 1 if side > 0 else 0
+            code = (((SYM_IDX[sym] * 24 + hour) * 2 + side01)
+                    * 7 + MULT_IDX_BY_SYM[sym]) * 3 + bucket
+            out.append({"sym": sym, "side": side,
+                        "entry_px": float(c[idx]),
+                        "pct": _sb_band_pct(adj, BAND_LO, BAND_HI),
+                        "score": float(WIN_TABLE.get(
+                            code, WIN_PRIOR))})
+    return out
+
+
+def nearest_candidate(frames, check_time_utc, m15_frames=None,
+                      m5_frames=None):
+    """Nearest-met candidate at a check: for every symbol/side,
+    how far the entry bar's position (pos_adj vs the fixed
+    0.40-0.60 band) travelled toward meeting the entry
+    condition, as a % (100 = inside the band; then the design's
+    score/stack rules are what held it back). This design fires
+    AT the :30 check stamp (no hour flooring, exactly as
+    step()). Falls back to the latest completed bar when the
+    check bar cannot be read. None only when no candidate bar
+    can be read at all."""
+    try:
+        chk = pd.Timestamp(check_time_utc)
+        T = int(chk.timestamp())
+        if m15_frames is None:
+            m15_frames = fetch_cycle93ai_m15_frames()
+        m15_bars = {}
+        for sym in SYMBOLS:
+            b = _bars_from_frame(
+                m15_frames.get(sym) if m15_frames else None)
+            if b is not None:
+                m15_bars[sym] = b
+        Tu = T
+        cand = _sb_sides_at(Tu, m15_bars)
+        if not cand:
+            alt = _sb_latest_bar_end(m15_bars, T)
+            if alt is not None and alt < T:
+                Tu = alt
+                cand = _sb_sides_at(Tu, m15_bars)
+            k = 0
+            while not cand and k < 8:
+                Tu -= 900
+                cand = _sb_sides_at(Tu, m15_bars)
+                k += 1
+        if not cand:
+            return None
+        best = None
+        for r in cand:
+            _key = (r["pct"], r["score"])
+            if best is None or _key > best[0]:
+                best = (_key, r)
+        r = best[1]
+        pct = r["pct"]
+        if pct >= 100.0:
+            txt = ("inside the entry band (100%) -- held back by "
+                   "the design's score/stack rules, not the band")
+        else:
+            txt = ("nearly met the entry band -- %.0f%% of the "
+                   "way in (bar position vs the 0.40-0.60 band)"
+                   % pct)
+        return {"sym": r["sym"], "side": int(r["side"]),
+                "entry_px": float(r["entry_px"]),
+                "sl_pips": float(FIXED_SL),
+                "near_pct": round(float(pct), 1),
+                "near_text": txt, "bar_s": int(Tu),
+                "fallback": bool(Tu != T)}
+    except Exception:
+        return None

@@ -2840,7 +2840,7 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
         in_window = bool(is_active_check_time(now_pd))
         sys_name = {
             "cycle60k": "January \u00b7 Cycle 60K (JSTACK-WPC-B0W40-{NDC,BMRNB,NF}-NR-MRP15-3TF-ECE-F30)",
-            "cycle85r": "February \u00b7 Cycle 85R (FSTACK-PW20-F30)",
+            "cycle85s": "February \u00b7 Cycle 85S (FSTACK-BMRNB0.00-3TF-NF15-ECE-F30)",
             "cycle86o": "March \u00b7 Cycle 86O (CELLEXC-F30)",
             "cycle87p": "April \u00b7 Cycle 87P (ASTACK-F18)",
             "cycle88t": "May \u00b7 Cycle 88T (MSTACK-F10)",
@@ -11162,10 +11162,10 @@ _COMBINED_CFG = {
     2: {
         "sysid": "cycle85pcombined",
         "month_name": "February",
-        "best_id": "cycle85r",
-        "best_label": "Cycle 85R (FSTACK-PW20-F30, RR 1:3, VALIDATED)",
-        "hours_mod": "core.cycle85r_best",
-        "hours_attr": "CYCLE85R_CHECK_HOURS",
+        "best_id": "cycle85s",
+        "best_label": "Cycle 85S (FSTACK-BMRNB0.00-3TF-NF15-ECE-F30, RR 1:3, EXT9)",
+        "hours_mod": "core.cycle85s_best",
+        "hours_attr": "CYCLE85S_CHECK_HOURS",
         "state_key": "combined_feb_signals_latest_v1",
         "age_key": "combined_feb_candle_age_txt",
         "diag_key": "combined_feb_signals_diag_v1",
@@ -12657,7 +12657,7 @@ _MONTH_PANEL_ORDER = [
     # the RR 1:3 registry cycles; February and July moved from their
     # legacy in-app panels to combined panels.
     ("January", "cycle60bcombined", "60k", "C60K"),
-    ("February", "cycle85pcombined", "85r", "C85R"),
+    ("February", "cycle85pcombined", "85s", "C85S"),
     ("March", "cycle86bcombined", "86o", "C86O"),
     ("April", "cycle87bcombined", "87p", "C87P"),
     ("May", "cycle88ncombined", "88t", "C88T"),
@@ -12678,7 +12678,7 @@ _SIGNAL_PANELS = {
                 "download": render_feb_combined_download_buttons,
                 "state_key": _COMBINED_CFG[2]["state_key"], "age_key": _COMBINED_CFG[2]["age_key"],
                 "diag_key": _COMBINED_CFG[2]["diag_key"], "fail_key": _COMBINED_CFG[2]["fail_key"],
-                "label": "Cycle 85R (FSTACK-PW20-F30, RR 1:3, VALIDATED) \u2014 February system (Best only)"},
+                "label": "Cycle 85S (FSTACK-BMRNB0.00-3TF-NF15-ECE-F30, RR 1:3, EXT9) \u2014 February system (Best only)"},
     "cycle86bcombined": {"render": _render_mar_combined_signals_table,
                 "download": render_mar_combined_download_buttons,
                 "state_key": _COMBINED_CFG[3]["state_key"], "age_key": _COMBINED_CFG[3]["age_key"],
@@ -12747,7 +12747,7 @@ def render_multisymbol_regime_summary(
     The "Signal system" dropdown offers the 12 month panels and
     auto-defaults to the current month's system. All twelve cfg
     panels evaluate the month's CURRENT registry best cycle
-    (EXT35+EXT6+EXT7 set: Jan 60K, Feb 85R, Mar 86O, Apr 87P, May 88T,
+    (EXT35+EXT6+EXT7 set: Jan 60K, Feb 85S, Mar 86O, Apr 87P, May 88T,
     Jun 89X, Jul 78M, Aug 67W, Sep 91Z, Oct 92L, Nov 93AJ,
     Dec 94T) through core.signal_mode (2026-11-16 migration;
     February and July were legacy in-app renderers before it).

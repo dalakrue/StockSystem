@@ -2850,7 +2850,7 @@ def _render_cycle12_check_banner(st, candle_age_txt=None):
             "cycle91z": "September \u00b7 Cycle 91Z (SSTACK-F10)",
             "cycle92l": "October \u00b7 Cycle 92L (OSTACK-N5-F10)",
             "cycle93aj": "November \u00b7 Cycle 93AJ (NovStack-DFC-PARB-3TF-F30)",
-            "cycle94r": "December \u00b7 Cycle 94R (DSTACK-BMR0-NFC-DENS0-MNF27.5-F40)",
+            "cycle94t": "December \u00b7 Cycle 94T (DSTACK-BMR0-NFC-DENS0-MNF35.00-3TF-F30)",
         }.get(active_system(), active_system())
 
         def _mmt(ts):
@@ -11092,10 +11092,10 @@ _COMBINED_CFG = {
     12: {
         "sysid": "cycle94combined",
         "month_name": "December",
-        "best_id": "cycle94r",
-        "best_label": "Cycle 94R (DSTACK-BMR0-NFC-DENS0-MNF27.5-F40, RR 1:3, EXT7 A3)",
-        "hours_mod": "core.cycle94r_best",
-        "hours_attr": "CYCLE94R_CHECK_HOURS",
+        "best_id": "cycle94t",
+        "best_label": "Cycle 94T (DSTACK-BMR0-NFC-DENS0-MNF35.00-3TF-F30, RR 1:3, EXT10)",
+        "hours_mod": "core.cycle94t_best",
+        "hours_attr": "CYCLE94T_CHECK_HOURS",
         "state_key": "combined_dec_signals_latest_v1",
         "age_key": "combined_dec_candle_age_txt",
         "diag_key": "combined_dec_signals_diag_v1",
@@ -12667,7 +12667,7 @@ _MONTH_PANEL_ORDER = [
     ("September", "cycle91combined", "91z", "C91Z"),
     ("October", "cycle92combined", "92l", "C92L"),
     ("November", "cycle93pcombined", "93aj", "C93AJ"),
-    ("December", "cycle94combined", "94r", "C94R"),
+    ("December", "cycle94combined", "94t", "C94T"),
 ]
 
 _SIGNAL_PANELS = {
@@ -12749,7 +12749,7 @@ def render_multisymbol_regime_summary(
     panels evaluate the month's CURRENT registry best cycle
     (EXT35+EXT6+EXT7 set: Jan 60J, Feb 85R, Mar 86O, Apr 87P, May 88T,
     Jun 89X, Jul 78M, Aug 67W, Sep 91Z, Oct 92L, Nov 93AJ,
-    Dec 94R) through core.signal_mode (2026-11-16 migration;
+    Dec 94T) through core.signal_mode (2026-11-16 migration;
     February and July were legacy in-app renderers before it).
     Each system runs its winner equations at its
     own check hours with exactly 1 entry per check. Each entry window's

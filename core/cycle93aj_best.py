@@ -1,7 +1,11 @@
 # EXT10 install (2026-11-18, user order): NovStack-DFC-PARB-3TF-F30 (Ext-10 Round R451, ACCEPTABLE under the
 # Extension 10 standard -- 2026 read NOT taken; AUDIT 107 picks / 100.00% / +5,943.20) -- replaces cycle93ai as this
-# month's best. Port of the round's filed module mod451_v2.py (code-identifier renames cycle93af -> cycle93aj only;
-# no logic change).
+# month's best. Port of the round's filed module mod451_v2.py (code-identifier renames cycle93af -> cycle93aj;
+# plus the R326-pattern FIXED_SL = 30 internalization below, and the R451 LIVE-FORM port (2026-11-18 night:
+# _shape_scores + panel-supplied sMC/sMC_H in the module's own row builders, verbatim from drive451 -- the filed
+# module was drive-form and raised KeyError 'sMC' on its panel path; A-prime proof required before registration).
+# The campaign drive applied F30 externally,
+# the installed module walks it internally, exactly as cycle93ai does for its F35).
 # Check triple 19:30/21:30/23:30 MMT = (13, 15, 17) UTC -- unchanged.
 # RR13 R451 (Ext-10) grading V2 = pDFCPARB (DFC + both-books blend-first) -- label-only copy of mod451_pDFCPARB.py
 """R496-PARB — November cycle, R4-096 product (Round 4
@@ -92,6 +96,8 @@ MAX_HOLD = 48
 MAXHOLD_BARS = 192  # 48h on M15
 COST_PIPS = 2.5
 TP_FRAC = 3.0  # RR 1:3 LAW (brief SS15): TP = 3 x SL
+FIXED_SL = 30.0  # R451 FIXED-SL LAW: one SL on every symbol and
+# every trade; TP = 3 x FIXED_SL at the walk
 OFFICE_HOURS = ()
 
 SYMBOLS = ["AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD",
@@ -1382,6 +1388,101 @@ def _trade_outcome(bars, sym, entry_s, side, dist_price,
     return int(fwd[itp]) + 900, TP_FRAC * mult * atr_pips - COST_PIPS
 
 
+W_SMC_H = (0.50, 0.25, 0.25)  # R451 V1/V2 H1-heavy blend (drive451)
+
+_PANEL_CTX = {"h1": None, "m5": None}
+
+
+def _set_panel_ctx(frames, m5_frames):
+    """Supply the H1/M5 panels for the 3TF blend (R451 live
+    form): _Form.step calls this with the panel_entries
+    arguments before the slot is processed. A panel that is
+    not supplied leaves the blend at the drive's own
+    missing-data neutral (0.5 per shape), exactly as
+    drive451 treats a missing panel."""
+    h1 = {}
+    if frames:
+        for sym, df in frames.items():
+            b = _bars_from_frame(df)
+            if b is not None:
+                h1[sym] = b
+    m5 = {}
+    if m5_frames:
+        for sym, df in m5_frames.items():
+            b = _bars_from_frame(df)
+            if b is not None:
+                m5[sym] = b
+    _PANEL_CTX["h1"] = h1 or None
+    _PANEL_CTX["m5"] = m5 or None
+
+
+def _shape_scores(side, h1_closes, m15_closes, m5_bar, pip):
+    """The filed (sH, sM, sF) feature scores -- the March 86o
+    r6r3 feature definitions, November scales. Verbatim from
+    drive451.py (R451 grading drive), which copied them from
+    cycle_rr12_sep_r408.py (R408 3TF form)."""
+    if h1_closes is not None and len(h1_closes) >= 13:
+        drift = (float(h1_closes[-1])
+                 - float(h1_closes[-13])) / pip
+        sH = min(1.0, max(0.0, 0.5 + side * drift
+                          / (2.0 * QH_P80)))
+    else:
+        sH = 0.5
+    if m15_closes is not None and len(m15_closes) >= 8:
+        dev = (float(m15_closes[-1])
+               - float(np.mean(m15_closes[-8:]))) / pip
+        sM = min(1.0, max(0.0, 0.5 + side * dev
+                          / (2.0 * QM_P80)))
+    else:
+        sM = 0.5
+    if m5_bar is not None:
+        o, h, l, c = m5_bar
+        rng = (h - l) / pip
+        body = (c - o) / pip
+        if h > l:
+            loc = (c - l) / (h - l) if side > 0 \
+                else (h - c) / (h - l)
+        else:
+            loc = 0.5
+        bodyr = body / rng if rng > 0 else 0.0
+        sF = min(1.0, max(0.0, 0.5 * loc + 0.25
+                          + 0.25 * side * bodyr))
+    else:
+        sF = 0.5
+    return sH, sM, sF
+
+
+def _panel_smc(T, sym, side, bars, idx):
+    """(sMC, sMC_H) for one candidate row, extracted from
+    the panels exactly as drive451.shapes does: sH from the
+    last 13 H1 closes up to T-3600, sM from the last 8 M15
+    closes ending at the T-900 bar, sF from the M5 bar
+    ending at T (ts == T-300)."""
+    _ts, _o, _h, _l, c = bars
+    m15_closes = c[idx - 7:idx + 1] if idx >= 7 else None
+    h1_closes = None
+    hb = _PANEL_CTX["h1"].get(sym) if _PANEL_CTX["h1"] else None
+    if hb is not None:
+        tsh, _oh, _hh, _lh, ch = hb
+        ih = int(np.searchsorted(tsh, T - 3600,
+                                 side="right")) - 1
+        if ih >= 12:
+            h1_closes = ch[ih - 12:ih + 1]
+    m5_bar = None
+    mb = _PANEL_CTX["m5"].get(sym) if _PANEL_CTX["m5"] else None
+    if mb is not None:
+        t5, o5, h5, l5, c5 = mb
+        i5 = int(np.searchsorted(t5, T - 300))
+        if i5 < len(t5) and t5[i5] == T - 300:
+            m5_bar = (float(o5[i5]), float(h5[i5]),
+                      float(l5[i5]), float(c5[i5]))
+    sH, sM, sF = _shape_scores(side, h1_closes, m15_closes,
+                               m5_bar, _pip_of(sym))
+    return (W_SMC[0] * sH + W_SMC[1] * sM + W_SMC[2] * sF,
+            W_SMC_H[0] * sH + W_SMC_H[1] * sM
+            + W_SMC_H[2] * sF)
+
+
 def _slot_rows(T, m15_bars):
     """Candidate rows for one slot, in canonical order
     (symbol index, side desc, step asc -- one step) --
@@ -1430,9 +1531,10 @@ def _slot_rows(T, m15_bars):
             side01 = 1 if side > 0 else 0
             code = (((sidx * 24 + hour) * 2 + side01) * 7
                     + MULT_IDX_BY_SYM[sym]) * 3 + bucket
-            dist = STEP_BY_SYM[sym] * atr * pip
             xp, net = _trade_outcome(
-                bars, sym, T, side, dist, STEP_BY_SYM[sym], atr)
+                bars, sym, T, side, FIXED_SL * pip,
+                FIXED_SL / atr, atr)
+            smc, smc_h = _panel_smc(T, sym, side, bars, idx)
             rows.append({
                 "sym": sym, "side": side, "mult": STEP_BY_SYM[sym],
                 "code": int(code),
@@ -1440,6 +1542,7 @@ def _slot_rows(T, m15_bars):
                                              WIN_PRIOR)),
                 "entry_px": entry_px, "atr": atr,
                 "pos_adj": float(adj),
+                "sMC": float(smc), "sMC_H": float(smc_h),
                 "exit": xp, "net": net,
                 "entry_s": int(T)})
     return rows
@@ -1493,9 +1596,10 @@ def _slot_rows_lvd(T, m15_bars):
             side01 = 1 if side > 0 else 0
             code = (((sidx * 24 + hour) * 2 + side01) * 7
                     + MULT_IDX_BY_SYM_LVD[sym]) * 3 + bucket
-            dist = STEP_BY_SYM_LVD[sym] * atr * pip
             xp, net = _trade_outcome(
-                bars, sym, T, side, dist, STEP_BY_SYM_LVD[sym], atr)
+                bars, sym, T, side, FIXED_SL * pip,
+                FIXED_SL / atr, atr)
+            smc, smc_h = _panel_smc(T, sym, side, bars, idx)
             rows.append({
                 "sym": sym, "side": side, "mult": STEP_BY_SYM_LVD[sym],
                 "code": int(code),
@@ -1503,6 +1607,7 @@ def _slot_rows_lvd(T, m15_bars):
                                              WIN_PRIOR)),
                 "entry_px": entry_px, "atr": atr,
                 "pos_adj": float(adj),
+                "sMC": float(smc), "sMC_H": float(smc_h),
                 "exit": xp, "net": net,
                 "entry_s": int(T)})
     return rows
@@ -1612,11 +1717,10 @@ class FillState:
             bars = m15_bars.get(pick["sym"])
             if bars is None:
                 continue
-            dist = pick["mult"] * pick["atr"] \
-                * _pip_of(pick["sym"])
+            dist = FIXED_SL * _pip_of(pick["sym"])
             xp, net = _trade_outcome(
                 bars, pick["sym"], pick["entry_s"],
-                pick["side"], dist, pick["mult"],
+                pick["side"], dist, FIXED_SL / pick["atr"],
                 pick["atr"])
             if xp is None:
                 continue
@@ -1790,11 +1894,10 @@ class FillStateLVD:
             bars = m15_bars.get(pick["sym"])
             if bars is None:
                 continue
-            dist = pick["mult"] * pick["atr"] \
-                * _pip_of(pick["sym"])
+            dist = FIXED_SL * _pip_of(pick["sym"])
             xp, net = _trade_outcome(
                 bars, pick["sym"], pick["entry_s"],
-                pick["side"], dist, pick["mult"],
+                pick["side"], dist, FIXED_SL / pick["atr"],
                 pick["atr"])
             if xp is None:
                 continue
@@ -1969,8 +2072,14 @@ class _Form:
                 m15_frames.get(sym) if m15_frames else None)
             if b is not None:
                 m15_bars[sym] = b
+        _set_panel_ctx(frames, m5_frames)
         era = "disc" if _dt.datetime.utcfromtimestamp(
             T).year <= 2023 else "audit"
+        # Live-form settlement before the new slot (2026-11-16
+        # app repair, carried from cycle93ai at this install):
+        # picks dealt at earlier checks resolve on the bars now
+        # available, lifting their symbol blocks.
+        self.fill.resolve_pending(m15_bars)
         _np0 = len(self.fill.picks)
         self.fill.process_slot(T, era, m15_bars)
         picks = self.fill.picks[_np0:]
@@ -1984,8 +2093,8 @@ class _Form:
                   "entry_candle": entry_candle,
                   "entry_time": entry_candle,
                   "entry_px": float(r["entry_px"]),
-                  "tp_pips": float(TP_FRAC * r["mult"] * r["atr"]),
-                  "sl_pips": float(r["mult"] * r["atr"]),
+                  "tp_pips": float(TP_FRAC * FIXED_SL),
+                  "sl_pips": float(FIXED_SL),
                   "exit_time": entry_candle
                   + pd.Timedelta(hours=MAX_HOLD),
                   "mult": float(r["mult"]),
@@ -2040,8 +2149,14 @@ def walk_ledger():
 
 
 def fetch_cycle93aj_m15_frames(state=None):
-    from core.cycle89_best import fetch_cycle89_m15_frames
-    return fetch_cycle89_m15_frames()
+    # 2026-11-16 app repair (carried from cycle93ai): fetch
+    # THIS system's own SYMBOLS through the shared route. The
+    # previous delegation ended at fetch_cycle89_m15_frames,
+    # which requests only the legacy 15-symbol subset -- 13
+    # of this system's symbols silently received no M15 bars
+    # and could never fire.
+    from core.cycle78_best import fetch_cycle78_m15_frames
+    return fetch_cycle78_m15_frames(state=state, symbols=SYMBOLS)
 
 
 def evaluate_cycle93aj_signals(frames: dict, check_time_utc,
@@ -2077,6 +2192,18 @@ class ArbFillState:
                        "src_pw": 0, "src_lvd": 0,
                        "ties": 0}
 
+    def resolve_pending(self, m15_bars):
+        # Live-form settlement (2026-11-16 app repair, carried
+        # from cycle93ai): the two ingredient books settle
+        # their own ledgers first -- the PARB precedent the
+        # NovStack docstring names. Without this call a live
+        # pick never resolves, its symbol stays blocked
+        # forever (max_exit = inf) and the panel dies out.
+        # No-op when every pick is already resolved
+        # (backtest form).
+        self.pw.resolve_pending(m15_bars)
+        self.lvd.resolve_pending(m15_bars)
+
     def process_slot(self, T, era, bars):
         rows_pw = _slot_rows(T, bars)
         rows_lvd = _slot_rows_lvd(T, bars)
@@ -2089,8 +2216,20 @@ class ArbFillState:
         if p_lvd is not None:
             assert p_lvd["entry_s"] == T
         if p_pw is not None and p_lvd is not None:
+            # Live-form guard (2026-11-16 app repair, carried
+            # from cycle93ai): at a live check both picks'
+            # walks are still unresolved, so both nets are
+            # None and the subtraction below raised TypeError,
+            # killing the slot. The identical branch now
+            # requires resolved nets; unresolved pairs fall
+            # through to the contested PREFS rule -- the same
+            # rule the backtest applies whenever the two
+            # books' nets differ, which is the dominant case
+            # there too. Resolved-net behaviour is unchanged.
             if p_pw["sym"] == p_lvd["sym"] \
                     and p_pw["side"] == p_lvd["side"] \
+                    and p_pw["net"] is not None \
+                    and p_lvd["net"] is not None \
                     and abs(p_pw["net"] - p_lvd["net"]) \
                     < 1e-9:
                 self.census["identical"] += 1
@@ -2145,6 +2284,12 @@ class ParbFillState:
         self.census = {"protected": 0, "refusals": 0,
                        "switch_slots": 0, "no_second": 0}
         self.seconds_trace = {}
+
+    def resolve_pending(self, m15_bars):
+        # Live-form settlement (2026-11-16 app repair, carried
+        # from cycle93ai): delegate to the arbitration
+        # layer's ingredient books.
+        self.arb.resolve_pending(m15_bars)
 
     def process_slot(self, T, era, bars):
         year = _dt2.datetime.utcfromtimestamp(T).year
@@ -2272,6 +2417,41 @@ class NovStackState:
         self.ece_no_cand = 0
         self.ece_no_cand_1st = 0
         self.ece_log = []
+
+    def resolve_pending(self, m15_bars):
+        # Live-form settlement (2026-11-16 app repair, carried
+        # from cycle93ai): the ingredient books settle their
+        # own ledgers first (the PARB precedent), then the
+        # recorded stream settles -- each unresolved recorded
+        # pick is re-walked on the bars now available
+        # (FillState.resolve_pending's own walk) and the
+        # loss-run state is rebuilt from the recorded stream,
+        # exactly as from_dict rebuilds it. No-op when every
+        # recorded pick is already resolved.
+        self.parb.resolve_pending(m15_bars)
+        changed = False
+        for pick in self.picks:
+            if pick["exit"] is not None:
+                continue
+            bars = m15_bars.get(pick["sym"])
+            if bars is None:
+                continue
+            dist = FIXED_SL * _pip_of(pick["sym"])
+            xp, net = _trade_outcome(
+                bars, pick["sym"], pick["entry_s"],
+                pick["side"], dist, FIXED_SL / pick["atr"],
+                pick["atr"])
+            if xp is None:
+                continue
+            pick["exit"] = int(xp)
+            pick["net"] = float(net)
+            changed = True
+        if changed:
+            self.rec_exit = {}
+            self.run_net = {}
+            self.last_loss = False
+            for p in self.picks:
+                self._note(p)
 
     # -- persistence (candidate _Form) --
     def to_dict(self):

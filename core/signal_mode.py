@@ -264,7 +264,7 @@ MONTH_SYSTEMS = {
     8: SYSTEM_CYCLE67W,   # August -- EXT35 WSTACK-D15-F40 (R253, VALIDATED) install (2026-11-16, user order)
     9: SYSTEM_CYCLE91Z,   # September -- EXT35 SSTACK-F10 (R158, VALIDATED) install (2026-11-16, user order)
     10: SYSTEM_CYCLE92L,   # October -- EXT35 OSTACK-N5-F10 (R254, VALIDATED) install (2026-11-16, user order)
-    11: SYSTEM_CYCLE93AI,   # November -- EXT6 NovStack-BRA0-NFC-DENS0-F35 (R326, ACCEPTABLE under Amendment A3 -- 2026 read NOT taken) install (2026-11-16, user order) [93aj EXT10 R451 install PUSHED 2026-11-18 (b0ece774) then HELD the same night: the filed R451 module is drive-form -- its panel path raises KeyError sMC (A-prime 0 delivered, all checks erroring); registry held on 93ai until the live-form port passes A-prime. See install_ext10_20261118/LOG.md]
+    11: SYSTEM_CYCLE93AJ,   # November -- EXT10 NovStack-DFC-PARB-3TF-F30 (R451, ACCEPTABLE under the Extension 10 standard -- 2026 read NOT taken) install (2026-11-18, user order). Installed b0ece774, HELD a6a07587 the same night (filed module was drive-form: KeyError sMC on its panel path), then REGISTERED after the live-form port (sMC computed in-module from the H1/M15/M5 panels + the six cycle93ai live-form repairs) passed: staged replay 577/577 EXACT, A-prime panel proof 57/57 (Nov 2016, pick-for-pick incl. exit+net), live-form chain rehearsal parity exact. See install_ext10_20261118/LOG.md
     12: SYSTEM_CYCLE94R,   # December -- EXT7 DSTACK-BMR0-NFC-DENS0-MNF27.5-F40 (R347, ACCEPTABLE under Amendment A3 -- 2026 read NOT taken) install (2026-11-16, user order)
 }
 

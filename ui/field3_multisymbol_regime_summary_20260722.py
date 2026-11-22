@@ -12877,7 +12877,35 @@ def render_multisymbol_regime_summary(
                     unsafe_allow_html=True)
     except Exception:
         pass
-    payload = _panel["render"](st, state)
+    # Canonical chain signal (user order 2026-11-22): for the
+    # CURRENT month the dashboard's signal is the chain's
+    # canonical feed (FULL WAY — one frame builder, memory
+    # stepped from the month start, delivery gate + ledger
+    # check, published hourly by the chain machine). The app's
+    # own live calculation for that month is retired, so the
+    # app can never show a different signal. Other months keep
+    # their panels (historical tools, not the live signal).
+    import datetime as _dt2
+    _cur_month = _dt2.datetime.now(_dt2.timezone.utc).month
+    _feed = None
+    try:
+        from core.canonical_feed import (
+            load_feed as _load_feed,
+            render_canonical_panel as _render_canon)
+        _feed = _load_feed()
+        if _feed is not None:
+            _render_canon(st, _feed)
+    except Exception:
+        _feed = None
+    if (_active_month is not None and _feed is not None
+            and _active_month == _cur_month
+            and int(_feed.get("month", 0)) == _cur_month):
+        payload = None
+        st.caption("The app's own live calculation for this "
+                   "month is retired — the panel above is the "
+                   "chain's signal, updated hourly.")
+    else:
+        payload = _panel["render"](st, state)
 
     # Downloads sit BELOW the signals table (full-width, mobile-friendly).
     if payload is not None:
@@ -12901,14 +12929,23 @@ def render_multisymbol_regime_summary(
     try:
         if _active_month is not None:
             _render_precheck_timer_box(st, _active_month)
-            _render_precheck_possible(st, state, _active_month)
+            # Current month: the precheck comes from the
+            # canonical feed panel above (user order
+            # 2026-11-22) — the app's own possible-read is
+            # retired for that month.
+            if not (_feed is not None
+                    and _active_month == _cur_month):
+                _render_precheck_possible(st, state, _active_month)
     except Exception:
         pass
 
     # Today's precheck signals -- all-day CARDS under the precheck
     # section (user order 2026-11-16): every precheck run of the
-    # day, kept for the whole Myanmar day.
-    _render_precheck_day_table(st)
+    # day, kept for the whole Myanmar day. (Skipped for the
+    # canonical-feed month: the History section below carries
+    # the chain's precheck rows.)
+    if not (_feed is not None and _active_month == _cur_month):
+        _render_precheck_day_table(st)
 
     # TEST preview (user order 2026-11-16 ~20:56 MMT): toggled from
     # the floating bar; shows exactly how a check result and a
@@ -12929,6 +12966,18 @@ def render_multisymbol_regime_summary(
                                       _cfg_t.get("best_label", ""))
 
     _render_eval_history(st, state, _active)
+
+    # ===== History (user order 2026-11-22) =====
+    # The very bottom of the dashboard: the last 24 CHECK and
+    # PRECHECK live replay tables from the canonical feed —
+    # recalculated from candles by the chain machine, updated
+    # every hour, weekends ignored.
+    try:
+        from core.canonical_feed import (
+            render_history_section as _render_hist)
+        _render_hist(st)
+    except Exception:
+        pass
 
     # Check-time reminders: rendered inside the floating control
     # bar above (migrated from the page bottom, user order

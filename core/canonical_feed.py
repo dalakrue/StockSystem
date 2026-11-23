@@ -41,6 +41,28 @@ def _fetch_feed():
         return None
 
 
+def feed_is_fresh(feed, max_age_minutes=90):
+    """True only when the chain machine's feed was generated
+    recently. The publisher runs hourly; if it stops, the feed
+    goes stale and the app must fall back to its own live
+    calculation instead of displaying an old precheck as the
+    current signal (failure seen 2026-11-23: the feed froze at
+    2026-11-22 23:40 MMT, so the 20:00 MMT check showed no
+    precheck at all). An unparseable timestamp counts as
+    stale — the safe direction is the live calculation."""
+    try:
+        import datetime as _dt
+        gen = _dt.datetime.strptime(
+            str((feed or {}).get("generated_at_mmt")),
+            "%Y-%m-%d %H:%M")
+        _mmt = _dt.timezone(_dt.timedelta(hours=6, minutes=30))
+        _now = _dt.datetime.now(_mmt).replace(tzinfo=None)
+        _age = (_now - gen).total_seconds() / 60.0
+        return -15.0 <= _age <= float(max_age_minutes)
+    except Exception:
+        return False
+
+
 try:
     import streamlit as _st
 
@@ -50,11 +72,17 @@ try:
 
     def load_feed():
         import time
-        return _cached_feed(int(time.time() // 3600))
+        feed = _cached_feed(int(time.time() // 3600))
+        # Freshness gate (fix 2026-11-23): a stale feed is
+        # treated as NO feed, so the dashboard falls back to
+        # its own live calculation instead of retiring it in
+        # favour of a days-old precheck.
+        return feed if feed_is_fresh(feed) else None
 
 except Exception:  # streamlit unavailable (offline checks)
     def load_feed():
-        return _fetch_feed()
+        feed = _fetch_feed()
+        return feed if feed_is_fresh(feed) else None
 
 
 _BOX = ("background:rgba(255,255,255,.55);"

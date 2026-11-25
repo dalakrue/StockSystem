@@ -1,32 +1,32 @@
 {
- "generated_at_mmt": "2026-11-22 13:44",
+ "generated_at_mmt": "2026-11-25 13:00",
  "month": 11,
  "system": "cycle93aj",
  "sl_pips": 30,
- "source": "FULL WAY canonical \u2014 chain machine full-sync walk (canonical_frames, stepped from month start); the app displays these numbers, it does not recompute them.",
+ "source": "FULL WAY canonical -- rebuilt 2026-11-25 (Option A) on this machine: November memory stepped from month start on the completed, frozen candle repo; CHECK + PRECHECK tables recomputed from the rebuilt memory by code. Supersedes the 2026-11-22 13:44 chain-machine feed, whose generating inputs are unrecoverable (FULLWAY_DIAGNOSIS_20261125.md).",
  "check": {
-  "total": 149.18,
+  "total": 142.82,
   "rows": [
    {
     "check_mmt": "19:30",
     "date": "2026-11-11",
-    "entry": "BUY NZDCHF @0.46323 (fired)",
-    "exit": "SL",
-    "net": -3.25
+    "entry": "SELL GBPCAD @1.89426 (fired)",
+    "exit": "TP",
+    "net": 8.75
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-11",
-    "entry": "SELL CHFJPY @191.90800 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "NO SIGNAL",
+    "exit": "-",
+    "net": 0.0
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-11",
-    "entry": "SELL AUDCAD @0.97594 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "NO SIGNAL",
+    "exit": "-",
+    "net": 0.0
    },
    {
     "check_mmt": "19:30",
@@ -39,41 +39,41 @@
     "check_mmt": "21:30",
     "date": "2026-11-12",
     "entry": "BUY GBPAUD @1.94421 (fired)",
-    "exit": "TP",
+    "exit": "OPEN",
     "net": 8.75
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-12",
-    "entry": "SELL CADJPY @112.03900 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "SELL NZDJPY @88.57700 (fired)",
+    "exit": "OPEN",
+    "net": 6.38
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-13",
-    "entry": "SELL GBPUSD @1.32305 (fired)",
-    "exit": "TP",
+    "entry": "SELL GBPJPY @211.57700 (fired)",
+    "exit": "OPEN",
     "net": 8.75
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-13",
     "entry": "BUY USDCAD @1.42479 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "exit": "OPEN",
+    "net": 4.91
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-13",
-    "entry": "BUY EURAUD @1.62720 (fired)",
-    "exit": "TP",
+    "entry": "SELL USDJPY @159.91200 (fired)",
+    "exit": "OPEN",
     "net": 8.75
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-16",
-    "entry": "SELL AUDJPY @107.77300 (fired)",
+    "entry": "BUY GBPAUD @1.95479 (fired)",
     "exit": "TP",
     "net": 8.75
    },
@@ -81,15 +81,15 @@
     "check_mmt": "21:30",
     "date": "2026-11-16",
     "entry": "SELL NZDCAD @0.78763 (fired)",
-    "exit": "SL",
-    "net": -3.25
+    "exit": "OPEN",
+    "net": 0.92
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-16",
-    "entry": "SELL EURUSD @1.10097 (fired)",
+    "entry": "SELL EURCAD @1.57359 (fired)",
     "exit": "OPEN",
-    "net": 4.1
+    "net": 0.43
    },
    {
     "check_mmt": "19:30",
@@ -103,7 +103,7 @@
     "date": "2026-11-17",
     "entry": "BUY USDCAD @1.42995 (fired)",
     "exit": "OPEN",
-    "net": 3.77
+    "net": 1.55
    },
    {
     "check_mmt": "23:30",
@@ -115,16 +115,16 @@
    {
     "check_mmt": "19:30",
     "date": "2026-11-18",
-    "entry": "SELL AUDCAD @0.96262 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "BUY EURUSD @1.09683 (fired)",
+    "exit": "OPEN",
+    "net": 2.26
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-18",
     "entry": "SELL AUDCHF @0.56632 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "exit": "OPEN",
+    "net": 7.54
    },
    {
     "check_mmt": "23:30",
@@ -136,217 +136,217 @@
    {
     "check_mmt": "19:30",
     "date": "2026-11-19",
-    "entry": "SELL EURCHF @0.92609 (fired)",
+    "entry": "SELL NZDCAD @0.78942 (fired)",
     "exit": "OPEN",
-    "net": 4.66
+    "net": 5.8
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-19",
-    "entry": "SELL USDJPY @159.83500 (fired)",
+    "entry": "SELL CADJPY @111.64900 (fired)",
     "exit": "TP",
     "net": 8.75
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-19",
-    "entry": "BUY GBPAUD @1.96328 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "SELL EURCHF @0.92616 (fired)",
+    "exit": "OPEN",
+    "net": 8.03
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-20",
-    "entry": "SELL NZDUSD @0.55011 (fired)",
-    "exit": "OPEN",
-    "net": 2.96
+    "entry": "NO SIGNAL",
+    "exit": "-",
+    "net": 0.0
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-20",
-    "entry": "BUY EURJPY @174.47100 (2nd (100%))",
-    "exit": "SL",
-    "net": -3.25
+    "entry": "SELL EURUSD @1.09826 (fired)",
+    "exit": "OPEN",
+    "net": 8.75
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-20",
-    "entry": "SELL EURJPY @174.25400 (fired)",
+    "entry": "SELL EURUSD @1.09796 (fired)",
     "exit": "OPEN",
-    "net": 3.44
+    "net": 8.75
    }
   ]
  },
  "precheck": {
-  "total": 140.91,
+  "total": 127.34,
   "rows": [
    {
     "check_mmt": "19:30",
     "date": "2026-11-11",
-    "entry": "SELL EURCAD @1.58433 (fired)",
+    "entry": "SELL GBPCAD @1.89426 (fired)",
     "exit": "TP",
     "net": 8.75
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-11",
-    "entry": "SELL NZDJPY @88.89700 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "NO SIGNAL",
+    "exit": "-",
+    "net": 0.0
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-11",
-    "entry": "SELL CHFJPY @191.89400 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "NO SIGNAL",
+    "exit": "-",
+    "net": 0.0
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-12",
-    "entry": "BUY GBPAUD @1.94312 (fired)",
+    "entry": "SELL AUDJPY @109.02300 (fired)",
     "exit": "TP",
     "net": 8.75
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-12",
-    "entry": "BUY GBPAUD @1.94335 (fired)",
-    "exit": "TP",
+    "entry": "BUY GBPAUD @1.94421 (fired)",
+    "exit": "OPEN",
     "net": 8.75
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-12",
-    "entry": "SELL AUDCHF @0.56836 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "SELL CADJPY @112.03900 (fired)",
+    "exit": "OPEN",
+    "net": 3.93
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-13",
-    "entry": "SELL AUDNZD @1.22651 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "BUY EURAUD @1.62848 (fired)",
+    "exit": "OPEN",
+    "net": 2.94
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-13",
-    "entry": "BUY EURAUD @1.62764 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "BUY USDCAD @1.42479 (fired)",
+    "exit": "OPEN",
+    "net": 4.91
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-13",
-    "entry": "SELL AUDCHF @0.56827 (fired)",
-    "exit": "TP",
+    "entry": "SELL USDJPY @159.91200 (fired)",
+    "exit": "OPEN",
     "net": 8.75
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-16",
-    "entry": "SELL AUDJPY @107.75400 (fired)",
+    "entry": "BUY GBPAUD @1.95479 (fired)",
     "exit": "TP",
     "net": 8.75
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-16",
-    "entry": "SELL EURJPY @175.63900 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "SELL NZDCAD @0.78763 (fired)",
+    "exit": "OPEN",
+    "net": 0.92
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-16",
-    "entry": "SELL EURCAD @1.57385 (fired)",
-    "exit": "OPEN",
-    "net": 0.65
+    "entry": "SELL CHFJPY @190.10800 (fired)",
+    "exit": "TP",
+    "net": 8.75
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-17",
-    "entry": "BUY NZDUSD @0.54983 (fired)",
-    "exit": "SL",
-    "net": -3.25
+    "entry": "SELL AUDNZD @1.22538 (fired)",
+    "exit": "TP",
+    "net": 8.75
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-17",
-    "entry": "BUY EURGBP @0.83333 (2nd (100%))",
+    "entry": "BUY USDCAD @1.42995 (fired)",
     "exit": "OPEN",
-    "net": 4.36
+    "net": 1.55
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-17",
-    "entry": "BUY CADCHF @0.58704 (fired)",
+    "entry": "SELL AUDCHF @0.56548 (fired)",
     "exit": "OPEN",
-    "net": -1.85
+    "net": 1.96
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-18",
-    "entry": "BUY EURGBP @0.83294 (fired)",
+    "entry": "BUY EURUSD @1.09683 (fired)",
     "exit": "OPEN",
-    "net": 4.75
+    "net": 2.26
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-18",
-    "entry": "SELL CADCHF @0.58826 (fired)",
+    "entry": "SELL AUDCHF @0.56632 (fired)",
     "exit": "OPEN",
-    "net": 2.57
+    "net": 7.54
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-18",
-    "entry": "SELL GBPNZD @2.39578 (fired)",
+    "entry": "SELL GBPCHF @1.10900 (fired)",
     "exit": "TP",
     "net": 8.75
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-19",
-    "entry": "SELL AUDCAD @0.95934 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "SELL NZDCAD @0.78942 (fired)",
+    "exit": "OPEN",
+    "net": 5.8
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-19",
-    "entry": "SELL GBPJPY @210.11200 (fired)",
+    "entry": "SELL CADJPY @111.64900 (fired)",
     "exit": "TP",
     "net": 8.75
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-19",
-    "entry": "SELL USDCHF @0.84275 (fired)",
+    "entry": "SELL EURCHF @0.92616 (fired)",
     "exit": "OPEN",
-    "net": 2.99
+    "net": 8.03
    },
    {
     "check_mmt": "19:30",
     "date": "2026-11-20",
-    "entry": "BUY GBPNZD @2.38341 (fired)",
-    "exit": "TP",
-    "net": 8.75
+    "entry": "NO SIGNAL",
+    "exit": "-",
+    "net": 0.0
    },
    {
     "check_mmt": "21:30",
     "date": "2026-11-20",
-    "entry": "BUY AUDNZD @1.21154 (2nd (100%))",
+    "entry": "SELL EURUSD @1.09826 (fired)",
     "exit": "OPEN",
-    "net": -1.72
+    "net": 8.75
    },
    {
     "check_mmt": "23:30",
     "date": "2026-11-20",
-    "entry": "SELL EURUSD @1.09803 (fired)",
-    "exit": "OPEN",
-    "net": 1.16
+    "entry": "NO SIGNAL",
+    "exit": "-",
+    "net": 0.0
    }
   ]
  },
@@ -354,15 +354,15 @@
  "latest_check": {
   "check_mmt": "23:30",
   "date": "2026-11-20",
-  "entry": "SELL EURJPY @174.25400 (fired)",
+  "entry": "SELL EURUSD @1.09796 (fired)",
   "exit": "OPEN",
-  "net": 3.44
+  "net": 8.75
  },
  "latest_precheck": {
   "check_mmt": "23:30",
   "date": "2026-11-20",
-  "entry": "SELL EURUSD @1.09803 (fired)",
-  "exit": "OPEN",
-  "net": 1.16
+  "entry": "NO SIGNAL",
+  "exit": "-",
+  "net": 0.0
  }
 }

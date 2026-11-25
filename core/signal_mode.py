@@ -2789,6 +2789,20 @@ def _evaluate_and_select_for(system_name, frames, check_time_utc,
         return entries
     finally:
         _ACTIVE = previous
+        _saveback_ledgers()
+
+
+def _saveback_ledgers():
+    """Best-effort GitHub save-back of walk-ledger state files after
+    an evaluation step (core.data.github_saveback). Dormant unless a
+    save-back token is configured in the app secrets; never raises
+    and never blocks the signal path (pushes run on daemon
+    threads)."""
+    try:
+        from core.data.github_saveback import saveback_walk_ledgers
+        saveback_walk_ledgers()
+    except Exception:
+        pass
 
 
 def _tag_combined(entries, system_name, is_second_best):

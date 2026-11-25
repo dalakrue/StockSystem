@@ -9,6 +9,7 @@ import sqlite3
 
 import pandas as pd
 
+from core.data.cache_boot import ensure_cache_db
 from core.data.deployment_migrations_20260705 import DEFAULT_DB_PATH, migrate_deployment_schema
 from core.runtime_selection_20260705 import normalize_symbol, normalize_timeframe, timeframe_seconds
 
@@ -118,6 +119,7 @@ def normalize_frame(
 class CandleRepository:
     def __init__(self, db_path: str | Path | None = None) -> None:
         self.db_path = Path(db_path or DEFAULT_DB_PATH)
+        ensure_cache_db(self.db_path)
         migrate_deployment_schema(self.db_path)
 
     def connection(self) -> sqlite3.Connection:

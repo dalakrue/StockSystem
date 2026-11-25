@@ -235,7 +235,11 @@ div[data-testid="stHorizontalBlock"]>div[data-testid="column"]{min-width:145px!i
 div[data-testid="stDataFrame"],div[data-testid="stTable"]{font-size:.76rem!important;max-width:100%!important;overflow:auto!important;}
 .stTabs [data-baseweb="tab-list"]{box-shadow:none!important;backdrop-filter:none!important;background:#fff!important;padding:.2rem!important;}
 .stTabs [data-baseweb="tab"]{font-size:.72rem!important;padding:.25rem .35rem!important;}
-section[data-testid="stSidebar"]{display:none!important;}
+/* Sidebar MUST stay usable on phone (fix 2026-11-25): the old
+   display:none here made the sidebar impossible to open on mobile --
+   Streamlit reported it collapsed/open but it was never shown.
+   Keep it overlay-sized instead of hidden. */
+section[data-testid="stSidebar"]{min-width:min(84vw,320px)!important;max-width:min(84vw,320px)!important;}
 iframe{max-width:100%!important;}
 </style>
 """

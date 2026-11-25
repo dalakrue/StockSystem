@@ -608,6 +608,8 @@ def render_settings_sidebar() -> None:
     """Render the complete Settings control surface in the native sidebar."""
     with st.sidebar:
         st.markdown('## ⚙️ Settings')
+        st.caption('To CLOSE this sidebar: tap the ✕ / « at its top corner. '
+                   'To OPEN it again: tap the dark ☰ button at the TOP-LEFT of the page.')
         st.caption('Keys, symbol loading and calculation')
         _render_settings()
 

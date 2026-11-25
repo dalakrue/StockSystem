@@ -293,9 +293,14 @@ def run_app():
             # silently to the manual Settings flow.
             from core.auto_load_startup_20261019 import maybe_auto_load_field3
 
-            maybe_auto_load_field3(st.session_state)
-        except Exception:
-            pass
+            _auto_outcome = maybe_auto_load_field3(st.session_state)
+            # Keep the outcome visible for diagnosis instead of
+            # swallowing it silently (fix 2026-11-25).
+            st.session_state["auto_load_outcome_20261125"] = _auto_outcome
+        except Exception as _auto_exc:
+            st.session_state["auto_load_outcome_20261125"] = {
+                "attempted": False, "ok": False,
+                "reason": f"{type(_auto_exc).__name__}: {_auto_exc}"}
         ensure_shared_calculation_result(force=False)
         try:
             from core.v9_architecture_guard_20260702 import publish_v9_canonical_state

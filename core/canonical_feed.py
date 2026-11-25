@@ -139,17 +139,17 @@ def render_history_section(st):
     2026-11-22): the last 24 CHECK and PRECHECK live replay
     tables from the canonical feed, updated hourly."""
     feed = load_feed()
-    st.markdown("## \U0001f559 History")
+    st.markdown(
+        "<div style='border-top:8px solid #64748b;margin:22px 0 8px 0;'></div>"
+        "<div style='background:#64748b;color:#fff;border-radius:10px;"
+        "padding:10px 14px;font-size:20px;font-weight:800;'>"
+        "⚪ HISTORY — past results</div>",
+        unsafe_allow_html=True)
     if not feed:
-        st.caption("Canonical feed unavailable right now — the "
-                   "table returns at the next hourly refresh.")
+        st.caption("History is not available right now.")
         return
-    st.caption("Last 24 CHECK and PRECHECK live replay — "
-               "FULL WAY canonical, recalculated from candles "
-               "by the chain machine and updated every hour. "
-               "Weekends ignored. "
-               f"Feed updated {feed.get('generated_at_mmt')} MMT "
-               f"· {feed.get('system')}.")
+    st.caption("Last 24 checks and prechecks. "
+               f"Updated {feed.get('generated_at_mmt')} MMT.")
     _table(st, "per CHECK", feed.get("check"))
     _table(st, "per PRECHECK", feed.get("precheck"))
     st.markdown(f"**BEST: {feed.get('best_last24', '—')}** "

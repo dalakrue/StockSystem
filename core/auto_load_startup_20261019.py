@@ -49,10 +49,13 @@ def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
 
         key, source = _resolve_twelve_key(state)
         if not key:
+            # FIX 2026-11-25: do NOT mark attempted here. The old
+            # code set the flag before checking the key pool, so
+            # one early failure (key not restored yet on a fresh
+            # open) blocked auto-load for the whole session.
             outcome["reason"] = "no_twelve_key_found"
             return outcome
 
-        state[AUTO_LOAD_FLAG] = True
         outcome["attempted"] = True
 
         # Make the key visible to the existing pool machinery exactly like a
@@ -70,6 +73,9 @@ def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
         if not pool.has_available_key():
             outcome["reason"] = "key_pool_reports_no_usable_key"
             return outcome
+
+        # Only now mark attempted: a real load is about to run.
+        state[AUTO_LOAD_FLAG] = True
 
         import streamlit as st
 

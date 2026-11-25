@@ -3774,10 +3774,9 @@ def _check_window_note(month, now=None):
     resume = (f" Live evaluation resumes at the next check window "
               f"({nxt} MMT).") if nxt else ""
     times = f" Check times (MMT): {', '.join(labels)}." if labels else ""
-    return ("Outside check window \u2014 showing the last stored result; "
-            "no live fetch runs outside a check window."
-            + resume + times
-            + " Live window: 15 min before to 30 min after each check.")
+    return ("Outside check window \u2014 this is the last check, "
+            "calculated when you opened the app."
+            + resume + times)
 
 
 def _fmt_check_mmt(check_utc, now_utc=None):
@@ -3912,19 +3911,20 @@ def _diag_notes(payload):
 
 
 def _c22_data_loaded(state):
-    """True when the shared pipeline reports loaded symbols.
+    """True when an evaluation may run.
 
-    Cheap gate for the (expensive) provider-chain fetch: with no data
-    loaded there is nothing to evaluate.
+    FIX 2026-11-25: the signal path has fetched from Dukascopy
+    (keyless) since 2026-11-16, but this gate still demanded a
+    Twelve Data key or a pre-loaded symbol set. On a fresh app
+    open neither is present yet, so the gate blocked EVERY
+    evaluation, the page stayed at 0/28, and auto-load /
+    auto-calculate on open never worked. The fetch itself is
+    the real check now: it records per-symbol failures and the
+    payload is marked DATA INCOMPLETE when too few load.
+    Always returns True; a failed fetch fails honestly in the
+    payload, it is no longer blocked before it even tries.
     """
-    try:
-        from core.twelve_data_key_pool import TwelveDataKeyPool
-        if TwelveDataKeyPool.from_state(state).has_available_key():
-            return True
-        ctx = get_global_symbol_context(state)
-        return len(list(ctx.completed_symbols or ctx.loaded_symbols or [])) > 0
-    except Exception:
-        return False
+    return True
 
 
 def _payload_data_failed(payload):
@@ -4082,8 +4082,7 @@ def _render_check_time_reminders(st, state):
     the session."""
     import importlib as _il
     st.markdown("### \u23f0 Check-time reminders")
-    st.caption("Tick the check times you want to remind yourself of. "
-               "Ticks are saved in the app state and stay ticked.")
+    st.caption("Tick a time to remind yourself. Ticks stay saved.")
     # User order 2026-10-22 (round 2): show ONLY the current calendar
     # month (Myanmar time) -- other months' ticks stay stored in state,
     # just not displayed. The month follows the actual current date.
@@ -4131,25 +4130,22 @@ _FLOAT_BAR_CSS = (
     "<style>"
     "div[data-testid='stVerticalBlock']:has(>"
     "div[data-testid='stElementContainer'] .fx-float-anchor){"
-    # Upper right (user order 2026-11-16 23:10 MMT): the bar moved
-    # from the bottom-right to the top-right of the page. Same
-    # buttons, same behaviour, same graceful in-flow fallback if
-    # the CSS pin fails.
-    "position:fixed;right:14px;top:14px;z-index:999990;"
-    "width:440px;max-width:94vw;max-height:74vh;overflow-y:auto;"
-    "background:rgba(255,255,255,.78);"
-    "border:1px solid rgba(148,163,184,.6);border-radius:14px;"
-    "box-shadow:0 10px 30px rgba(15,23,42,.18);"
-    "backdrop-filter:blur(14px) saturate(160%);"
-    "-webkit-backdrop-filter:blur(14px) saturate(160%);"
-    "padding:10px 12px;}"
-    # On a narrow screen the hamburger chip takes the top-right
-    # corner (see ui/sidebar_hard_lock.py) and the bar sits below
-    # it instead of under it.
+    # SMALL floating bar (user order 2026-11-25): compact, top-right,
+    # never covering the page. Was 440px wide / 74vh tall.
+    "position:fixed;right:10px;top:10px;z-index:999990;"
+    "width:300px;max-width:86vw;max-height:52vh;overflow-y:auto;"
+    "background:rgba(255,255,255,.94);"
+    "border:2px solid #0f172a;border-radius:12px;"
+    "box-shadow:0 8px 22px rgba(15,23,42,.20);"
+    "padding:6px 8px;}"
+    "div[data-testid='stVerticalBlock']:has(>"
+    "div[data-testid='stElementContainer'] .fx-float-anchor) button{"
+    "min-height:32px!important;font-size:.78rem!important;"
+    "padding:.15rem .3rem!important;}"
     "@media (max-width:760px){"
     "div[data-testid='stVerticalBlock']:has(>"
     "div[data-testid='stElementContainer'] .fx-float-anchor){"
-    "top:70px;}}"
+    "top:64px;width:272px;}}"
     "</style>")
 
 
@@ -4171,38 +4167,65 @@ def _render_floating_controls(st, state):
         with st.container():
             st.markdown("<span class='fx-float-anchor'></span>",
                         unsafe_allow_html=True)
-            _c1, _c2, _c3, _c4 = st.columns(4)
+            # CLOSE / OPEN for the whole floating bar (fix
+            # 2026-11-25: the bar had no close button and covered
+            # the page). Closed = one small button only.
+            if not bool(st.session_state.get("fx_float_open", True)):
+                if st.button("⚙ Controls — tap to open",
+                             key="fx_float_open_btn",
+                             use_container_width=True):
+                    st.session_state["fx_float_open"] = True
+                    try:
+                        st.rerun()
+                    except Exception:
+                        pass
+                return
+            _h1, _h2 = st.columns([4, 1])
+            with _h1:
+                st.markdown("**⚙ Controls**")
+            with _h2:
+                if st.button("✕", key="fx_float_close_btn",
+                             use_container_width=True,
+                             help="Close this floating box"):
+                    st.session_state["fx_float_open"] = False
+                    try:
+                        st.rerun()
+                    except Exception:
+                        pass
+                    return
+            _c1, _c2 = st.columns(2)
             with _c1:
                 if st.button("\U0001f504 Refresh",
                              key="refresh_dashboard_btn",
                              use_container_width=True):
                     _force_dashboard_refresh(st, state)
             with _c2:
+                if st.button("\u23f0 Reminders",
+                             key="fx_reminders_btn",
+                             use_container_width=True):
+                    st.session_state["fx_show_reminders"] = (
+                        not bool(st.session_state.get(
+                            "fx_show_reminders", False)))
+            st.markdown("---")
+            st.caption("🟧 TEST only — NOT real signals:")
+            _t1, _t2 = st.columns(2)
+            with _t1:
                 if st.button("\U0001f9ea Test",
                              key="fx_test_preview_btn",
                              use_container_width=True):
                     st.session_state["fx_show_test_preview"] = (
                         not bool(st.session_state.get(
                             "fx_show_test_preview")))
-            with _c3:
-                # PRECHECK TEST (user order 2026-11-16 23:10 MMT):
-                # beside the Test button; renders ONLY the
-                # precheck samples (fired + no-fire) with the same
-                # renderer calls the live precheck block uses.
+            with _t2:
                 if st.button("\U0001f50e Precheck Test",
                              key="fx_precheck_test_btn",
                              use_container_width=True):
                     st.session_state["fx_show_precheck_test"] = (
                         not bool(st.session_state.get(
                             "fx_show_precheck_test")))
-            with _c4:
-                if st.button("\u23f0 Reminders",
-                             key="fx_reminders_btn",
-                             use_container_width=True):
-                    st.session_state["fx_show_reminders"] = (
-                        not bool(st.session_state.get(
-                            "fx_show_reminders", True)))
-            if st.session_state.get("fx_show_reminders", True):
+            # Reminders OFF by default (fix 2026-11-25: open by
+            # default made the floating bar huge).
+            if st.session_state.get("fx_show_reminders", False):
                 _render_check_time_reminders(st, state)
     except Exception:
         pass
@@ -11837,13 +11860,31 @@ def _render_combined_signals_table(st, state, month):
                 stored_win = None
         latest_win = _latest_entry_window_utc(now_utc, hours=hours)
         live_ok = in_check_window(month, now_utc)
+        # AUTO-CALCULATE ON OPEN (user order 2026-11-25): when the
+        # app is opened and the latest check has not been evaluated
+        # yet in this session, evaluate it ONCE on open -- even
+        # outside the live window -- so opening the app always
+        # loads data and calculates. Inside the live window the
+        # old rule is unchanged. The on-open run is once per
+        # session per window (session flag), so reruns do not
+        # re-fetch again and again.
+        _open_key = f"auto_calc_on_open::{month}::{latest_win}"
+        _auto_on_open = (
+            latest_win is not None
+            and (stored_win is None or stored_win != latest_win
+                 or _payload_data_failed(payload))
+            and not state.get(_open_key))
         fresh_this_window = False
-        if (live_ok
+        if ((live_ok or _auto_on_open)
                 and latest_win is not None
                 and (stored_win is None or stored_win != latest_win
                 or _payload_data_failed(payload))
                 and not _combined_recent_fail(latest_win, state, month)
                 and _c22_data_loaded(state)):
+            try:
+                state[_open_key] = True
+            except Exception:
+                pass
             with st.spinner(f"Evaluating {cfg['month_name']} signals..."):
                 new_payload = _evaluate_combined_window(
                     state, month, int(latest_win.hour), day=latest_win.normalize())
@@ -12827,6 +12868,15 @@ def render_multisymbol_regime_summary(
         _panel = _SIGNAL_PANELS[_MONTH_PANEL_ORDER[_mnow3 - 1][1]]
     _render_cycle12_check_banner(st, state.get(_panel["age_key"]))
     _render_symbols_loaded_box(st, context, state)
+    # Colour legend (user order 2026-11-25): one short line, at the top.
+    st.markdown(
+        "<div style='font-size:13px;line-height:1.9;margin:4px 0;'>"
+        "🟢 <b>Green = REAL check</b> &nbsp;|&nbsp; "
+        "🔵 <b>Blue = REAL precheck</b> &nbsp;|&nbsp; "
+        "🟧 <b>Orange = TEST only, NOT real</b> &nbsp;|&nbsp; "
+        "⚪ <b>Grey = History</b></div>"
+        "<div style='border-top:3px solid #0f172a;margin:4px 0 8px 0;'></div>",
+        unsafe_allow_html=True)
 
     # Clock box (user order 2026-11-16 23:11 MMT): current Myanmar
     # time, WEEKDAY + 12-hour AM/PM, in a glass box on the main
@@ -12842,21 +12892,19 @@ def render_multisymbol_regime_summary(
     # glass bar (the reminders migrated here, beside Refresh).
     _render_floating_controls(st, state)
 
-    # ===== SECTION 1 -- CHECK SIGNAL (top) =====
-    # Layout law (user order 2026-11-16 ~20:56 MMT): the page top is
-    # exactly ONE section for the check and ONE for the precheck,
-    # clearly separated and labelled. The signals table's "Quick
-    # look" column is classified here, in its own section: it is
-    # the CHECK entry written in one line -- it belongs to CHECK,
-    # not to the precheck.
-    st.markdown("## \u2705 CHECK SIGNAL \u2014 the final signal, "
-                "at the check time")
-    st.caption("This is the CHECK system: the final signal, computed "
-               "at the check time. Each check shows as a glass box: "
-               "the 'Quick look' line at the top of the box is the "
-               "check entry written in one line "
-               "(SYMBOL-side-T<tp>,S<sl>) \u2014 Quick look belongs "
-               "to this CHECK section.")
+    # ===== SECTION 1 -- REAL CHECK SIGNAL =====
+    # Colour + line law (user order 2026-11-25): every section has
+    # its own colour and a thick line, so REAL and TEST can never
+    # be confused. GREEN = real check. BLUE = real precheck.
+    # ORANGE = test only. GREY = history. Text is short.
+    st.markdown(
+        "<div style='border-top:8px solid #16a34a;margin:18px 0 8px 0;'></div>"
+        "<div style='background:#16a34a;color:#fff;border-radius:10px;"
+        "padding:10px 14px;font-size:20px;font-weight:800;'>"
+        "🟢 REAL — CHECK SIGNAL</div>"
+        "<div style='font-size:14px;margin:6px 2px;'>"
+        "The final signal. This is REAL — you can trade this.</div>",
+        unsafe_allow_html=True)
     # Expected-finish line (user order 2026-11-16 23:08 MMT): the
     # next check's time, or 'Evaluating now' while a check window
     # is being evaluated. One line per section -- the PRECHECK
@@ -12901,9 +12949,7 @@ def render_multisymbol_regime_summary(
             and _active_month == _cur_month
             and int(_feed.get("month", 0)) == _cur_month):
         payload = None
-        st.caption("The app's own live calculation for this "
-                   "month is retired — the panel above is the "
-                   "chain's signal, updated hourly.")
+        st.caption("REAL signal above — from the chain, updated hourly.")
     else:
         payload = _panel["render"](st, state)
 
@@ -12912,14 +12958,16 @@ def render_multisymbol_regime_summary(
         st.markdown("<div style='margin-top:4px;'></div>", unsafe_allow_html=True)
         _panel["download"](st, payload)
 
-    # ===== SECTION 2 -- PRECHECK SIGNAL =====
-    st.markdown("## \U0001f50e PRECHECK SIGNAL \u2014 early read "
-                "before the check")
-    st.caption("This is the PRECHECK system: an early read on the "
-               "still-forming candle. Inside its window (check "
-               "\u2212 30 min) it recalculates on fresh data every "
-               "1 minute until the check \u2014 it does not stop "
-               "after the first read.")
+    # ===== SECTION 2 -- REAL PRECHECK SIGNAL =====
+    st.markdown(
+        "<div style='border-top:8px solid #2563eb;margin:22px 0 8px 0;'></div>"
+        "<div style='background:#2563eb;color:#fff;border-radius:10px;"
+        "padding:10px 14px;font-size:20px;font-weight:800;'>"
+        "🔵 REAL — PRECHECK SIGNAL</div>"
+        "<div style='font-size:14px;margin:6px 2px;'>"
+        "Early read, 30 minutes before the check. REAL data, "
+        "but NOT final — the check can change it.</div>",
+        unsafe_allow_html=True)
     # POSSIBLE (pre-check) block for this panel's next check
     # (additive display only, user order 2026-10-28). The timer box
     # (user order 2026-11-16) heads the section: next check time,
@@ -12947,23 +12995,32 @@ def render_multisymbol_regime_summary(
     if not (_feed is not None and _active_month == _cur_month):
         _render_precheck_day_table(st)
 
-    # TEST preview (user order 2026-11-16 ~20:56 MMT): toggled from
-    # the floating bar; shows exactly how a check result and a
-    # precheck result are displayed, fired and no-fire forms.
+    # ===== SECTION 3 -- TEST ONLY (orange) =====
     _cfg_t = _COMBINED_CFG.get(_active_month or 0) or {}
+    _any_test = bool(st.session_state.get("fx_show_test_preview")
+                     or st.session_state.get("fx_show_precheck_test"))
+    if _any_test:
+        st.markdown(
+            "<div style='border-top:8px dashed #ea580c;margin:22px 0 8px 0;'></div>"
+            "<div style='background:#ea580c;color:#fff;border-radius:10px;"
+            "padding:10px 14px;font-size:20px;font-weight:800;'>"
+            "🟧 TEST ONLY — NOT REAL</div>"
+            "<div style='font-size:14px;margin:6px 2px;'>"
+            "Samples only. Do NOT trade these.</div>",
+            unsafe_allow_html=True)
     if st.session_state.get("fx_show_test_preview"):
         _render_test_preview(st, _cfg_t.get("month_name", ""),
                              _cfg_t.get("best_label", ""),
                              month=_active_month)
-
-    # PRECHECK TEST preview (user order 2026-11-16 23:10 MMT):
-    # toggled from the floating bar's Precheck Test button; ONLY
-    # the precheck samples (fired + no-fire), rendered with the
-    # same calls the live precheck block uses.
     if st.session_state.get("fx_show_precheck_test"):
         _render_precheck_test_preview(st, _active_month,
                                       _cfg_t.get("month_name", ""),
                                       _cfg_t.get("best_label", ""))
+    if _any_test:
+        st.markdown(
+            "<div style='border-top:8px dashed #ea580c;margin:8px 0 4px 0;'></div>"
+            "<div style='font-size:14px;font-weight:700;'>🟧 END OF TEST — above was NOT real.</div>",
+            unsafe_allow_html=True)
 
     _render_eval_history(st, state, _active)
 

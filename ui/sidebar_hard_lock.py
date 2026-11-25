@@ -187,7 +187,13 @@ section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button{
   position:relative!important;z-index:1000002!important;
 }
 section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"]{
-  background:rgba(255,255,255,.55)!important;border-radius:10px!important;
+  background:rgba(15,23,42,.92)!important;border-radius:10px!important;
+  min-width:2.5rem!important;min-height:2.5rem!important;
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button,
+section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] svg{
+  color:#ffffff!important;fill:#ffffff!important;
+  min-width:2.5rem!important;min-height:2.5rem!important;
 }
 /* The reopen control IS the hamburger toggle (user order
    2026-11-16: default closed, open via a clearly visible
@@ -209,22 +215,22 @@ section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"]{
    the top-right corner and the bar sits below it. Honest limit
    (as with fix #2): AppTest does not apply CSS, so this move is
    verified by code inspection -- please confirm with one tap. */
+/* FIX 2026-11-25: back to TOP-LEFT. The old top-right place
+   (right:464px / right:14px on phone) sat under the floating
+   control bar and under Streamlit's own top-right icons, so taps
+   hit the bar, not the button, and the sidebar looked dead.
+   Top-left is Streamlit's natural place, nothing else lives
+   there, and the floating bar stays top-right. */
 button[data-testid="stExpandSidebarButton"],
 div[data-testid="stSidebarCollapsedControl"]{
   pointer-events:auto!important;visibility:visible!important;opacity:1!important;
-  position:fixed!important;top:14px!important;right:464px!important;left:auto!important;
-  z-index:1000002!important;
+  position:fixed!important;top:14px!important;left:14px!important;right:auto!important;
+  z-index:1000003!important;
   min-width:2.75rem!important;width:2.75rem!important;height:2.75rem!important;
   display:flex!important;align-items:center!important;justify-content:center!important;
   background:rgba(15,23,42,.92)!important;color:#ffffff!important;
   border:1px solid rgba(255,255,255,.35)!important;border-radius:12px!important;
   box-shadow:0 6px 18px rgba(15,23,42,.28)!important;cursor:pointer!important;
-}
-@media (max-width:760px){
-  button[data-testid="stExpandSidebarButton"],
-  div[data-testid="stSidebarCollapsedControl"]{
-    right:14px!important;
-  }
 }
 button[data-testid="stExpandSidebarButton"]>*,
 div[data-testid="stSidebarCollapsedControl"]>*{display:none!important;}

@@ -354,7 +354,7 @@ def render_multi_symbol_selectors(
         load_all_clicked = bool(state.pop("settings_top_load_all_requested_20260823", False)) and bool(canonical_selected)
         # Top Quick Actions "Retry Failed Symbols" button: retries only the
         # symbols that failed the Twelve Data load, then the completion loop
-        # drives the universe to 20/20 before any ranking calculation.
+        # drives the universe to complete (28/28) before any ranking calculation.
         retry_failed_clicked = bool(state.pop("settings_top_retry_failed_requested_20261007", False)) and bool(canonical_selected)
         clear_clicked = st.button(
             "Clear Load State",
@@ -469,7 +469,7 @@ def render_multi_symbol_selectors(
                 elif retry_failed_clicked:
                     # Top "Retry Failed Symbols" action: failed-only reload
                     # through every selector, then the completion loop drives
-                    # the canonical universe to 20/20 via the full key pool.
+                    # the canonical universe to complete (28/28) via the full key pool.
                     load_all_selectors_safely(
                         state, groups, timeframe, progress_callback=_load_progress,
                         retry_failed_only=True, force_retry_failed=True,
@@ -557,7 +557,7 @@ def render_multi_symbol_selectors(
                         st.error(
                             f"Ranking withheld: {loaded_count}/{len(canonical_selected)} symbols loaded. "
                             f"Missing: {', '.join(missing_20261007) if missing_20261007 else 'unknown'}. "
-                            "Press '🔁 Retry Failed Symbols' at the top to load the missing symbols — the Middle Standard ranking table is only published at 20/20."
+                            f"Press '🔁 Retry Failed Symbols' at the top to load the missing symbols — the Middle Standard ranking table is only published when all {len(canonical_selected)} symbols are loaded."
                         )
                 except Exception as auto_calc_exc:
                     state["startup_top30_load_status_20260824"] = "LOADED_CALCULATION_FAILED"

@@ -26,21 +26,43 @@ _PARTS_DIRNAME = "cache_parts"
 _MANIFEST_NAME = "manifest.json"
 
 
-def _candle_rows(db_path: Path) -> int | None:
-    """Row count of the candles table, or None if unreadable/absent."""
+def _candle_counts(db_path: Path) -> dict[str, int] | None:
+    """Per-timeframe candle row counts, or None if unreadable/absent."""
     try:
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
         try:
-            row = conn.execute("SELECT COUNT(*) FROM candles").fetchone()
-            return int(row[0]) if row else None
+            return {str(tf): int(n) for tf, n in conn.execute(
+                "SELECT timeframe, COUNT(*) FROM candles GROUP BY timeframe")}
         finally:
             conn.close()
     except Exception:
         return None
 
 
+def _store_matches_manifest(db_path: Path, manifest: dict) -> bool:
+    """True when the on-disk store already holds at least the snapshot.
+
+    Fix 2026-11-25 (20-of-28 bug): the old check accepted ANY non-empty
+    candles table as "populated", so a store holding only part of the
+    universe (e.g. the old 20-symbol set) blocked the restore forever
+    and the app could never load the missing symbols from cache. A
+    store that has been freshened by live loads holds MORE rows than
+    the snapshot and still counts as matching -- it is never replaced.
+    """
+    counts = manifest.get("counts") or {}
+    if not counts:
+        return False
+    if not db_path.exists() or db_path.stat().st_size <= 0:
+        return False
+    existing = _candle_counts(db_path)
+    if existing is None:
+        return False
+    return all(int(existing.get(tf, 0)) >= int(n) for tf, n in counts.items())
+
+
 def ensure_cache_db(db_path) -> bool:
-    """Restore db_path from data/cache_parts if it is missing/empty.
+    """Restore db_path from data/cache_parts if it is missing or holds
+    less than the shipped snapshot (per-timeframe candle counts).
 
     Returns True when a restore happened. Never raises.
     """
@@ -48,14 +70,14 @@ def ensure_cache_db(db_path) -> bool:
     tmp_db = None
     try:
         db_path = Path(db_path)
-        if db_path.exists() and db_path.stat().st_size > 0 and _candle_rows(db_path):
-            return False  # a populated candle store is already present
 
         parts_dir = db_path.parent / _PARTS_DIRNAME
         manifest_path = parts_dir / _MANIFEST_NAME
         if not manifest_path.exists():
             return False
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if _store_matches_manifest(db_path, manifest):
+            return False  # store already holds at least the snapshot
         part_names = sorted(manifest.get("parts") or [])
         if not part_names:
             return False

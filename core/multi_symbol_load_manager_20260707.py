@@ -1201,6 +1201,18 @@ def merge_selector_load_results(state: MutableMapping[str, Any], configured: Map
             validation, payload = _cache_only_validation_for_symbol(symbol, tf, required_rows)
             if isinstance(payload, Mapping):
                 results[symbol] = payload
+        if not bool(validation.get("ok")):
+            # Fix 2026-11-25 (20-of-28 bug): a failed provider record used
+            # to mask a perfectly valid frame already sitting in the local
+            # candle store -- the cache fallback above only ran when NO
+            # record existed at all. A valid exact-symbol cache frame now
+            # wins over any failed record, from any selector.
+            cache_validation, cache_payload = _cache_only_validation_for_symbol(
+                symbol, tf, required_rows)
+            if bool(cache_validation.get("ok")):
+                validation = cache_validation
+                if isinstance(cache_payload, Mapping):
+                    results[symbol] = cache_payload
         validation["source_selector"] = group_name
         validation.setdefault("assigned_key", SELECTOR_KEY_MAP.get(group_name, "TWELVE_DATA_KEY_POOL"))
         validations[symbol] = validation
@@ -1310,7 +1322,7 @@ def load_all_selectors_safely(
         state["selector_load_all_nonblocking_errors_20260722"] = errors
     merged = merge_selector_load_results(state, groups, tf)
     if ensure_complete:
-        # Drive the canonical universe to 20/20: any symbol that survived the
+        # Drive the canonical universe to complete (28/28): any symbol that survived the
         # selector-owned passes is retried through the FULL key pool with
         # quota-aware waits between rounds. Successful rows are never
         # re-fetched.
@@ -1389,7 +1401,7 @@ def ensure_complete_canonical_load(
     progress_callback: Any = None,
     max_rounds: int = 5,
 ) -> dict[str, Any]:
-    """Retry failed symbols through the FULL key pool until all 20 are loaded.
+    """Retry failed symbols through the FULL key pool until all selected are loaded.
 
     Each round waits for key-pool capacity, clears stale circuit breakers, and
     retries ONLY failed symbols via round-robin across every configured Twelve

@@ -1,14 +1,19 @@
 """Zero-touch startup auto-load for the slim Field 3 build (2026-10-19).
 
-When the app opens, if a Twelve Data key is available and no completed
-Field 3 generation exists yet, this module loads the canonical 20-symbol
-universe and runs the Super Quick calculation — the same pipeline the
-Settings sidebar's "Super Quick Run" button uses — so the Middle Standard
-Regime Ranking table appears after a short wait with zero manual steps.
+When the app opens and no completed Field 3 generation exists yet, this
+module loads the canonical 28-symbol universe and runs the Super Quick
+calculation — the same pipeline the Settings sidebar's "Super Quick Run"
+button uses — so the Middle Standard Regime Ranking table appears after
+a short wait with zero manual steps.
 
-Key resolution order: Streamlit Secrets (TWELVE_DATA_API_KEY) -> credential
-vault -> session state. Runs at most once per browser session. Any failure
-falls back silently to the manual Settings flow.
+A Twelve Data key is used when one is configured (Streamlit Secrets
+TWELVE_DATA_API_KEY -> credential vault -> session state), but it is NOT
+required: the loader admits every symbol that already holds a valid
+frame in the local candle store, which a cold boot restores from the
+repo snapshot (fix 2026-11-25 — the old key gate meant a fresh redeploy,
+whose in-app key vault is wiped, never auto-loaded at all and the app
+sat at a partial 20/28). Runs at most once per browser session. Any
+failure falls back silently to the manual Settings flow.
 """
 from __future__ import annotations
 
@@ -48,32 +53,26 @@ def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
             return outcome
 
         key, source = _resolve_twelve_key(state)
-        if not key:
-            # FIX 2026-11-25: do NOT mark attempted here. The old
-            # code set the flag before checking the key pool, so
-            # one early failure (key not restored yet on a fresh
-            # open) blocked auto-load for the whole session.
-            outcome["reason"] = "no_twelve_key_found"
-            return outcome
+        # FIX 2026-11-25 (20-of-28 bug): a Twelve key is no longer a gate.
+        # The load below admits every symbol with a valid frame in the
+        # local candle store (restored from the repo snapshot on cold
+        # boot) and only spends provider credits on symbols the store
+        # cannot cover. The old gate returned here whenever the key was
+        # missing or its pool momentarily empty -- exactly the state of
+        # every fresh redeploy -- so auto-load never ran and the app
+        # showed whatever partial load a manual Twelve run had managed.
+        if key:
+            # Make the key visible to the existing pool machinery exactly
+            # like a Settings paste does.
+            try:
+                state["twelve_api_key"] = key
+                state["twelve_api_key_source"] = f"auto_load_{source}"
+            except Exception:
+                pass
+        else:
+            source = "local_cache_no_key"
 
         outcome["attempted"] = True
-
-        # Make the key visible to the existing pool machinery exactly like a
-        # Settings paste does.
-        try:
-            state["twelve_api_key"] = key
-            state["twelve_api_key_source"] = f"auto_load_{source}"
-        except Exception:
-            pass
-
-        # Confirm the pool actually sees a usable key before spending time.
-        from core.twelve_data_key_pool import TwelveDataKeyPool
-
-        pool = TwelveDataKeyPool.from_state(state)
-        if not pool.has_available_key():
-            outcome["reason"] = "key_pool_reports_no_usable_key"
-            return outcome
-
         # Only now mark attempted: a real load is about to run.
         state[AUTO_LOAD_FLAG] = True
 

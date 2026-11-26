@@ -123,21 +123,60 @@ def _persist_real(repo, raw, sym, tf, errors):
         errors.append(f"{sym} {tf}: cache write {type(exc).__name__}")
 
 
+def _bar_key(frame):
+    """Bar-open timestamps of a raw repository frame, for per-bar dedup."""
+    names = {str(c).lower(): c for c in frame.columns}
+    for cand in ("open_time", "time", "datetime", "timestamp", "date"):
+        if cand in names:
+            return pd.to_datetime(frame[names[cand]], utc=True, errors="coerce")
+    if isinstance(frame.index, pd.DatetimeIndex):
+        return pd.Series(pd.to_datetime(frame.index, utc=True), index=frame.index)
+    return None
+
+
 def _dukascopy_rows(raw):
-    """Repository rows for the signal path: Dukascopy candles only.
+    """Repository rows for the signal path: Dukascopy first, Twelve
+    fallback only where Dukascopy has no row for that bar.
 
     The repository is a shared cache; rows persisted by the old
     Twelve Data route (or any other provider) must never enter a
     check / precheck evaluation (user order 2026-11-16: same
-    candles as the chain, no silent substitution). Rows without a
-    provider tag are excluded -- the safe direction.
+    candles as the chain, no silent substitution). AMENDED by user
+    decision 2026-11-25 19:56 MMT: a TWELVE_DATA row tagged
+    source_status=FALLBACK_TWELVE (written by twelve_fill.py) may
+    fill a bar ONLY when no Dukascopy row exists for that bar;
+    Dukascopy always wins where present. Rows without a provider
+    tag are excluded -- the safe direction.
+
+    The returned frame carries attrs["data_basis"] ("fallback" if
+    any fallback row was admitted, else "dukascopy") and
+    attrs["fallback_bars"], so the read layer can label any result
+    computed with fallback rows as "fallback data".
     """
     if raw is None or not isinstance(raw, pd.DataFrame) or raw.empty:
         return raw
     if "provider" not in raw.columns:
         return raw.iloc[0:0]
-    keep = raw["provider"].astype(str).str.upper() == "DUKASCOPY"
-    return raw.loc[keep]
+    prov = raw["provider"].astype(str).str.upper()
+    is_duka = prov == "DUKASCOPY"
+    is_fallback = prov == "TWELVE_DATA"
+    if "source_status" in raw.columns:
+        is_fallback &= (raw["source_status"].astype(str).str.upper()
+                        == "FALLBACK_TWELVE")
+    out = raw.loc[is_duka | is_fallback].copy()
+    if len(out):
+        key = _bar_key(out)
+        if key is not None:
+            pri = pd.Series(np.where(is_duka.loc[out.index], 0, 1),
+                            index=out.index)
+            tmp = out.assign(_bk=key.values, _pri=pri.values)
+            tmp = tmp.sort_values(["_bk", "_pri"], kind="stable")
+            out = tmp.drop_duplicates(subset=["_bk"], keep="first")
+            out = out.drop(columns=["_bk", "_pri"])
+    n_fb = int(is_fallback.loc[out.index].sum()) if len(out) else 0
+    out.attrs["data_basis"] = "fallback" if n_fb else "dukascopy"
+    out.attrs["fallback_bars"] = n_fb
+    return out
 
 
 def _direct_fetch(state, symbols, tf, *, deadline, force=False):
@@ -232,9 +271,13 @@ def fetch_check_frames(state, symbols, need_candles=None):
         state.pop(M15_MEMO_KEY, None)
     frames, errors, sources = {}, [], {}
     repo = _repository()
+    h1_fallback = False
     for sym in symbols:
         try:
-            frame = normalize_ohlc(_dukascopy_rows(repo.load(sym, "H1", limit=400, completed_only=False)), 50) if repo else None
+            sel = _dukascopy_rows(repo.load(sym, "H1", limit=400, completed_only=False)) if repo else None
+            if sel is not None and getattr(sel, "attrs", {}).get("data_basis") == "fallback":
+                h1_fallback = True
+            frame = normalize_ohlc(sel, 50)
         except Exception as exc:
             frame = None
             errors.append(f"{sym} H1: cache read {type(exc).__name__}")
@@ -248,7 +291,12 @@ def fetch_check_frames(state, symbols, need_candles=None):
     # entry bar is absent. Go DIRECTLY to M15; do not exhaust keys on late H1.
     only_entry = [s for s in symbols if need and s in frames
                   and entry not in frames[s].index and previous.issubset(frames[s].index)]
-    h1_targets = [s for s in symbols if (force and s not in only_entry) or s not in frames
+    # REPO-FIRST (user order 2026-11-25 21:59 MMT): the live fetch
+    # may only fill symbols whose STORED frame lacks the needed
+    # candles; a refresh must never re-fetch (and thereby risk
+    # discarding) bars the store already holds, so `force` no
+    # longer widens the target list.
+    h1_targets = [s for s in symbols if s not in frames
                   or (need and not need.issubset(frames[s].index) and s not in only_entry)]
     if h1_targets:
         raw_frames, notes = _direct_fetch(state, h1_targets, "H1", deadline=deadline, force=force)
@@ -275,15 +323,123 @@ def fetch_check_frames(state, symbols, need_candles=None):
     ready_symbols = [s for s in symbols if s in frames
                      and (not need or need.issubset(frames[s].index))]
     latest = max((f.index.max() for f in frames.values()), default=None)
+    _sb = state.get("check_data_basis")
+    data_basis = ("assembled" if _sb == "assembled"
+                  else "fallback" if (h1_fallback or _sb == "fallback")
+                  else "dukascopy")
+    if data_basis != "dukascopy":
+        state["check_data_basis"] = data_basis
     diag = dict(cache=sum(v == "H1 cache" for v in sources.values()),
                 live=sum(v != "H1 cache" for v in sources.values()), frames=len(frames),
                 ready=len(ready_symbols), required=len(symbols),
                 missing_symbols=[s for s in symbols if s not in ready_symbols],
-                entry_sources=sources, live_errors=errors[:8])
+                entry_sources=sources, live_errors=errors[:8],
+                data_basis=data_basis)
     _record_load_status(state, "H1", frames, symbols)
     result = frames, latest, diag
     state[H1_MEMO_KEY] = dict(key=key, at=time.monotonic(), result=result)
     return result
+
+
+_ASSEMBLY_OK = None
+
+
+def _assembly_selfcheck(repo):
+    """Gate (a) for Gate Amendment No.2 (user order 2026-11-25
+    21:59 MMT), inside the live path: assemble M15 bars from
+    stored M5 on an hour where real M15 exists and compare EVERY
+    OHLC field. Assembly is enabled only if the comparison is
+    exact; the result is cached per process. If no testable hour
+    exists, assembly stays OFF (cannot prove = do not use)."""
+    global _ASSEMBLY_OK
+    if _ASSEMBLY_OK is not None:
+        return _ASSEMBLY_OK
+    _ASSEMBLY_OK = False
+    try:
+        for sym in ("EURUSD", "GBPUSD", "USDJPY", "AUDUSD",
+                    "EURGBP", "AUDNZD"):
+            # The comparison target must be DUKASCOPY M15 bars:
+            # assembly reproduces the Dukascopy aggregation, and
+            # Twelve fallback bars legitimately differ from it
+            # (C1 finding) — comparing against them would refuse
+            # a sound method.
+            raw15 = repo.load(sym, "M15", limit=200,
+                              completed_only=False)
+            if raw15 is not None and "provider" in raw15.columns:
+                raw15 = raw15.loc[
+                    raw15["provider"].astype(str).str.upper()
+                    == "DUKASCOPY"]
+            m15 = normalize_ohlc(raw15)
+            m5 = normalize_ohlc(_dukascopy_rows(
+                repo.load(sym, "M5", limit=2400, completed_only=False)))
+            if m15 is None or m5 is None or len(m15) < 4:
+                continue
+            hours = sorted({t.floor("h") for t in m15.index},
+                           reverse=True)
+            for h in hours[:6]:
+                stamps = pd.date_range(h, periods=4, freq="15min")
+                m5stamps = pd.date_range(h, periods=12, freq="5min")
+                if not stamps.isin(m15.index).all() \
+                        or not m5stamps.isin(m5.index).all():
+                    continue
+                ok = True
+                for st in stamps:
+                    part = m5.loc[pd.date_range(st, periods=3,
+                                                freq="5min")]
+                    asm = (float(part.Open.iloc[0]),
+                           float(part.High.max()),
+                           float(part.Low.min()),
+                           float(part.Close.iloc[-1]))
+                    real = m15.loc[st]
+                    if asm != (float(real.Open), float(real.High),
+                               float(real.Low), float(real.Close)):
+                        ok = False
+                        break
+                _ASSEMBLY_OK = bool(ok)
+                return _ASSEMBLY_OK
+    except Exception:
+        _ASSEMBLY_OK = False
+    return _ASSEMBLY_OK
+
+
+def _assemble_m15_gaps(repo, sym, frame, required):
+    """Gate Amendment No.2: fill MISSING M15 stamps in `frame`
+    from stored M5 bars (open=first open, high=max, low=min,
+    close=last close, volume=sum). GAPS ONLY — a stamp already
+    in the frame is never touched, so precedence Dukascopy M15 >
+    Twelve fallback M15 > assembled-from-M5 holds by
+    construction. Returns (frame, n_assembled)."""
+    if frame is None or repo is None or len(frame) == 0:
+        return frame, 0
+    try:
+        m5 = normalize_ohlc(_dukascopy_rows(
+            repo.load(sym, "M5", limit=6000, completed_only=False)))
+        if m5 is None:
+            return frame, 0
+        grid = pd.date_range(frame.index.min(), required,
+                             freq="15min")
+        rows = {}
+        for st in grid:
+            if st in frame.index:
+                continue
+            part_idx = pd.date_range(st, periods=3, freq="5min")
+            if not part_idx.isin(m5.index).all():
+                continue
+            part = m5.loc[part_idx]
+            row = dict(Open=float(part.Open.iloc[0]),
+                       High=float(part.High.max()),
+                       Low=float(part.Low.min()),
+                       Close=float(part.Close.iloc[-1]))
+            if "Volume" in m5.columns:
+                row["Volume"] = float(part.Volume.sum())
+            rows[st] = row
+        if not rows:
+            return frame, 0
+        add = pd.DataFrame.from_dict(rows, orient="index")
+        add.index = pd.DatetimeIndex(add.index)
+        return _merge(frame, add, 5000), len(rows)
+    except Exception:
+        return frame, 0
 
 
 def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=False):
@@ -293,23 +449,30 @@ def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=Fa
     required = utc_naive(need_entry) if need_entry is not None else now.floor("15min") - pd.Timedelta(minutes=15)
     memo = state.setdefault(M15_MEMO_KEY, {})
     frames, missing, errors = {}, [], []
+    basis = {}
     repo = _repository()
     for sym in symbols:
         cached = memo.get(sym)
         frame = cached.get("frame") if isinstance(cached, dict) else None
+        sym_basis = cached.get("data_basis") if isinstance(cached, dict) else None
         sufficient = frame is not None and required in frame.index and (need_entry is not None or len(frame) >= MIN_DEEP_BARS)
         if force or not sufficient:
             try:
                 raw = _dukascopy_rows(repo.load(sym, "M15", limit=2000, completed_only=False)) if repo else None
+                if raw is not None and getattr(raw, "attrs", {}).get("data_basis") == "fallback":
+                    sym_basis = "fallback"
                 frame = _merge(frame, normalize_ohlc(raw), 5000)
             except Exception:
                 pass
+        basis[sym] = sym_basis or "dukascopy"
         sufficient = frame is not None and required in frame.index and (need_entry is not None or len(frame) >= MIN_DEEP_BARS)
         if frame is not None:
             frames[sym] = frame
         failed_recently = (isinstance(cached, dict) and cached.get("required") == required
                            and time.monotonic() - cached.get("attempt", 0) < RETRY_SECONDS)
-        if force or (not sufficient and not failed_recently):
+        # REPO-FIRST (user order 2026-11-25 21:59 MMT): live fetch
+        # only for symbols whose stored frame is insufficient.
+        if not sufficient and not failed_recently:
             missing.append(sym)
     if missing:
         deadline = deadline if deadline is not None else time.monotonic() + FETCH_BUDGET_SECONDS
@@ -319,10 +482,29 @@ def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=Fa
             frame = _merge(frames.get(sym), norm, 5000)
             if frame is not None:
                 frames[sym] = frame
-            memo[sym] = dict(frame=frame, attempt=time.monotonic(), required=required)
+            memo[sym] = dict(frame=frame, attempt=time.monotonic(), required=required,
+                             data_basis=basis.get(sym, "dukascopy"))
             if sym in raw_frames:
                 _persist_real(repo, raw_frames[sym], sym, "M15", errors)
+    # Gate Amendment No.2 (user order 2026-11-25 21:59 MMT):
+    # assemble any still-missing M15 bars from stored M5 — gaps
+    # only, after the exactness self-check inside this path.
+    if repo is not None and _assembly_selfcheck(repo):
+        for sym in list(frames.keys()):
+            filled, n_asm = _assemble_m15_gaps(
+                repo, sym, frames[sym], required)
+            if n_asm:
+                frames[sym] = filled
+                basis[sym] = "assembled"
+                memo[sym] = dict(frame=filled,
+                                 attempt=time.monotonic(),
+                                 required=required,
+                                 data_basis="assembled")
     state["check_m15_last_errors"] = errors
+    if any(basis.get(s) == "assembled" for s in frames):
+        state["check_data_basis"] = "assembled"
+    elif any(basis.get(s) == "fallback" for s in frames):
+        state["check_data_basis"] = "fallback"
     _record_load_status(state, "M15", frames, symbols)
     # 2026-11-16 repair (app migration): the ported cycle modules
     # convert frames through _bars_from_frame, which reads the time
@@ -336,10 +518,48 @@ def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=Fa
     out = {}
     for _sym, _f in frames.items():
         try:
-            out[_sym] = _f.assign(Datetime=_f.index)
+            _o = _f.assign(Datetime=_f.index)
         except Exception:
-            out[_sym] = _f
+            _o = _f
+        _o.attrs["data_basis"] = basis.get(_sym, "dukascopy")
+        out[_sym] = _o
     return out
+
+
+M15_SLOT_WINDOW_BARS = 32    # _slot_rows: entry bar + the 31 bars before it
+M15_FORWARD_BARS = 192       # _trade_outcome: 48 h hold cap on M15
+
+
+def m15_window_complete(frame, check_ts):
+    """True when one symbol's M15 frame holds the full data a
+    check-slot evaluation consumes (2026-11-25 gate fix; see
+    GATE_FIX_20261125.md / FULLWAY_DIAGNOSIS_20261125.md).
+
+    Per symbol the evaluation (cycle93aj _slot_rows /
+    _trade_outcome) reads: the entry bar (the M15 bar opening
+    at check - 15m), the 32-bar window ending at that bar
+    (pos32 / ATR14 read bars idx-31..idx), and the 48h forward
+    window -- the 192 M15 bars after the entry bar -- to
+    resolve exits. The old readiness gate counted only two
+    H1 candles, so slots stepped with these windows missing
+    or shifted by gaps. The backward window is checked by
+    exact 15-minute stamps; the forward window positionally
+    (trading bars only, exactly as _trade_outcome indexes
+    it), so it may legitimately span a weekend.
+    """
+    data = normalize_ohlc(frame)
+    if data is None:
+        return False
+    entry = utc_naive(check_ts) - pd.Timedelta(minutes=15)
+    pos = int(data.index.searchsorted(entry))
+    if pos >= len(data) or data.index[pos] != entry:
+        return False
+    window = pd.date_range(
+        entry - pd.Timedelta(minutes=15 * (M15_SLOT_WINDOW_BARS - 1)),
+        entry, freq="15min")
+    if not window.isin(data.index).all():
+        return False
+    return len(data) - 1 - pos >= M15_FORWARD_BARS
 
 
 def fetch_m5_frames(state, symbols, *, deadline=None, force=False):
@@ -362,23 +582,29 @@ def fetch_m5_frames(state, symbols, *, deadline=None, force=False):
     required = now.floor("5min") - pd.Timedelta(minutes=5)
     memo = state.setdefault(M5_MEMO_KEY, {})
     frames, missing, errors = {}, [], []
+    basis = {}
     repo = _repository()
     for sym in symbols:
         cached = memo.get(sym)
         frame = cached.get("frame") if isinstance(cached, dict) else None
+        sym_basis = cached.get("data_basis") if isinstance(cached, dict) else None
         sufficient = frame is not None and required in frame.index
         if force or not sufficient:
             try:
                 raw = _dukascopy_rows(repo.load(sym, "M5", limit=400, completed_only=False)) if repo else None
+                if raw is not None and getattr(raw, "attrs", {}).get("data_basis") == "fallback":
+                    sym_basis = "fallback"
                 frame = _merge(frame, normalize_ohlc(raw), 400)
             except Exception:
                 pass
+        basis[sym] = sym_basis or "dukascopy"
         sufficient = frame is not None and required in frame.index
         if frame is not None:
             frames[sym] = frame
         failed_recently = (isinstance(cached, dict) and cached.get("required") == required
                            and time.monotonic() - cached.get("attempt", 0) < RETRY_SECONDS)
-        if force or (not sufficient and not failed_recently):
+        # REPO-FIRST (user order 2026-11-25 21:59 MMT), as M15.
+        if not sufficient and not failed_recently:
             missing.append(sym)
     if missing:
         deadline = deadline if deadline is not None else time.monotonic() + FETCH_BUDGET_SECONDS
@@ -388,17 +614,22 @@ def fetch_m5_frames(state, symbols, *, deadline=None, force=False):
             frame = _merge(frames.get(sym), norm, 400)
             if frame is not None:
                 frames[sym] = frame
-            memo[sym] = dict(frame=frame, attempt=time.monotonic(), required=required)
+            memo[sym] = dict(frame=frame, attempt=time.monotonic(), required=required,
+                             data_basis=basis.get(sym, "dukascopy"))
             if sym in raw_frames:
                 _persist_real(repo, raw_frames[sym], sym, "M5", errors)
     state["check_m5_last_errors"] = errors
+    if any(basis.get(s) == "fallback" for s in frames):
+        state["check_data_basis"] = "fallback"
     _record_load_status(state, "M5", frames, symbols)
     out = {}
     for _sym, _f in frames.items():
         try:
-            out[_sym] = _f.assign(Datetime=_f.index)
+            _o = _f.assign(Datetime=_f.index)
         except Exception:
-            out[_sym] = _f
+            _o = _f
+        _o.attrs["data_basis"] = basis.get(_sym, "dukascopy")
+        out[_sym] = _o
     return out
 
 

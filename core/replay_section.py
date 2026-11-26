@@ -1,12 +1,21 @@
-"""Replay — past check calculator (user order 2026-11-25).
+"""Replay — past check calculator (user order 2026-11-25;
+Twelve Data route, user order 2026-11-27).
 
 A dashboard section at the bottom, immediately before History.
 Pick a date, pick one of that date's check times, press
 Calculate: the app loads that slot's candles (H1 / M15 / M5,
-28 symbols) from the store and runs a RAW, STATELESS
-calculation — the month cycle's own equations on a fresh,
-empty form. No walked memory is read or used, so the section
-works for dates with no walked memory at all.
+28 symbols) FROM THE TWELVE DATA API — the window ending at
+that slot, fetched at click time — and runs a RAW, STATELESS
+calculation on those candles: the month cycle's own equations
+on a fresh, empty form. No walked memory and no local candle
+store are used for the calculation, so the section works for
+dates whose candles were never loaded into the app.
+
+ONLY AFTER the calculation does the section look at the past:
+the slot's recorded result (the walk ledger's delivered /
+processed lists, read-only) is shown next to the fresh result
+with a MATCH / DIFFERENT verdict. The recorded result never
+feeds the calculation.
 
 Two results per slot:
 - CHECK: the full signal (symbol, side, entry, TP, SL) the
@@ -18,16 +27,16 @@ Two results per slot:
   candle (user rule 2026-11-26): it is judged on the H1 sig
   bar (completed by check - 30) and the history before it,
   with the entry candle synthesized from the signal close —
-  the same method as the proven true-precheck walk. The gate
-  stays 28/28 on the sig bar, or DATA ERROR naming what is
-  missing — never a guessed signal.
+  the same method as the proven true-precheck walk.
 
 State safety: the evaluation runs on a temporary form file;
-the real walk ledgers are never read, stepped or written,
-and the GitHub save-back is disabled for the duration.
-Gate: 28/28 or DATA ERROR, both sides. Data-basis labels
-("fallback data" / "assembled-from-M5 data") follow the read
-path's own basis reporting.
+the real walk ledgers are never stepped or written, and the
+GitHub save-back is disabled for the duration. The comparison
+lookup reads the ledger only.
+Gate: 28/28 or DATA ERROR, both sides — never a guessed
+signal. Data basis is labelled "Twelve Data" (or
+"assembled-from-M5 data" where an M15 bar had to be assembled
+from Twelve M5 bars, gaps only, real M15 always wins).
 """
 from __future__ import annotations
 
@@ -35,6 +44,7 @@ import datetime as _dt
 import importlib
 import os
 import tempfile
+import time
 
 import pandas as pd
 
@@ -83,6 +93,193 @@ def slots_for_date(d: _dt.date):
 
 
 # ------------------------------------------------------------------
+# Twelve Data window loader (user order 2026-11-27)
+#
+# On Calculate, the slot's candles are fetched from the Twelve
+# Data API for the exact window the calculation consumes:
+# H1 ending at the entry hour, M15 and M5 ending at the entry
+# bar. Keys come from the app's own key pool (session state /
+# Streamlit secrets / vault), rotated per request under the
+# pool's per-minute limits. Frames are normalized to exactly
+# the shapes the evaluators already consume. Results are
+# cached per (symbol, timeframe, window end) for the life of
+# the app process, so re-clicking a slot costs no credits.
+# ------------------------------------------------------------------
+
+_TWELVE_URL = "https://api.twelvedata.com/time_series"
+_TWELVE_TF = {"H1": ("1h", 450, 60), "M15": ("15min", 400, 15),
+              "M5": ("5min", 400, 5)}
+_TWELVE_CACHE: dict = {}
+_TWELVE_WAIT_LIMIT_S = 150.0
+
+
+def _twelve_symbol(sym: str) -> str:
+    try:
+        from core.connectors.data_parts.utils import (
+            _twelve_symbol as _fmt)
+        return _fmt(sym)
+    except Exception:
+        s = str(sym).strip().upper()
+        if len(s) == 6 and s.isalpha():
+            return f"{s[:3]}/{s[3:]}"
+        return s
+
+
+def _twelve_pool(state):
+    from core.twelve_data_key_pool import TwelveDataKeyPool
+    return TwelveDataKeyPool.from_state(
+        state if state is not None else {})
+
+
+def _twelve_fetch_values(pool, sym, interval, bars, end_ts,
+                         step_minutes=60):
+    """One Twelve time_series window request. Returns
+    (values_list, "") or (None, error_note). Waits (bounded)
+    when every configured key is at its per-minute limit."""
+    import requests
+    waited = 0.0
+    last_note = "Twelve Data request did not run"
+    while True:
+        lease = None
+        try:
+            lease = pool.reserve_key(symbol=sym,
+                                     timeframe=interval)
+        except Exception as exc:
+            return None, f"Twelve Data key pool error: {exc}"
+        if lease is None:
+            try:
+                n_keys = len(pool.keys())
+            except Exception:
+                n_keys = 0
+            if n_keys == 0:
+                return None, ("Twelve Data API key is not "
+                              "configured")
+            if waited >= _TWELVE_WAIT_LIMIT_S:
+                return None, ("Twelve Data keys are at their "
+                              "per-minute limit")
+            time.sleep(5.0)
+            waited += 5.0
+            continue
+        params = {
+            "symbol": _twelve_symbol(sym),
+            "interval": interval,
+            "outputsize": int(bars),
+            "apikey": lease.api_key,
+            "format": "JSON",
+            "timezone": "UTC",
+            # One bar past the window end, so the bar AT the
+            # end is included whichever way the API bounds it;
+            # the caller truncates exactly.
+            "end_date": (end_ts + pd.Timedelta(
+                minutes=step_minutes)).strftime(
+                "%Y-%m-%d %H:%M:%S"),
+        }
+        try:
+            resp = requests.get(_TWELVE_URL, params=params,
+                                timeout=20)
+            data = resp.json()
+        except Exception as exc:
+            last_note = f"Twelve Data network error: {exc}"
+            time.sleep(2.0)
+            waited += 2.0
+            if waited >= _TWELVE_WAIT_LIMIT_S:
+                return None, last_note
+            continue
+        if isinstance(data, dict) and data.get("values"):
+            return data["values"], ""
+        msg = ""
+        if isinstance(data, dict):
+            msg = str(data.get("message") or data.get("status")
+                      or "")[:160]
+        last_note = f"Twelve Data: {msg or 'no candle rows'}"
+        if "limit" in last_note.lower() or resp.status_code == 429:
+            time.sleep(5.0)
+            waited += 5.0
+            if waited >= _TWELVE_WAIT_LIMIT_S:
+                return None, last_note
+            continue
+        return None, last_note
+
+
+def _twelve_frame(pool, sym, tf, end_ts, errors):
+    """Normalized Twelve frame for one symbol/timeframe,
+    truncated to bars starting at or before end_ts. M15/M5
+    frames also carry the Datetime column the month modules
+    read, mirroring the runtime's own M15/M5 returns."""
+    from core.check_candle_runtime import normalize_ohlc
+    interval, bars, step_minutes = _TWELVE_TF[tf]
+    key = (sym, tf, str(end_ts))
+    if key in _TWELVE_CACHE:
+        return _TWELVE_CACHE[key]
+    values, note = _twelve_fetch_values(pool, sym, interval,
+                                        bars, end_ts,
+                                        step_minutes=step_minutes)
+    frame = None
+    if values:
+        raw = pd.DataFrame(values)
+        frame = normalize_ohlc(raw, 1)
+        if frame is not None:
+            frame = frame.loc[:end_ts]
+            if frame.empty:
+                frame = None
+    if frame is None and note and len(errors) < 8:
+        errors.append(f"{sym} {tf}: {note}")
+    if frame is not None and tf in ("M15", "M5"):
+        frame = frame.assign(Datetime=frame.index)
+        frame.attrs["data_basis"] = "twelve"
+    _TWELVE_CACHE[key] = frame
+    return frame
+
+
+def _twelve_frames(pool, symbols, tf, end_ts, errors):
+    out = {}
+    for sym in symbols:
+        f = _twelve_frame(pool, sym, tf, end_ts, errors)
+        if f is not None:
+            out[sym] = f
+    return out
+
+
+def _assemble_m15_from_twelve_m5(m15_frame, m5_frame, slot):
+    """Fill ONLY the missing bars of the consumed 32-bar M15
+    window (ending at the entry bar, slot - 15m) from Twelve
+    M5 bars: open=first, high=max, low=min, close=last. Real
+    M15 bars always win. Returns (frame, n_assembled)."""
+    entry_bar = slot - pd.Timedelta(minutes=15)
+    window = pd.date_range(end=entry_bar, periods=32,
+                           freq="15min")
+    have = set(m15_frame.index) if m15_frame is not None else set()
+    missing = [t for t in window if t not in have]
+    if not missing or m5_frame is None:
+        return m15_frame, 0
+    rows = {}
+    for t in missing:
+        parts = [t + pd.Timedelta(minutes=5 * k) for k in range(3)]
+        if all(p in m5_frame.index for p in parts):
+            seg = m5_frame.loc[parts]
+            rows[t] = {"Open": float(seg["Open"].iloc[0]),
+                       "High": float(seg["High"].max()),
+                       "Low": float(seg["Low"].min()),
+                       "Close": float(seg["Close"].iloc[-1]),
+                       "Volume": float(seg["Volume"].sum())
+                       if "Volume" in seg else 0.0}
+    if not rows:
+        return m15_frame, 0
+    add = pd.DataFrame.from_dict(rows, orient="index")
+    add.index = pd.DatetimeIndex(add.index)
+    if m15_frame is None:
+        out = add.sort_index()
+    else:
+        base = m15_frame.drop(columns=["Datetime"],
+                              errors="ignore")
+        out = pd.concat([base, add]).sort_index()
+        out = out.loc[~out.index.duplicated(keep="first")]
+    out = out.assign(Datetime=out.index)
+    out.attrs["data_basis"] = "assembled"
+    return out, len(rows)
+
+
+# ------------------------------------------------------------------
 # Raw stateless evaluation helpers
 # ------------------------------------------------------------------
 
@@ -92,10 +289,12 @@ def _pip_of(sym: str) -> float:
 
 def _basis_label(basis: str) -> str:
     return {"fallback": "fallback data",
-            "assembled": "assembled-from-M5 data"}.get(basis, "")
+            "assembled": "assembled-from-M5 data",
+            "twelve": "Twelve Data"}.get(basis, "")
 
 
-def _stateless_entries(mod, month, frames, slot, m15_frames=None):
+def _stateless_entries(mod, month, frames, slot, m15_frames=None,
+                       m5_frames=None):
     """Evaluate ONE slot on a fresh, empty form (raw
     calculation). The real ledger is never touched: the
     module's state handle is pointed at a temp file for the
@@ -117,7 +316,7 @@ def _stateless_entries(mod, month, frames, slot, m15_frames=None):
         else:
             entries = mod.panel_entries(
                 frames, slot, m15_frames=m15_frames,
-                open_symbols=())
+                open_symbols=(), m5_frames=m5_frames)
     finally:
         sm._saveback_ledgers = prev_saveback
         mod._STATE = prev_form
@@ -248,52 +447,69 @@ def _pick_view(r):
 
 
 # ------------------------------------------------------------------
-# CHECK side — raw calculation on the slot's full data
+# CHECK side — raw calculation on Twelve Data candles for the slot
 # ------------------------------------------------------------------
 
-def replay_check(month: int, slot) -> dict:
-    from core.check_candle_runtime import fetch_check_frames
+def replay_check(month: int, slot, state=None) -> dict:
     system, mod = _month_module(month)
     symbols = list(mod.SYMBOLS)
     slot = pd.Timestamp(slot)
     sig = slot - pd.Timedelta(hours=1, minutes=30)
     ent = slot - pd.Timedelta(minutes=30)
-
-    frames, _latest, diag = fetch_check_frames(
-        {}, symbols, need_candles=[sig, ent])
-    ready = int(diag.get("ready", 0))
-    if ready != len(symbols):
+    entry_bar = slot - pd.Timedelta(minutes=15)
+    try:
+        pool = _twelve_pool(state)
+    except Exception as exc:
         return {"status": "DATA ERROR",
-                "missing": (f"H1 sig/entry candles for "
-                            f"{len(symbols) - ready} symbols: "
-                            f"{', '.join(diag.get('missing_symbols', []))}"),
-                "basis": diag.get("data_basis", "dukascopy")}
+                "missing": f"Twelve Data key pool unavailable: "
+                           f"{exc}",
+                "basis": "twelve"}
+    errors: list = []
+    frames = _twelve_frames(pool, symbols, "H1", ent, errors)
+    h1_missing = [s for s in symbols
+                  if s not in frames or sig not in frames[s].index
+                  or ent not in frames[s].index]
+    if h1_missing:
+        note = f"; {errors[0]}" if errors else ""
+        return {"status": "DATA ERROR",
+                "missing": (f"H1 sig/entry candles from Twelve "
+                            f"Data for {len(h1_missing)} symbols: "
+                            f"{', '.join(h1_missing)}{note}"),
+                "basis": "twelve"}
 
-    fetch_m15 = getattr(mod, f"fetch_{system}_m15_frames")
-    m15_frames = fetch_m15()
+    m15_frames = _twelve_frames(pool, symbols, "M15", entry_bar,
+                                errors)
+    m5_frames = _twelve_frames(pool, symbols, "M5", entry_bar,
+                               errors)
+    basis = "twelve"
     bars = _m15_bars(mod, m15_frames)
     _ok, m15_missing = _window_ok(bars, slot)
     absent = [s for s in symbols if s not in bars]
-    if m15_missing or absent:
+    bad = sorted(set(m15_missing) | set(absent))
+    if bad:
+        # Gaps only: assemble the missing M15 window bars from
+        # the Twelve M5 bars; real M15 always wins.
+        for sym in bad:
+            filled, n_asm = _assemble_m15_from_twelve_m5(
+                m15_frames.get(sym), m5_frames.get(sym), slot)
+            if n_asm:
+                m15_frames[sym] = filled
+                basis = "assembled"
+        bars = _m15_bars(mod, m15_frames)
+        _ok, m15_missing = _window_ok(bars, slot)
+        absent = [s for s in symbols if s not in bars]
         bad = sorted(set(m15_missing) | set(absent))
+    if bad:
+        note = f"; {errors[0]}" if errors else ""
         return {"status": "DATA ERROR",
-                "missing": (f"M15 entry bar / 32-bar window for "
-                            f"{len(bad)} symbols: {', '.join(bad)}"),
-                "basis": diag.get("data_basis", "dukascopy")}
+                "missing": (f"M15 entry bar / 32-bar window from "
+                            f"Twelve Data for {len(bad)} symbols: "
+                            f"{', '.join(bad)}{note}"),
+                "basis": "twelve"}
 
-    basis = diag.get("data_basis", "dukascopy")
-    bases = {getattr(f, "attrs", {}).get("data_basis")
-             for f in m15_frames.values()}
-    if "assembled" in bases:
-        basis = "assembled"
-    elif "fallback" in bases and basis == "dukascopy":
-        basis = "fallback"
-
-    # Evaluate on the SAME M15 frames the gate just verified
-    # (panel_entries accepts them directly — the module's own
-    # entry point), so the read is evaluated exactly as gated.
     dealt = _stateless_entries(mod, month, frames, slot,
-                               m15_frames=m15_frames)
+                               m15_frames=m15_frames,
+                               m5_frames=m5_frames)
     picks = [_pick_view(r) for r in dealt]
     dealt_keys = {(p["symbol"], p["direction"]) for p in picks}
 
@@ -327,54 +543,44 @@ def replay_check(month: int, slot) -> dict:
 
 
 # ------------------------------------------------------------------
-# PRECHECK side — raw calculation on data as of check - 15 min
+# PRECHECK side — Twelve H1 as of check - 15 min
 # ------------------------------------------------------------------
 
-def replay_precheck(month: int, slot) -> dict:
+def replay_precheck(month: int, slot, state=None) -> dict:
     """Precheck inputs at the cutoff (check - 15 min): the H1
     sig frame — the sig bar completes by check - 30 — and the
-    history before it. Only candles COMPLETED by the cutoff
-    count. The entry candle is NOT required: a precheck never
-    waits for it (user rule 2026-11-26); the combined
-    evaluation synthesizes it from the signal close, exactly
-    as in the proven true-precheck walk. (The previous version
-    demanded the M15 entry bar, which completes AT the check
-    time itself, so every precheck was a structural DATA
-    ERROR — that demand is removed.)"""
-    from core.check_candle_runtime import (
-        _repository, normalize_ohlc)
+    history before it, loaded from Twelve Data. Only candles
+    COMPLETED by the cutoff count. The entry candle is NOT
+    required: a precheck never waits for it (user rule
+    2026-11-26); the combined evaluation synthesizes it from
+    the signal close, exactly as in the proven true-precheck
+    walk."""
     system, mod = _month_module(month)
     symbols = list(mod.SYMBOLS)
     slot = pd.Timestamp(slot)
     cutoff = slot - pd.Timedelta(minutes=15)
     sig = slot - pd.Timedelta(hours=1, minutes=30)
-    repo = _repository()
-    if repo is None:
+    try:
+        pool = _twelve_pool(state)
+    except Exception as exc:
         return {"status": "DATA ERROR",
-                "missing": "candle store unavailable"}
-
-    def _truncated(tf, minutes):
-        out = {}
-        limit = 2000 if tf == "H1" else 6000
-        for sym in symbols:
-            raw = repo.load(sym, tf, limit=limit,
-                            completed_only=False)
-            f = normalize_ohlc(raw, 1)
-            if f is None:
-                continue
-            keep = f.index + pd.Timedelta(minutes=minutes) <= cutoff
-            out[sym] = f[keep]
-        return out
-
-    h1 = _truncated("H1", 60)
+                "missing": f"Twelve Data key pool unavailable: "
+                           f"{exc}"}
+    errors: list = []
+    full = _twelve_frames(pool, symbols, "H1", sig, errors)
+    h1 = {}
+    for sym, f in full.items():
+        keep = f.index + pd.Timedelta(minutes=60) <= cutoff
+        h1[sym] = f[keep]
     h1_missing = [s for s in symbols
                   if s not in h1 or sig not in h1[s].index]
     if h1_missing:
+        note = f"; {errors[0]}" if errors else ""
         return {"status": "DATA ERROR",
                 "missing": (
-                    f"H1 sig bar {sig} UTC missing for "
-                    f"{len(h1_missing)} symbols: "
-                    f"{', '.join(h1_missing)}")}
+                    f"H1 sig bar {sig} UTC from Twelve Data "
+                    f"missing for {len(h1_missing)} symbols: "
+                    f"{', '.join(h1_missing)}{note}")}
 
     # Evaluate statelessly on the cutoff-truncated H1 frames
     # via the combined path (m15_frames=None): the entry
@@ -386,10 +592,78 @@ def replay_precheck(month: int, slot) -> dict:
             "picks": picks}
 
 
-def replay_slot(d: _dt.date, slot) -> dict:
+# ------------------------------------------------------------------
+# Compare to the past — read-only, AFTER the calculation
+# ------------------------------------------------------------------
+
+def _recorded_past(mod, slot):
+    """The slot's recorded result from the walk ledger
+    (read-only): {"kind": "pick", ...} / {"kind": "no_signal"}
+    / {"kind": "none"}. Never used by the calculation."""
+    try:
+        form = mod.load_state_form()
+        delivered = getattr(form, "delivered", []) or []
+        processed = getattr(form, "processed", []) or []
+    except Exception:
+        return {"kind": "none"}
+    slot = pd.Timestamp(slot)
+    for r in delivered:
+        try:
+            if pd.Timestamp(r["check"]) == slot:
+                return {"kind": "pick",
+                        "symbol": r["symbol"],
+                        "direction": r["direction"],
+                        "entry_px": float(r["entry_px"])}
+        except Exception:
+            continue
+    for p in processed:
+        try:
+            if pd.Timestamp(p) == slot:
+                return {"kind": "no_signal"}
+        except Exception:
+            continue
+    return {"kind": "none"}
+
+
+def _compare(check: dict, past: dict) -> str:
+    if check["status"] == "DATA ERROR":
+        return "Not compared — the calculation did not run."
+    calc = check["picks"][0] if check.get("picks") else None
+    if past["kind"] == "none":
+        return ("No recorded result for this slot — nothing "
+                "to compare.")
+    if past["kind"] == "pick":
+        recorded = (f"{past['symbol']} {past['direction']} @ "
+                    f"{past['entry_px']:.5f}")
+        if calc is None:
+            return (f"DIFFERENT — recorded {recorded}; the "
+                    f"Twelve Data calculation gives NO SIGNAL.")
+        if (calc["symbol"] == past["symbol"]
+                and calc["direction"] == past["direction"]):
+            return (f"MATCH — the Twelve Data calculation "
+                    f"reproduces the recorded pick {recorded} "
+                    f"(entry may differ by a few pips: Twelve "
+                    f"vs Dukascopy prices).")
+        return (f"DIFFERENT — recorded {recorded}; the Twelve "
+                f"Data calculation gives {calc['symbol']} "
+                f"{calc['direction']} @ {calc['entry_px']:.5f}.")
+    # past == no_signal
+    if calc is None:
+        return "MATCH — recorded NO SIGNAL, and the Twelve " \
+               "Data calculation also gives NO SIGNAL."
+    return (f"DIFFERENT — recorded NO SIGNAL; the Twelve Data "
+            f"calculation gives {calc['symbol']} "
+            f"{calc['direction']} @ {calc['entry_px']:.5f}.")
+
+
+def replay_slot(d: _dt.date, slot, state=None) -> dict:
+    check = replay_check(d.month, slot, state=state)
+    precheck = replay_precheck(d.month, slot, state=state)
+    _system, mod = _month_module(d.month)
+    past = _recorded_past(mod, slot)
     return {"date": str(d), "slot": str(slot),
-            "check": replay_check(d.month, slot),
-            "precheck": replay_precheck(d.month, slot)}
+            "check": check, "precheck": precheck,
+            "past": past, "compare": _compare(check, past)}
 
 
 # ------------------------------------------------------------------
@@ -418,8 +692,9 @@ def render_replay_section(st):
         "padding:10px 14px;font-size:20px;font-weight:800;'>"
         "🟣 REPLAY — past check calculator</div>"
         "<div style='font-size:14px;margin:6px 2px;'>"
-        "Raw calculation from candles — no memory used. "
-        "Pick a date and a check time, then Calculate.</div>",
+        "Calculated from Twelve Data candles loaded for the "
+        "picked time — no memory used. After calculating, the "
+        "result is compared with the recorded past result.</div>",
         unsafe_allow_html=True)
 
     d = st.date_input("Date", value=_default_replay_date(),
@@ -434,11 +709,12 @@ def render_replay_section(st):
     slot = dict((lbl, ts) for ts, lbl in slots)[choice]
 
     if st.button("Calculate", key="replay_calc"):
-        with st.spinner("Calculating — loading candles and "
-                        "running the raw calculation…"):
+        with st.spinner("Calculating — loading this slot's "
+                        "candles from Twelve Data and running "
+                        "the raw calculation…"):
             try:
                 st.session_state["replay_result"] = replay_slot(
-                    d, slot)
+                    d, slot, state=st.session_state)
             except Exception as exc:
                 st.session_state["replay_result"] = {
                     "date": str(d), "slot": str(slot),
@@ -487,6 +763,20 @@ def render_replay_section(st):
     lbl = _basis_label(chk.get("basis", ""))
     if lbl:
         st.caption(f"Data basis: {lbl}")
+
+    past = res.get("past") or {"kind": "none"}
+    st.markdown("**COMPARE TO PAST**")
+    if past["kind"] == "pick":
+        st.markdown(
+            f"Recorded at the time: **{past['symbol']} "
+            f"{past['direction']} @ {past['entry_px']:.5f}**")
+    elif past["kind"] == "no_signal":
+        st.markdown("Recorded at the time: **NO SIGNAL**")
+    else:
+        st.markdown("Recorded at the time: — (no recorded "
+                    "result for this slot)")
+    if res.get("compare"):
+        st.markdown(res["compare"])
 
     pre = res["precheck"]
     st.markdown("**PRECHECK (check − 15 min)**")

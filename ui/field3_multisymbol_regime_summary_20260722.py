@@ -13024,6 +13024,17 @@ def render_multisymbol_regime_summary(
 
     _render_eval_history(st, state, _active)
 
+    # ===== Replay (user order 2026-11-25) =====
+    # Immediately before History: pick a past date + check
+    # time and re-run the raw calculation from candles
+    # (stateless — no walked memory used or touched).
+    try:
+        from core.replay_section import (
+            render_replay_section as _render_replay)
+        _render_replay(st)
+    except Exception:
+        pass
+
     # ===== History (user order 2026-11-22) =====
     # The very bottom of the dashboard: the last 24 CHECK and
     # PRECHECK live replay tables from the canonical feed —

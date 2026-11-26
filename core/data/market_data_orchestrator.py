@@ -999,6 +999,20 @@ class MarketDataOrchestrator:
                 break
         if raw is None:
             lease=pool.reserve_alias(assigned_alias,symbol=symbol,timeframe=timeframe) if assigned_alias in {"TWELVE_KEY_1","TWELVE_KEY_2"} else pool.reserve_key(symbol=symbol,timeframe=timeframe)
+            if lease is None and assigned_alias in {"TWELVE_KEY_1","TWELVE_KEY_2"}:
+                # Parallel-load fix (user order 2026-11-26): a selector's
+                # assigned key carries only its own per-minute budget
+                # (8 credits). A 10-symbol selector run through the
+                # parallel scheduler exhausted that one key and failed
+                # the overflow symbols QUOTA_COOLDOWN on the first pass
+                # while the other configured keys sat idle. When the
+                # assigned key is configured but out of credits/cooling,
+                # lease from the shared pool (round-robin over every
+                # configured key, each key's own limit still enforced
+                # by the pool) before declaring the symbol blocked.
+                _snap_pre = pool.status_snapshot()
+                if _snap_pre.get(assigned_alias, {}).get("configured"):
+                    lease = pool.reserve_key(symbol=symbol, timeframe=timeframe)
             if lease is None:
                 snapshot=pool.status_snapshot()
                 if assigned_alias in {"TWELVE_KEY_1","TWELVE_KEY_2"}:
@@ -1010,7 +1024,9 @@ class MarketDataOrchestrator:
                 raise ProviderPermanentError("TWELVE_DATA_KEY_POOL_NOT_CONFIGURED")
             metadata={"provider_key_alias":lease.alias,"actual_key_name":lease.alias,"masked_key":lease.masked_key,
                       "remaining_before":lease.remaining_before,"remaining_after":lease.remaining_after,
-                      "selector_owned":bool(assigned_alias),"request_sent":True}
+                      "selector_owned":bool(assigned_alias),
+                      "assigned_key_overflow":bool(assigned_alias in {"TWELVE_KEY_1","TWELVE_KEY_2"} and lease.alias != assigned_alias),
+                      "request_sent":True}
             raw=fetch_twelve(provider_symbol,lease.api_key,interval=interval,bars=source_rows)
         ok = bool(isinstance(raw, tuple) and len(raw) >= 2 and raw[1])
         message = str(raw[2] if isinstance(raw, tuple) and len(raw) >= 3 else "")

@@ -92,8 +92,40 @@ def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
         groups = fixed_groups()
         scope = "LUNCH_CORE"  # Super Quick — the app's recommended default mode.
 
+        # Parallel two-timeframe load (user order 2026-11-26): the
+        # selector loader's records hold ONE timeframe at a time, so
+        # the second timeframe the app actually consumes -- M15, used
+        # by every check/precheck evaluation -- was never loaded at
+        # startup and arrived as a second serial wait at check time.
+        # Warm it CONCURRENTLY with the main load through the check
+        # runtime's own route (repository-first, Dukascopy live fill;
+        # spends no Twelve Data credits). The warm thread uses a
+        # throwaway state dict (no session-state races); every bar it
+        # fetches is persisted to the shared candle repository, so
+        # the check runtime later reads them store-first.
+        import threading
+
+        def _warm_m15() -> None:
+            try:
+                from core.check_candle_runtime import fetch_m15_frames
+                from core.fixed_fx_universe_20260918 import (
+                    TARGET_FX_SYMBOLS,
+                )
+
+                fetch_m15_frames({}, list(TARGET_FX_SYMBOLS))
+            except Exception:
+                pass
+
+        _m15_warm = threading.Thread(
+            target=_warm_m15, daemon=True, name="auto_load_m15_warm"
+        )
+        _m15_warm.start()
+
         with st.spinner("Loading market data from Twelve Data…"):
             load_all_selectors_safely(state, groups, timeframe)
+
+        _m15_warm.join(timeout=120)
+        outcome["m15_warm_joined"] = not _m15_warm.is_alive()
 
         activation = activate_loaded_universe_for_run(state, scope, groups, timeframe)
         if not activation.get("ok"):

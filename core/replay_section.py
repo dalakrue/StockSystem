@@ -158,6 +158,13 @@ def _window_ok(bars, slot):
 def _candidate_rows(mod, frames, bars, slot):
     """Candidate rows from the same read (both books), in the
     chain capture's ranking order (-sMC, -score)."""
+    # Capability guard (fix 2026-11-26): only November (93aj) and
+    # December (94t) carry the panel-context helper this reader
+    # needs. The other ten months have no panel read to rank --
+    # return empty honestly instead of letting the swallowed
+    # AttributeError below masquerade as "no second best exists".
+    if not hasattr(mod, "_set_panel_ctx"):
+        return []
     rows = []
     try:
         mod._set_panel_ctx(frames, None)
@@ -181,6 +188,14 @@ def _near_miss(mod, bars, slot, dealt_keys):
     whose band position came nearest to entering the band,
     computed with the module's own _pos32. Returns None when
     every symbol with a valid entry bar was dealt or in-band."""
+    # Capability guard (fix 2026-11-26): January (60k), March
+    # (86o), August (67w) and October (92l) have no _pos32 helper.
+    # The unguarded call below raised AttributeError AFTER the
+    # check result was already computed, collapsing the whole read
+    # into a fake "DATA ERROR -- calculation failed". A month
+    # without _pos32 simply has no near-miss line.
+    if not hasattr(mod, "_pos32"):
+        return None
     import numpy as np
     T = int(pd.Timestamp(slot).timestamp())
     lo = float(getattr(mod, "BAND_LO", 0.4))
@@ -389,6 +404,19 @@ def replay_slot(d: _dt.date, slot) -> dict:
 # Dashboard rendering
 # ------------------------------------------------------------------
 
+def _default_replay_date():
+    """Default replay date (fix 2026-11-26): the most recent
+    weekday BEFORE today. The old default was today, whose slots
+    have usually not completed yet, so the first thing a user saw
+    on pressing Calculate was a DATA ERROR for a slot whose data
+    cannot exist yet. Yesterday's (or Friday's) slots are
+    complete and calculable."""
+    d = _dt.date.today() - _dt.timedelta(days=1)
+    while d.weekday() >= 5:  # Sat/Sun -> back to Friday
+        d -= _dt.timedelta(days=1)
+    return d
+
+
 def render_replay_section(st):
     """Replay — the bottom of the dashboard, immediately
     before History (user order 2026-11-25)."""
@@ -402,7 +430,7 @@ def render_replay_section(st):
         "Pick a date and a check time, then Calculate.</div>",
         unsafe_allow_html=True)
 
-    d = st.date_input("Date", value=_dt.date.today(),
+    d = st.date_input("Date", value=_default_replay_date(),
                       key="replay_date")
     slots = slots_for_date(d)
     if not slots:

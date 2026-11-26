@@ -327,6 +327,25 @@ def render_multi_symbol_selectors(
                       f" / {len(canonical_selected)}**")
         if failed_now_count_20260708:
             _load_line += f" · {failed_now_count_20260708} not loaded yet"
+            # No silent shortfall (fix 2026-11-26): name the missing
+            # symbols, using the same success set
+            # loaded_canonical_status counts with, so the names are
+            # exactly the complement of the displayed count.
+            _wide_success_20261126 = {
+                "SUCCESS", "CACHE_SUCCESS", "READY_FROM_CACHE",
+                "VALIDATED", "DEGRADED_VALID", "DEGRADED_VALID_CACHE",
+                "TWELVE_KEY_1_SUCCESS", "TWELVE_KEY_2_SUCCESS",
+                "SKIPPED_VALID_CACHE",
+            }
+            _missing_names_20261126 = [
+                str(_r.get("Symbol"))
+                for _r in rows
+                if _r.get("Symbol")
+                and str(_r.get("Load Status") or "").upper()
+                not in _wide_success_20261126
+            ]
+            if _missing_names_20261126:
+                _load_line += f": {', '.join(_missing_names_20261126)}"
         st.markdown(_load_line)
 
         load_locked = bool(

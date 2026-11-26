@@ -3064,10 +3064,41 @@ def _render_symbols_loaded_box(st, context, state=None):
             getattr(context, "failed_symbols", None), dict) else {}
         n_fail = sum(1 for s in failed if str(s).upper() in req_set
                      and str(s).upper() not in have)
+        # Ground-truth source (fix 2026-11-26): the records/context
+        # above are per-timeframe load paperwork and can lag or lose
+        # a publish, which is how this chip could show 20/28 while
+        # the candle store already held all 28 symbols' history
+        # (verified against the boot snapshot: 28/28 x H1/M15/M5).
+        # A required symbol with a valid H1 frame in the store HAS
+        # loaded history by definition -- count it.
+        try:
+            from core.data.candle_repository import CandleRepository
+            from core.data.deployment_migrations_20260705 import (
+                DEFAULT_DB_PATH as _DB_PATH,
+            )
+            from core.multi_symbol_load_manager_20260707 import (
+                is_valid_candle_df as _is_valid_frame,
+            )
+            _repo = CandleRepository(_DB_PATH)
+            for _sym in required:
+                if _sym in have:
+                    continue
+                _frame = _repo.load(_sym, "H1", limit=600,
+                                    completed_only=False)
+                if _is_valid_frame(_frame, min_rows=50):
+                    have.add(_sym)
+        except Exception:
+            pass
         n_ok, n_cfg = len(have), len(required)
         txt = f"📊 <b>{n_ok}/{n_cfg}</b> symbols with loaded history"
         if n_fail:
             txt += f" <span style='color:#b91c1c;'>({n_fail} failed)</span>"
+        # No silent shortfall (fix 2026-11-26): name the symbols
+        # that have no loaded history yet.
+        missing = [s for s in required if s not in have]
+        if missing:
+            txt += (f" <span style='color:#b91c1c;'>missing: "
+                    f"{', '.join(missing)}</span>")
         st.markdown(
             "<div style='background:rgba(255,255,255,.55);"
             "border:1px solid rgba(255,255,255,.65);border-radius:10px;"
@@ -13032,8 +13063,16 @@ def render_multisymbol_regime_summary(
         from core.replay_section import (
             render_replay_section as _render_replay)
         _render_replay(st)
-    except Exception:
-        pass
+    except Exception as _replay_exc:
+        # Never vanish silently (fix 2026-11-26): the old bare
+        # `except: pass` made ANY app-environment failure look
+        # like the section simply did not exist. Show the error
+        # in place instead.
+        try:
+            st.error(f"🟣 REPLAY section failed to render: "
+                     f"{type(_replay_exc).__name__}: {_replay_exc}")
+        except Exception:
+            pass
 
     # ===== History (user order 2026-11-22) =====
     # The very bottom of the dashboard: the last 24 CHECK and

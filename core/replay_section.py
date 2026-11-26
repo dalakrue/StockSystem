@@ -14,11 +14,13 @@ Two results per slot:
   closest near-miss from the same read.
 - PRECHECK (check - 15 min): the same raw calculation on the
   data as it stood 15 minutes before the check — only candles
-  completed by then. The builders consume the M15 entry bar
-  (check - 15m), which completes AT the check time, so at
-  check - 15 the consumed inputs are incomplete and the
-  precheck side reports DATA ERROR naming what is missing —
-  never a guessed signal.
+  completed by then. A precheck never waits for the entry
+  candle (user rule 2026-11-26): it is judged on the H1 sig
+  bar (completed by check - 30) and the history before it,
+  with the entry candle synthesized from the signal close —
+  the same method as the proven true-precheck walk. The gate
+  stays 28/28 on the sig bar, or DATA ERROR naming what is
+  missing — never a guessed signal.
 
 State safety: the evaluation runs on a temporary form file;
 the real walk ledgers are never read, stepped or written,
@@ -329,10 +331,16 @@ def replay_check(month: int, slot) -> dict:
 # ------------------------------------------------------------------
 
 def replay_precheck(month: int, slot) -> dict:
-    """Consumed inputs at the cutoff, in the builders' own
-    terms: the H1 sig frame (sig bar completed by check - 30)
-    and the M15 basis (entry bar check - 15m + its 32-bar
-    window). Only candles COMPLETED by the cutoff count."""
+    """Precheck inputs at the cutoff (check - 15 min): the H1
+    sig frame — the sig bar completes by check - 30 — and the
+    history before it. Only candles COMPLETED by the cutoff
+    count. The entry candle is NOT required: a precheck never
+    waits for it (user rule 2026-11-26); the combined
+    evaluation synthesizes it from the signal close, exactly
+    as in the proven true-precheck walk. (The previous version
+    demanded the M15 entry bar, which completes AT the check
+    time itself, so every precheck was a structural DATA
+    ERROR — that demand is removed.)"""
     from core.check_candle_runtime import (
         _repository, normalize_ohlc)
     system, mod = _month_module(month)
@@ -340,7 +348,6 @@ def replay_precheck(month: int, slot) -> dict:
     slot = pd.Timestamp(slot)
     cutoff = slot - pd.Timedelta(minutes=15)
     sig = slot - pd.Timedelta(hours=1, minutes=30)
-    entry_bar = slot - pd.Timedelta(minutes=15)
     repo = _repository()
     if repo is None:
         return {"status": "DATA ERROR",
@@ -360,34 +367,19 @@ def replay_precheck(month: int, slot) -> dict:
         return out
 
     h1 = _truncated("H1", 60)
-    m15 = _truncated("M15", 15)
     h1_missing = [s for s in symbols
                   if s not in h1 or sig not in h1[s].index]
-    m15_missing = [s for s in symbols
-                   if s not in m15 or entry_bar not in m15[s].index]
-    missing = []
     if h1_missing:
-        missing.append(
-            f"H1 sig bar {sig} UTC missing for "
-            f"{len(h1_missing)} symbols: {', '.join(h1_missing)}")
-    if m15_missing:
-        missing.append(
-            f"M15 entry bar {entry_bar} UTC not completed at "
-            f"check - 15 min for {len(m15_missing)} symbols "
-            f"(it completes at the check time itself)")
-    if missing:
         return {"status": "DATA ERROR",
-                "missing": "; ".join(missing)}
+                "missing": (
+                    f"H1 sig bar {sig} UTC missing for "
+                    f"{len(h1_missing)} symbols: "
+                    f"{', '.join(h1_missing)}")}
 
-    # Defensive path (inputs complete at the cutoff): evaluate
-    # statelessly on the truncated frames, precheck format.
-    m15_frames = {}
-    for sym, f in m15.items():
-        g = f.assign(Datetime=f.index)
-        g.attrs["data_basis"] = "dukascopy"
-        m15_frames[sym] = g
-    dealt = _stateless_entries(mod, month, h1, slot,
-                               m15_frames=m15_frames)
+    # Evaluate statelessly on the cutoff-truncated H1 frames
+    # via the combined path (m15_frames=None): the entry
+    # candle is synthesized from the signal close.
+    dealt = _stateless_entries(mod, month, h1, slot)
     picks = [{"symbol": r["symbol"], "direction": r["direction"],
               "entry_px": float(r["entry_px"])} for r in dealt]
     return {"status": "OK" if picks else "NO SIGNAL",

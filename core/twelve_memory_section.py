@@ -21,6 +21,7 @@ import io
 import json
 import os
 import tempfile
+import time
 import datetime as dt
 
 import pandas as pd
@@ -55,17 +56,36 @@ def _slots_for_month(mod, year, month):
     return out
 
 
+def _feed_ended_or_continues(idx, point, end_point):
+    """Closed-market signature for one symbol's series at a
+    slot: either the series continues past the slot (a holiday
+    inside the window), or it ends within 4 days before the
+    slot and never trades at/after it (the feed ends at a
+    year-end close, e.g. Twelve H1 stopping at 11:00 on
+    Dec 31). Anything else is a data hole, not a closure."""
+    if len(idx) == 0:
+        return False
+    last = idx.max()
+    if last > end_point:
+        return True
+    return bool(point - pd.Timedelta(days=4) <= last < point)
+
+
 def _fetch_window(pool, sym, tf, start_ts, end_ts, errors):
     """One symbol/timeframe's full window from Twelve Data,
     fetched backwards in <=5000-bar calls. Returns a normalized
     frame (Datetime column + data_basis for M15/M5, mirroring
-    the replay fetcher) or None."""
+    the replay fetcher) or None. Requests are paced (2 s
+    between calls) so the download stays under the plan's
+    per-minute credit limit instead of bursting past it —
+    slower, but no limit failures (user request 2026-11-27)."""
     interval = _TF_INTERVAL[tf]
     step = _TF_STEP_MIN[tf]
     chunks = []
     end = pd.Timestamp(end_ts)
     start = pd.Timestamp(start_ts)
     while end > start:
+        time.sleep(2.0)
         values, note = _twelve_fetch_values(
             pool, sym, interval, _MAX_BARS_PER_CALL, end,
             step_minutes=step)
@@ -305,7 +325,8 @@ def build_memory(month, year, state=None, progress=None):
                           if sig not in frames[s].index
                           or ent not in frames[s].index]
             if h1_missing and len(h1_missing) == len(symbols) \
-                    and all(data["H1"][s].index.max() > ent
+                    and all(_feed_ended_or_continues(
+                        data["H1"][s].index, sig, ent)
                             for s in symbols):
                 # Market closed (user ruling 2026-11-27): the
                 # candles do not exist, but the downloaded data
@@ -353,7 +374,9 @@ def build_memory(month, year, state=None, progress=None):
                 bad = sorted(set(m15_missing) | set(absent))
             if bad:
                 if len(bad) == len(symbols) and all(
-                        data["M15"][s].index.max() > entry_bar
+                        _feed_ended_or_continues(
+                            data["M15"][s].index, entry_bar,
+                            entry_bar)
                         for s in symbols):
                     # Market closed (user ruling 2026-11-27):
                     # Twelve has H1 bars for the day but no M15

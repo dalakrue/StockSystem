@@ -60,15 +60,18 @@ def _feed_ended_or_continues(idx, point, end_point):
     """Closed-market signature for one symbol's series at a
     slot: either the series continues past the slot (a holiday
     inside the window), or it ends within 4 days before the
-    slot and never trades at/after it (the feed ends at a
-    year-end close, e.g. Twelve H1 stopping at 11:00 on
-    Dec 31). Anything else is a data hole, not a closure."""
+    slot without trading past it — the feed stops at a
+    year-end close, possibly right AT the slot's own stamps
+    (e.g. Twelve H1 whose last Dec 31 bar is the 12:00 or
+    13:00 stamp itself, with the other stamp missing).
+    Anything else is a data hole, not a closure."""
     if len(idx) == 0:
         return False
     last = idx.max()
     if last > end_point:
         return True
-    return bool(point - pd.Timedelta(days=4) <= last < point)
+    return bool(end_point - pd.Timedelta(days=4) <= last
+                <= end_point)
 
 
 def _fetch_window(pool, sym, tf, start_ts, end_ts, errors):
@@ -180,7 +183,7 @@ def _compare(built_state, past):
 
 
 def _xlsx_bytes(month, year, cycle, built_state, compare,
-                past_name, skipped=()):
+                past_name, skipped=(), note=None):
     buf = io.BytesIO()
     delivered = built_state.get("delivered", [])
     processed = [str(t).replace("T", " ")[:19]
@@ -198,6 +201,7 @@ def _xlsx_bytes(month, year, cycle, built_state, compare,
         ("Slots skipped — DATA ERROR (market closed)",
          len(skipped)),
         ("Picks delivered", len(delivered)),
+        ("Result note", note or "complete run"),
         ("Compared against", past_name or "no stored past found"),
         ("Shared slots", compare["shared_slots"] if compare
          else ""),
@@ -246,8 +250,11 @@ def _xlsx_bytes(month, year, cycle, built_state, compare,
 def build_memory(month, year, state=None, progress=None):
     """Download the month's candles from Twelve Data and walk
     its cycle over them. progress(frac, text) is called as work
-    advances. Returns a result dict; on any gate failure the
-    status is DATA ERROR and no partial memory is returned."""
+    advances. Returns a result dict; if a gate fails partway
+    through the walk, the status is DATA ERROR and the memory
+    walked up to that point is returned with it as a partial
+    result (user request 2026-11-27: show the table as far as
+    it got, do not wait for 100%)."""
     def report(frac, text):
         if progress is not None:
             progress(frac, text)
@@ -307,6 +314,7 @@ def build_memory(month, year, state=None, progress=None):
     prev_saveback = sm._saveback_ledgers
     built_state = None
     skipped = []
+    stop_missing = None
     try:
         sm._saveback_ledgers = lambda: None
         mod._STATE = mod.load_state_form(path=state_path)
@@ -340,12 +348,12 @@ def build_memory(month, year, state=None, progress=None):
                        f"(market closed), skipped")
                 continue
             if h1_missing:
-                return {"status": "DATA ERROR",
-                        "missing": (f"{slot}: H1 sig/entry candles "
-                                    f"from Twelve Data missing "
-                                    f"for {len(h1_missing)} "
-                                    f"symbols: "
-                                    f"{', '.join(h1_missing)}")}
+                stop_missing = (
+                    f"{slot}: H1 sig/entry candles from "
+                    f"Twelve Data missing for "
+                    f"{len(h1_missing)} symbols: "
+                    f"{', '.join(h1_missing)}")
+                break
             m15_frames = {}
             m5_frames = {}
             for sym in symbols:
@@ -391,11 +399,11 @@ def build_memory(month, year, state=None, progress=None):
                            f"({slot:%Y-%m-%d %H:%M} UTC) — DATA "
                            f"ERROR (market closed), skipped")
                     continue
-                return {"status": "DATA ERROR",
-                        "missing": (f"{slot}: M15 entry window "
-                                    f"from Twelve Data missing "
-                                    f"for {len(bad)} symbols: "
-                                    f"{', '.join(bad)}")}
+                stop_missing = (
+                    f"{slot}: M15 entry window from Twelve "
+                    f"Data missing for {len(bad)} symbols: "
+                    f"{', '.join(bad)}")
+                break
             mod.panel_entries(frames, slot, m15_frames=m15_frames,
                               open_symbols=(), m5_frames=m5_frames)
             report(0.30 + 0.65 * (i + 1) / len(slots),
@@ -410,16 +418,28 @@ def build_memory(month, year, state=None, progress=None):
         mod._STATE = prev_form
     if not built_state:
         return {"status": "DATA ERROR",
-                "missing": "the walk produced no state"}
+                "missing": stop_missing
+                           or "the walk produced no state"}
 
     # ---- Phase 3: compare + files (95% -> 100%) ----
-    report(0.97, "Comparing against the stored past…")
+    if stop_missing:
+        report(0.97, "Stopped at a DATA ERROR — preparing "
+                     "the partial result…")
+    else:
+        report(0.97, "Comparing against the stored past…")
     past, past_name = _past_ledger(cycle, year, month)
     compare = _compare(built_state, past) if past else None
     xlsx = _xlsx_bytes(month, year, cycle, built_state, compare,
-                       past_name, skipped=skipped)
+                       past_name, skipped=skipped,
+                       note=(f"PARTIAL — stopped early: "
+                             f"{stop_missing}"
+                             if stop_missing else None))
     report(1.0, "Done")
-    return {"status": "OK", "cycle": cycle,
+    return {"status": "DATA ERROR" if stop_missing else "OK",
+            "missing": stop_missing,
+            "partial": bool(stop_missing),
+            "total_slots": len(slots),
+            "cycle": cycle,
             "slots": len(built_state.get("processed", [])),
             "skipped": skipped,
             "delivered": len(built_state.get("delivered", [])),
@@ -468,18 +488,28 @@ def render_twelve_memory_section(st):
     result = st.session_state.get(store_key)
     if not result:
         return
+    comp = result.get("compare")
     if result.get("status") != "OK":
         st.error(f"DATA ERROR — {result.get('missing', '')}")
-        return
-    comp = result.get("compare")
-    st.success(
-        f"✅ Built {_MONTH_NAMES[month - 1]} {year} "
-        f"({result['cycle']}) from Twelve Data: "
-        f"{result['slots']} slots walked, "
-        f"{result['delivered']} picks delivered."
-        + (f" {len(result['skipped'])} slot(s) recorded DATA "
-           f"ERROR (market closed) and skipped."
-           if result.get("skipped") else ""))
+        if not result.get("xlsx"):
+            return
+        st.warning(
+            f"**Partial result — as far as the build got.** "
+            f"{result['slots']} of "
+            f"{result.get('total_slots', '?')} slots walked, "
+            f"{result['delivered']} picks delivered, before "
+            f"the error above. The table and downloads below "
+            f"are everything walked up to that point — you do "
+            f"not need a 100% run to use them.")
+    else:
+        st.success(
+            f"✅ Built {_MONTH_NAMES[month - 1]} {year} "
+            f"({result['cycle']}) from Twelve Data: "
+            f"{result['slots']} slots walked, "
+            f"{result['delivered']} picks delivered."
+            + (f" {len(result['skipped'])} slot(s) recorded "
+               f"DATA ERROR (market closed) and skipped."
+               if result.get("skipped") else ""))
     if comp:
         st.markdown(
             f"**Compare vs stored past "

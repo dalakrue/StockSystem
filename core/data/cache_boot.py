@@ -1,15 +1,20 @@
-"""Cold-boot restore of the candle cache from repo-shipped gzip parts.
+"""Cold-boot restore of the candle cache from gzip parts.
 
 The live candle DB (data/multi_symbol_field10_20260701.sqlite3, ~150 MB)
 cannot be committed to git directly (GitHub rejects files over 100 MB),
-so a compressed snapshot of it ships as base64 text parts under
-data/cache_parts/ (see manifest.json there; the push route accepts
-UTF-8 text only, hence the encoding). On a cold boot — a fresh
-Streamlit Cloud checkout carries only a ~0.5 MB empty placeholder DB —
-this module rebuilds the real DB from the parts before the repository
-reads it. It is a no-op whenever a populated candle store is already
-present, and it never raises: on any failure the app proceeds with
-whatever store it has, exactly as it did before this module existed.
+so a compressed snapshot of it ships as base64 text parts (see
+manifest.json; the push route accepts UTF-8 text only, hence the
+encoding). Since 2026-11-28 the snapshot lives in the separate data
+repo dalakrue/fx-data under cache_parts/ -- StockSystem itself no
+longer carries the ~165 MB of parts. On a cold boot -- a fresh
+Streamlit Cloud checkout carries only a ~0.5 MB empty placeholder DB --
+this module downloads the parts from fx-data and rebuilds the real DB
+before the repository reads it. A locally present copy of the parts
+(data/cache_parts/ next to the DB) is still honoured as a fallback
+when it exists. The restore is a no-op whenever a populated candle
+store is already present, and it never raises: on any failure the app
+proceeds with whatever store it has, exactly as it did before this
+module existed.
 """
 from __future__ import annotations
 
@@ -20,10 +25,27 @@ import json
 import os
 import shutil
 import sqlite3
+import urllib.request
 from pathlib import Path
 
 _PARTS_DIRNAME = "cache_parts"
 _MANIFEST_NAME = "manifest.json"
+_REMOTE_PARTS_BASE = (
+    "https://raw.githubusercontent.com/dalakrue/fx-data/main/cache_parts"
+)
+_DOWNLOAD_TIMEOUT_SECONDS = 60
+
+
+def _fetch_bytes(url: str) -> bytes | None:
+    """GET url as bytes, or None on any failure. Never raises."""
+    try:
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "stocksystem-cache-boot"})
+        with urllib.request.urlopen(
+                req, timeout=_DOWNLOAD_TIMEOUT_SECONDS) as resp:
+            return resp.read()
+    except Exception:
+        return None
 
 
 def _candle_counts(db_path: Path) -> dict[str, int] | None:
@@ -61,9 +83,11 @@ def _store_matches_manifest(db_path: Path, manifest: dict) -> bool:
 
 
 def ensure_cache_db(db_path) -> bool:
-    """Restore db_path from data/cache_parts if it is missing or holds
-    less than the shipped snapshot (per-timeframe candle counts).
+    """Restore db_path from the cache snapshot if it is missing or holds
+    less than the snapshot (per-timeframe candle counts).
 
+    Parts are read from a locally present data/cache_parts/ when one
+    exists (fallback), otherwise downloaded from dalakrue/fx-data.
     Returns True when a restore happened. Never raises.
     """
     tmp_gz = None
@@ -73,9 +97,15 @@ def ensure_cache_db(db_path) -> bool:
 
         parts_dir = db_path.parent / _PARTS_DIRNAME
         manifest_path = parts_dir / _MANIFEST_NAME
-        if not manifest_path.exists():
-            return False
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        local = manifest_path.exists()
+        if local:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        else:
+            raw_manifest = _fetch_bytes(
+                _REMOTE_PARTS_BASE + "/" + _MANIFEST_NAME)
+            if raw_manifest is None:
+                return False
+            manifest = json.loads(raw_manifest.decode("utf-8"))
         if _store_matches_manifest(db_path, manifest):
             return False  # store already holds at least the snapshot
         part_names = sorted(manifest.get("parts") or [])
@@ -84,7 +114,17 @@ def ensure_cache_db(db_path) -> bool:
 
         tmp_gz = db_path.with_name(db_path.name + ".restore.gz")
         tmp_db = db_path.with_name(db_path.name + ".restore-tmp")
-        encoded = b"".join((parts_dir / name).read_bytes() for name in part_names)
+        if local:
+            encoded = b"".join(
+                (parts_dir / name).read_bytes() for name in part_names)
+        else:
+            blobs = []
+            for name in part_names:
+                blob = _fetch_bytes(_REMOTE_PARTS_BASE + "/" + name)
+                if blob is None:
+                    return False  # a part is unreachable; keep the old store
+                blobs.append(blob)
+            encoded = b"".join(blobs)
         raw_gz = base64.b64decode(encoded, validate=True) \
             if manifest.get("encoding") == "base64" else encoded
         digest = hashlib.sha256()

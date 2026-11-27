@@ -3379,7 +3379,7 @@ def _record_eval_history(sysname, payload, replace=True):
                 return v
 
         entries = []
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             for _, r in disp.iterrows():
@@ -3922,6 +3922,51 @@ def _render_clock_box(st, now=None):
         return
 
 
+_EVAL_ERROR_TEXT = {
+    "check_candles_incomplete": (
+        "DATA ERROR \u2014 the needed check candles are incomplete: "
+        "not all 28 symbols have the signal and entry candles "
+        "for this window"),
+    "feature_data_incomplete": (
+        "DATA ERROR \u2014 feature data incomplete for this window"),
+    "evaluation_incomplete": (
+        "DATA ERROR \u2014 evaluation incomplete for this window"),
+}
+
+
+def _eval_error_text(exc):
+    """Readable evaluation-failure reason (fix 2026-11-27).
+
+    The panels used to store only type(exc).__name__ in
+    diag["evaluation_error"], so a plain data gap surfaced to
+    the user as a bare "Calculation error: ValueError" with no
+    reason. Map the known sentinel messages to the real reason;
+    anything else keeps its type AND its message."""
+    msg = str(exc or "").strip()
+    if msg in _EVAL_ERROR_TEXT:
+        return _EVAL_ERROR_TEXT[msg]
+    name = type(exc).__name__ if exc is not None else "Error"
+    return f"{name}: {msg}" if msg else f"{name} (no detail)"
+
+
+def _basis_caption(payload):
+    """Data-basis label for a window read (fix 2026-11-27): when
+    the check route had to fill gaps from the Twelve Data
+    fallback (or M5 assembly), the read is labelled so a result
+    computed on it is never mistaken for a pure Dukascopy read.
+    Mirrors the Replay section's basis labels."""
+    try:
+        basis = str(((payload or {}).get("diag") or {}).get(
+            "data_basis") or "")
+    except Exception:
+        basis = ""
+    if basis == "fallback":
+        return " \u00b7 Data basis: fallback data (Twelve Data)"
+    if basis == "assembled":
+        return " \u00b7 Data basis: assembled-from-M5 data"
+    return ""
+
+
 def _diag_notes(payload):
     """Provider notes from a window evaluation's fetch diagnostics,
     for the data-failure message (fix 2026-10-26): the fetch already
@@ -3931,7 +3976,14 @@ def _diag_notes(payload):
     try:
         diag = (payload or {}).get("diag") or {}
         if diag.get("evaluation_error"):
-            return "Calculation error: " + str(diag["evaluation_error"]) + ". Retrying automatically."
+            err = str(diag["evaluation_error"])
+            out = (err if err.startswith("DATA ERROR")
+                   else "Calculation error: " + err)
+            errs = diag.get("live_errors") or []
+            if errs:
+                out += (" Provider notes: "
+                        + "; ".join(str(e) for e in errs[:3]))
+            return out + ". Retrying automatically."
         errs = diag.get("live_errors") or []
         if errs:
             return "Provider notes: " + "; ".join(str(e) for e in errs[:4])
@@ -4823,7 +4875,7 @@ def _evaluate_c60_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -4831,7 +4883,7 @@ def _evaluate_c60_window(state, hour_utc, day=None):
             entries = select_cycle60_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -4985,7 +5037,7 @@ def _render_cycle60_signals_table(st, state):
                                 "cycle60", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -5148,7 +5200,7 @@ def _evaluate_c60b_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -5156,7 +5208,7 @@ def _evaluate_c60b_window(state, hour_utc, day=None):
             entries = select_cycle60b_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -5310,7 +5362,7 @@ def _render_cycle60b_signals_table(st, state):
                                 "cycle60b", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -5472,7 +5524,7 @@ def _evaluate_c67_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -5480,7 +5532,7 @@ def _evaluate_c67_window(state, hour_utc, day=None):
             entries = select_cycle67_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -5634,7 +5686,7 @@ def _render_cycle67_signals_table(st, state):
                                 "cycle67", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -5800,7 +5852,7 @@ def _evaluate_c78_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -5808,7 +5860,7 @@ def _evaluate_c78_window(state, hour_utc, day=None):
             entries = select_cycle78_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -5966,7 +6018,7 @@ def _render_cycle78_signals_table(st, state):
                                 "cycle78", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -6126,7 +6178,7 @@ def _evaluate_c85_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -6136,7 +6188,7 @@ def _evaluate_c85_window(state, hour_utc, day=None):
                                              check_time_utc=check_label)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -6294,7 +6346,7 @@ def _render_cycle85_signals_table(st, state):
                                 "cycle85", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -6457,7 +6509,7 @@ def _evaluate_c86_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -6465,7 +6517,7 @@ def _evaluate_c86_window(state, hour_utc, day=None):
             entries = select_cycle86_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -6619,7 +6671,7 @@ def _render_cycle86_signals_table(st, state):
                                 "cycle86", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -6782,7 +6834,7 @@ def _evaluate_c87_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -6790,7 +6842,7 @@ def _evaluate_c87_window(state, hour_utc, day=None):
             entries = select_cycle87_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -6944,7 +6996,7 @@ def _render_cycle87_signals_table(st, state):
                                 "cycle87", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -7107,7 +7159,7 @@ def _evaluate_c87b_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -7117,7 +7169,7 @@ def _evaluate_c87b_window(state, hour_utc, day=None):
                                     open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -7271,7 +7323,7 @@ def _render_cycle87b_signals_table(st, state):
                                 "cycle87b", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -7431,7 +7483,7 @@ def _evaluate_c88_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -7439,7 +7491,7 @@ def _evaluate_c88_window(state, hour_utc, day=None):
             entries = select_cycle88_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -7593,7 +7645,7 @@ def _render_cycle88_signals_table(st, state):
                                 "cycle88", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -7756,7 +7808,7 @@ def _evaluate_c89_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -7764,7 +7816,7 @@ def _evaluate_c89_window(state, hour_utc, day=None):
             entries = select_cycle89_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -7918,7 +7970,7 @@ def _render_cycle89_signals_table(st, state):
                                 "cycle89", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -8082,7 +8134,7 @@ def _evaluate_c91_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -8090,7 +8142,7 @@ def _evaluate_c91_window(state, hour_utc, day=None):
             entries = select_cycle91_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -8244,7 +8296,7 @@ def _render_cycle91_signals_table(st, state):
                                 "cycle91", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -8409,7 +8461,7 @@ def _evaluate_c287_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -8417,7 +8469,7 @@ def _evaluate_c287_window(state, hour_utc, day=None):
             entries = select_cycle287_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -8571,7 +8623,7 @@ def _render_cycle287_signals_table(st, state):
                                 "cycle287", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -8737,7 +8789,7 @@ def _evaluate_c92_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -8745,7 +8797,7 @@ def _evaluate_c92_window(state, hour_utc, day=None):
             entries = select_cycle92_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -8900,7 +8952,7 @@ def _render_cycle92_signals_table(st, state):
                                 "cycle92", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -9063,7 +9115,7 @@ def _evaluate_c93_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -9071,7 +9123,7 @@ def _evaluate_c93_window(state, hour_utc, day=None):
             entries = select_cycle93_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -9225,7 +9277,7 @@ def _render_cycle93_signals_table(st, state):
                                 "cycle93", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -9388,7 +9440,7 @@ def _evaluate_c93b_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -9398,7 +9450,7 @@ def _evaluate_c93b_window(state, hour_utc, day=None):
                                     open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -9552,7 +9604,7 @@ def _render_cycle93b_signals_table(st, state):
                                 "cycle93b", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -9715,7 +9767,7 @@ def _evaluate_c94_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -9723,7 +9775,7 @@ def _evaluate_c94_window(state, hour_utc, day=None):
             entries = select_cycle94_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -9877,7 +9929,7 @@ def _render_cycle94_signals_table(st, state):
                                 "cycle94", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -10040,7 +10092,7 @@ def _evaluate_c274_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -10048,7 +10100,7 @@ def _evaluate_c274_window(state, hour_utc, day=None):
             entries = select_cycle274_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -10202,7 +10254,7 @@ def _render_cycle274_signals_table(st, state):
                                 "cycle274", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -10365,7 +10417,7 @@ def _evaluate_c94b_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -10375,7 +10427,7 @@ def _evaluate_c94b_window(state, hour_utc, day=None):
                                     open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -10529,7 +10581,7 @@ def _render_cycle94b_signals_table(st, state):
                                 "cycle94b", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -10692,7 +10744,7 @@ def _evaluate_c274_window(state, hour_utc, day=None):
             _require_evaluator_status(sig)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             sig = _pd.DataFrame()
         try:
             if diag.get("evaluation_error"):
@@ -10700,7 +10752,7 @@ def _evaluate_c274_window(state, hour_utc, day=None):
             entries = select_cycle274_entries(sig, open_symbols=())
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries = _pd.DataFrame()
         if not isinstance(entries, _pd.DataFrame):
             entries = _pd.DataFrame()
@@ -10854,7 +10906,7 @@ def _render_cycle274_signals_table(st, state):
                                 "cycle274", live_tag),
             unsafe_allow_html=True,
         )
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}")
+        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             try:
@@ -11562,7 +11614,7 @@ def _evaluate_combined_window(state, month, hour_utc, day=None):
             _require_evaluator_status(entries)
         except Exception as exc:
             diag = dict(diag or {})
-            diag["evaluation_error"] = type(exc).__name__
+            diag.setdefault("evaluation_error", _eval_error_text(exc))
             entries, source = _pd.DataFrame(), "BEST"
         source_label = "BEST"
         source_system = cfg["best_id"]

@@ -18,6 +18,11 @@ M5_MEMO_KEY = "check_m5_memo_20261116"
 RETRY_SECONDS = 15.0
 SUCCESS_SECONDS = 60.0
 FETCH_BUDGET_SECONDS = 20.0
+# Extra bounded budget for the Twelve Data fallback route
+# (user order 2026-11-27): when the repository + Dukascopy
+# route cannot serve a symbol/window, the check path may fill
+# it from Twelve Data before declaring the window incomplete.
+TWELVE_FALLBACK_BUDGET_SECONDS = 90.0
 # Deep-history sufficiency for the M15 route. The 1600-bar figure
 # was a Twelve Data-era heuristic (one API call returned 2000
 # bars); the designs' true needs are far smaller -- 32-bar slot
@@ -201,6 +206,100 @@ def _direct_fetch(state, symbols, tf, *, deadline, force=False):
                         force=force)
 
 
+def _twelve_fetch(state, symbols, tf, *, end_ts, deadline=None):
+    """Twelve Data fallback frames for the check route (user
+    order 2026-11-27).
+
+    Dukascopy stays primary: this route is consulted ONLY for
+    symbols/windows the repository + Dukascopy route could not
+    serve. It mirrors the Replay section's Twelve loader
+    (core/replay_section): the same key pool
+    (TwelveDataKeyPool.from_state), the same window request,
+    the same normalize_ohlc normalization, frames truncated to
+    bars starting at or before end_ts. Returned frames are
+    normalized; callers merge them UNDER any existing bars
+    (existing bars win shared stamps, so a Twelve bar only ever
+    fills a gap). Frames carry the replay loader's own basis
+    attrs; the fetch functions additionally mark the read
+    "fallback" in their diag / basis bookkeeping so the UI can
+    label the result "fallback data". Never raises: failures
+    come back as per-symbol error notes and the caller keeps
+    the honest DATA ERROR gate (28/28 or DATA ERROR).
+    """
+    frames, errors = {}, []
+    if not symbols:
+        return frames, errors
+    try:
+        from core import replay_section as _rs
+        pool = _rs._twelve_pool(state)
+    except Exception as exc:
+        return frames, [f"Twelve Data fallback unavailable: "
+                        f"{type(exc).__name__}: {exc}"]
+    prev_wait = _rs._TWELVE_WAIT_LIMIT_S
+    try:
+        for sym in symbols:
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    errors.append(
+                        f"{sym} {tf}: Twelve Data fallback "
+                        f"skipped (budget exhausted)")
+                    continue
+                # Bound the pool's per-request wait by the
+                # budget this route was given.
+                _rs._TWELVE_WAIT_LIMIT_S = max(
+                    5.0, min(prev_wait, remaining))
+            try:
+                frame = _rs._twelve_frame(pool, sym, tf,
+                                          utc_naive(end_ts),
+                                          errors)
+            except Exception as exc:
+                frame = None
+                errors.append(f"{sym} {tf}: Twelve Data fallback "
+                              f"{type(exc).__name__}: {exc}")
+            if frame is not None:
+                frames[sym] = frame
+    finally:
+        _rs._TWELVE_WAIT_LIMIT_S = prev_wait
+    return frames, errors
+
+
+def _assemble_m15_from_m5_frame(m5_frame, frame, required):
+    """Assemble missing M15 bars from a supplied M5 frame
+    (gaps only), the same math as _assemble_m15_gaps but with
+    the M5 bars coming from the Twelve fallback instead of the
+    repository: open=first open, high=max, low=min, close=last
+    close, volume=sum. A stamp already in the frame is never
+    touched. Returns (frame, n_assembled)."""
+    if m5_frame is None or frame is None or len(frame) == 0:
+        return frame, 0
+    m5 = normalize_ohlc(m5_frame)
+    if m5 is None:
+        return frame, 0
+    grid = pd.date_range(frame.index.min(), utc_naive(required),
+                         freq="15min")
+    rows = {}
+    for st in grid:
+        if st in frame.index:
+            continue
+        part_idx = pd.date_range(st, periods=3, freq="5min")
+        if not part_idx.isin(m5.index).all():
+            continue
+        part = m5.loc[part_idx]
+        row = dict(Open=float(part.Open.iloc[0]),
+                   High=float(part.High.max()),
+                   Low=float(part.Low.min()),
+                   Close=float(part.Close.iloc[-1]))
+        if "Volume" in m5.columns:
+            row["Volume"] = float(part.Volume.sum())
+        rows[st] = row
+    if not rows:
+        return frame, 0
+    add = pd.DataFrame.from_dict(rows, orient="index")
+    add.index = pd.DatetimeIndex(add.index)
+    return _merge(frame, add, 5000), len(rows)
+
+
 def _record_load_status(state, tf, frames, requested=()):
     """Honest per-field load status (user order 2026-11-16).
 
@@ -320,6 +419,31 @@ def fetch_check_frames(state, symbols, need_candles=None):
                 sources[sym] = "M15 exact hour-open"
             else:
                 errors.append(f"{sym}: exact M15 hour-start candle unavailable")
+    # Twelve Data fallback (user order 2026-11-27): any symbol
+    # the repository + Dukascopy route still cannot serve --
+    # no frame at all, or a needed candle missing -- gets its
+    # H1 window from Twelve Data (the Replay section's route).
+    # Merged UNDER the existing frame: bars already held always
+    # win a shared stamp, so Twelve only fills gaps. The gate
+    # below is unchanged: 28/28 or DATA ERROR.
+    fb_targets = [s for s in symbols if s not in frames
+                  or (need and not need.issubset(frames[s].index))]
+    if fb_targets:
+        fb_end = entry if entry is not None else utc_naive(
+            pd.Timestamp.now(tz="UTC")).floor("h")
+        fb_frames, fb_notes = _twelve_fetch(
+            state, fb_targets, "H1", end_ts=fb_end,
+            deadline=time.monotonic() + TWELVE_FALLBACK_BUDGET_SECONDS)
+        errors.extend(fb_notes)
+        for sym, raw in fb_frames.items():
+            norm = normalize_ohlc(raw, 1)
+            if norm is None:
+                continue
+            merged = _merge(norm, frames.get(sym))
+            if merged is not None and len(merged) >= 50:
+                frames[sym] = merged
+                sources[sym] = "H1 twelve fallback"
+                h1_fallback = True
     ready_symbols = [s for s in symbols if s in frames
                      and (not need or need.issubset(frames[s].index))]
     latest = max((f.index.max() for f in frames.values()), default=None)
@@ -486,6 +610,62 @@ def fetch_m15_frames(state, symbols, *, deadline=None, need_entry=None, force=Fa
                              data_basis=basis.get(sym, "dukascopy"))
             if sym in raw_frames:
                 _persist_real(repo, raw_frames[sym], sym, "M15", errors)
+    # Twelve Data fallback (user order 2026-11-27): symbols
+    # whose M15 frame is still insufficient after the
+    # repository + Dukascopy route get the window from Twelve
+    # Data (the Replay section's route), merged UNDER existing
+    # bars (existing bars win shared stamps). Remaining gaps
+    # in the window are then assembled from Twelve M5 bars,
+    # gaps only, exactly as the Replay route does; a frame
+    # completed either way is marked basis "fallback" /
+    # "assembled" so the read is labelled.
+    fb_missing = []
+    for sym in symbols:
+        frame = frames.get(sym)
+        ok = frame is not None and required in frame.index \
+            and (need_entry is not None or len(frame) >= MIN_DEEP_BARS)
+        if not ok:
+            fb_missing.append(sym)
+    if fb_missing:
+        fb_frames, fb_errors = _twelve_fetch(
+            state, fb_missing, "M15", end_ts=required,
+            deadline=time.monotonic() + TWELVE_FALLBACK_BUDGET_SECONDS)
+        errors.extend(fb_errors)
+        still = []
+        for sym in fb_missing:
+            raw = fb_frames.get(sym)
+            if raw is not None:
+                norm = normalize_ohlc(raw)
+                if norm is not None:
+                    frame = _merge(norm, frames.get(sym), 5000)
+                    if frame is not None:
+                        frames[sym] = frame
+                        basis[sym] = "fallback"
+                        memo[sym] = dict(
+                            frame=frame, attempt=time.monotonic(),
+                            required=required, data_basis="fallback")
+            frame = frames.get(sym)
+            ok = frame is not None and required in frame.index \
+                and (need_entry is not None or len(frame) >= MIN_DEEP_BARS)
+            if not ok:
+                still.append(sym)
+        if still:
+            m5_frames, m5_errors = _twelve_fetch(
+                state, still, "M5", end_ts=required,
+                deadline=time.monotonic()
+                + TWELVE_FALLBACK_BUDGET_SECONDS)
+            errors.extend(m5_errors)
+            for sym in still:
+                if sym not in m5_frames:
+                    continue
+                filled, n_asm = _assemble_m15_from_m5_frame(
+                    m5_frames[sym], frames.get(sym), required)
+                if n_asm:
+                    frames[sym] = filled
+                    basis[sym] = "assembled"
+                    memo[sym] = dict(
+                        frame=filled, attempt=time.monotonic(),
+                        required=required, data_basis="assembled")
     # Gate Amendment No.2 (user order 2026-11-25 21:59 MMT):
     # assemble any still-missing M15 bars from stored M5 — gaps
     # only, after the exactness self-check inside this path.
@@ -618,6 +798,30 @@ def fetch_m5_frames(state, symbols, *, deadline=None, force=False):
                              data_basis=basis.get(sym, "dukascopy"))
             if sym in raw_frames:
                 _persist_real(repo, raw_frames[sym], sym, "M5", errors)
+    # Twelve Data fallback (user order 2026-11-27), as on the
+    # H1/M15 routes: symbols still missing the required M5 bar
+    # after the repository + Dukascopy route get it from
+    # Twelve Data, merged UNDER existing bars.
+    fb_missing = [s for s in symbols
+                  if frames.get(s) is None
+                  or required not in frames[s].index]
+    if fb_missing:
+        fb_frames, fb_errors = _twelve_fetch(
+            state, fb_missing, "M5", end_ts=required,
+            deadline=time.monotonic() + TWELVE_FALLBACK_BUDGET_SECONDS)
+        errors.extend(fb_errors)
+        for sym, raw in fb_frames.items():
+            norm = normalize_ohlc(raw)
+            if norm is None:
+                continue
+            frame = _merge(norm, frames.get(sym), 400)
+            if frame is not None:
+                frames[sym] = frame
+                basis[sym] = "fallback"
+                memo[sym] = dict(frame=frame,
+                                 attempt=time.monotonic(),
+                                 required=required,
+                                 data_basis="fallback")
     state["check_m5_last_errors"] = errors
     if any(basis.get(s) == "fallback" for s in frames):
         state["check_data_basis"] = "fallback"

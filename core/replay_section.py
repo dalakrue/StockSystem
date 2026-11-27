@@ -308,6 +308,19 @@ def _basis_label(basis: str) -> str:
             "twelve": "Twelve Data"}.get(basis, "")
 
 
+def _moved_text_rp(symbol, direction, entry):
+    """Moved-since-entry text for a displayed Replay pick
+    (user order 2026-11-28): against the latest price in the
+    app's local candle store (the shared core.data.moved_pips
+    helper — local read only, no fetch). "moved: —" when no
+    later price exists. Never raises."""
+    try:
+        from core.data.moved_pips import moved_text as _mt
+        return _mt(symbol, direction, entry)
+    except Exception:
+        return "moved: \u2014"
+
+
 def _stateless_entries(mod, month, frames, slot, m15_frames=None,
                        m5_frames=None):
     """Evaluate ONE slot on a fresh, empty form (raw
@@ -601,8 +614,10 @@ def replay_precheck(month: int, slot, state=None) -> dict:
     # via the combined path (m15_frames=None): the entry
     # candle is synthesized from the signal close.
     dealt = _stateless_entries(mod, month, h1, slot)
-    picks = [{"symbol": r["symbol"], "direction": r["direction"],
-              "entry_px": float(r["entry_px"])} for r in dealt]
+    # Same pick view as the check side (user order 2026-11-28
+    # consistency: every displayed pick carries TP/SL) — the
+    # extra keys are additive; the calculation is unchanged.
+    picks = [_pick_view(r) for r in dealt]
     return {"status": "OK" if picks else "NO SIGNAL",
             "picks": picks}
 
@@ -826,7 +841,8 @@ def render_replay_section(st):
                 f"{p['symbol']} {p['direction']} @ "
                 f"{p['entry_px']:.5f} · TP {p['tp_px']:.5f} "
                 f"({p['tp_pips']:.0f} pips) · SL {p['sl_px']:.5f} "
-                f"({p['sl_pips']:.0f} pips)")
+                f"({p['sl_pips']:.0f} pips) · "
+                f"{_moved_text_rp(p['symbol'], p['direction'], p['entry_px'])}")
     if chk.get("second_best"):
         s = chk["second_best"]
         st.markdown(
@@ -852,6 +868,7 @@ def render_replay_section(st):
         st.markdown(
             f"Recorded at the time: **{past['symbol']} "
             f"{past['direction']} @ {past['entry_px']:.5f}**"
+            f" · {_moved_text_rp(past['symbol'], past['direction'], past['entry_px'])}"
             f"{_hist_note}")
     elif past["kind"] == "no_signal":
         st.markdown(
@@ -861,6 +878,48 @@ def render_replay_section(st):
                     "result for this slot)")
     if res.get("compare"):
         st.markdown(res["compare"])
+        # Visual chip row for the verdict (user order
+        # 2026-11-28): MATCH green / DIFFERENT orange, with a
+        # chip for each side's pick beside it. Display only —
+        # the compare text above stays the record.
+        try:
+            import html as _html_rp
+            _cmp_rp = str(res["compare"])
+            _chips = []
+            _chip_css = ("display:inline-block;padding:3px 10px;"
+                         "border-radius:999px;color:#fff;"
+                         "font-size:12px;font-weight:700;"
+                         "margin:2px 4px 2px 0;")
+            if _cmp_rp.startswith("MATCH"):
+                _chips.append(
+                    f"<span style='{_chip_css}background:#16a34a;'>"
+                    f"✅ MATCH</span>")
+            elif _cmp_rp.startswith("DIFFERENT"):
+                _chips.append(
+                    f"<span style='{_chip_css}background:#ea580c;'>"
+                    f"⚠️ DIFFERENT</span>")
+            _calc0 = (chk.get("picks") or [None])[0]
+            if _calc0:
+                _chips.append(
+                    f"<span style='{_chip_css}background:#2563eb;'>"
+                    f"Calculated: {_html_rp.escape(str(_calc0['symbol']))} "
+                    f"{_html_rp.escape(str(_calc0['direction']))}</span>")
+            if past["kind"] == "pick":
+                _chips.append(
+                    f"<span style='{_chip_css}background:#64748b;'>"
+                    f"Recorded: {_html_rp.escape(str(past['symbol']))} "
+                    f"{_html_rp.escape(str(past['direction']))}</span>")
+            elif past["kind"] == "no_signal":
+                _chips.append(
+                    f"<span style='{_chip_css}background:#64748b;'>"
+                    f"Recorded: NO SIGNAL</span>")
+            if _chips:
+                st.markdown(
+                    "<div style='margin:2px 0 6px 0;'>"
+                    + "".join(_chips) + "</div>",
+                    unsafe_allow_html=True)
+        except Exception:
+            pass
         # OpenRouter narration (user order 2026-11-28): one
         # plain line on WHY a DIFFERENT verdict differs.
         # Dormant without an [openrouter] key — the compare
@@ -888,5 +947,8 @@ def render_replay_section(st):
         st.markdown("**NO SIGNAL**")
     else:
         for p in pre["picks"]:
-            st.markdown(f"**{p['symbol']} {p['direction']} @ "
-                        f"{p['entry_px']:.5f}**")
+            st.markdown(
+                f"**{p['symbol']} {p['direction']} @ "
+                f"{p['entry_px']:.5f}** · TP {p['tp_px']:.5f} "
+                f"· SL {p['sl_px']:.5f} · "
+                f"{_moved_text_rp(p['symbol'], p['direction'], p['entry_px'])}")

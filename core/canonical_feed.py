@@ -152,5 +152,39 @@ def render_history_section(st):
                f"Updated {feed.get('generated_at_mmt')} MMT.")
     _table(st, "per CHECK", feed.get("check"))
     _table(st, "per PRECHECK", feed.get("precheck"))
+    # Net-per-day chart (user order 2026-11-28): the settled
+    # CHECK rows above, aggregated by day — rendered from the
+    # feed's own stored rows, no extra fetch.
+    try:
+        _daily = {}
+        for _r in (feed.get("check") or {}).get("rows") or []:
+            try:
+                _daily[str(_r["date"])] = (
+                    _daily.get(str(_r["date"]), 0.0)
+                    + float(_r["net"]))
+            except Exception:
+                continue
+        if _daily:
+            _days = sorted(_daily)
+            _mx = max(abs(_daily[d]) for d in _days) or 1.0
+            st.markdown("**Net $ per day (per CHECK)**")
+            _bars = []
+            for _d in _days:
+                _v = _daily[_d]
+                _w = max(2.0, 100.0 * abs(_v) / _mx)
+                _c = "#16a34a" if _v >= 0 else "#dc2626"
+                _bars.append(
+                    f"<div style='display:flex;align-items:"
+                    f"center;gap:6px;margin:2px 0;'>"
+                    f"<span style='min-width:82px;font-size:"
+                    f"11px;'>{_d}</span>"
+                    f"<span style='display:inline-block;"
+                    f"height:12px;width:{_w:.0f}%;background:"
+                    f"{_c};border-radius:4px;'></span>"
+                    f"<b style='font-size:12px;'>${_v:+.2f}</b>"
+                    f"</div>")
+            st.markdown("".join(_bars), unsafe_allow_html=True)
+    except Exception:
+        pass
     st.markdown(f"**BEST: {feed.get('best_last24', '—')}** "
                 "(last 24 rows)")

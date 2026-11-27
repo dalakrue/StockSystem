@@ -194,6 +194,15 @@ def run_app():
                 inject_motion_background_css()
             except Exception:
                 pass
+        # Shared glass theme (user order 2026-11-28): ONE
+        # glass stylesheet for the whole app, injected once
+        # here at the app entry so every section shares the
+        # same panels/blur/borders. Pure CSS; never blocks.
+        try:
+            from ui.glass_theme_20261128 import inject_glass_theme
+            inject_glass_theme(st)
+        except Exception:
+            pass
         inject_mobile_css()
         inject_mobile_table_alignment(st, phone_mode=phone_mode)
         st.markdown(extreme_mobile_css(bool(st.session_state.get("extreme_mobile_lite_mode_20260628"))), unsafe_allow_html=True)

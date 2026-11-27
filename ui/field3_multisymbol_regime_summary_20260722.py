@@ -3261,6 +3261,20 @@ def _tpsl_text(symbol, direction, entry, tp=None, sl=None,
     return f"TP {tpv:.{dec}f} · SL {slv:.{dec}f}"
 
 
+def _moved_text_safe(symbol, direction, entry):
+    """Moved-since-entry text for a displayed pick (user
+    order 2026-11-28): "moved: +X.X pips" against the latest
+    price in the app's local candle store, or "moved: —"
+    when no later price exists. Local read only (the shared
+    core.data.moved_pips helper) — no provider call is ever
+    made for this figure. Never raises."""
+    try:
+        from core.data.moved_pips import moved_text as _mt
+        return _mt(symbol, direction, entry)
+    except Exception:
+        return "moved: —"
+
+
 def _eval_test_status(res):
     """Full-way test verdict for a calculated result dict
     (user order 2026-11-28): PASS when the evaluation
@@ -3766,11 +3780,13 @@ def _backfill_eval_history_from_state(state):
         pass
 
 
-def _hist_entry_text(e):
+def _hist_entry_text(e, moved=None):
     """One history entry's display text: its Quick look, with
     TP/SL PRICES appended when the entry is a pick whose line
     does not already carry them (user order 2026-11-28: TP
-    and SL beside every entry, history rows included)."""
+    and SL beside every entry, history rows included). An
+    OPEN pick also carries its moved-since-entry figure
+    (same user order) when the caller supplies it."""
     try:
         e = e or {}
         quick = str(e.get("quick", "") or "")
@@ -3783,6 +3799,9 @@ def _hist_entry_text(e):
         if tpsl and tpsl.split(" \u00b7 ")[0] not in quick:
             quick = (quick + " \u00b7 " + tpsl) if quick \
                 else tpsl
+        if moved:
+            quick = (quick + " \u00b7 " + str(moved)) if quick \
+                else str(moved)
         return quick
     except Exception:
         return str((e or {}).get("quick", "") or "")
@@ -3797,6 +3816,174 @@ def _hist_test_text(r):
         reason = str((r or {}).get("test_reason") or "")
         return f"FAIL \u2014 {reason}" if reason else "FAIL"
     return tst
+
+
+def _render_readiness_grid(st, payload):
+    """28-symbol readiness grid for the current check window
+    (user order 2026-11-28): one coloured cell per symbol from
+    the window's own ranking — green = the entry, amber =
+    fired but not selected, grey = evaluated with no entry,
+    red = no data. Pure display of the stored payload; no
+    fetch, no re-evaluation. Never raises."""
+    try:
+        import html as _html
+        ranking = (payload or {}).get("ranking")
+        nev = (payload or {}).get("n_evaluable")
+        if ranking is None or not hasattr(ranking, "iterrows") \
+                or ranking.empty \
+                or "Symbol" not in ranking.columns:
+            if isinstance(nev, int) and nev >= 0:
+                st.caption(
+                    f"Symbol readiness: {nev}/{_C22_N_REQ} ready")
+            return
+        _colors = {"✅ ENTRY": "#16a34a",
+                   "Fired — not selected": "#d97706",
+                   "— No entry": "#64748b",
+                   "⚠ No data": "#dc2626"}
+        cells = []
+        ready = 0
+        total = 0
+        for _, r in ranking.iterrows():
+            sym = str(r.get("Symbol", "") or "")
+            status = str(r.get("Status", "") or "")
+            if not sym:
+                continue
+            total += 1
+            if status != "⚠ No data":
+                ready += 1
+            bg = _colors.get(status, "#64748b")
+            cells.append(
+                f"<span title='{_html.escape(status)}' "
+                f"style='display:inline-block;min-width:62px;"
+                f"text-align:center;padding:3px 4px;"
+                f"border-radius:6px;background:{bg};color:#fff;"
+                f"font-size:10px;font-weight:700;'>"
+                f"{_html.escape(sym)}</span>")
+        if not cells:
+            return
+        st.markdown(
+            f"**Symbol readiness — {ready}/{total} ready** "
+            f"<span style='font-size:11px;color:#64748b;'>"
+            f"🟩 entry · 🟧 fired, not selected · ⬜ no entry · "
+            f"🟥 no data</span>",
+            unsafe_allow_html=True)
+        st.markdown(
+            "<div style='display:flex;flex-wrap:wrap;gap:4px;"
+            "margin:2px 0 8px 0;'>" + "".join(cells) + "</div>",
+            unsafe_allow_html=True)
+    except Exception:
+        pass
+
+
+def _render_history_visuals(st, sysname):
+    """History charts (user order 2026-11-28): net moved pips
+    per day + a win/loss summary visual, computed from the
+    persistent eval-history store's recorded picks (live +
+    Replay records), each marked to the latest price in the
+    local candle store — the same moved-pips figure shown
+    beside every pick. Stored data only, no fetches; these
+    are marked-to-market figures, not settled results.
+    Never raises."""
+    try:
+        from core.data.moved_pips import moved_pips as _mp
+        rows = []
+        for _name in (str(sysname), str(sysname) + ":replay"):
+            try:
+                rows.extend(_load_eval_history(_name,
+                                               hours=24 * 30))
+            except Exception:
+                pass
+        daily = {}
+        wins = losses = flat = priced = 0
+        for r in rows:
+            day = str(r.get("window_utc") or "")[:10]
+            if not day:
+                continue
+            for e in (r.get("entries") or []):
+                sym = str(e.get("symbol") or "")
+                if not sym:
+                    continue
+                v = _mp(sym, e.get("direction"), e.get("entry"))
+                if v is None:
+                    continue
+                priced += 1
+                daily[day] = daily.get(day, 0.0) + v
+                if v > 0:
+                    wins += 1
+                elif v < 0:
+                    losses += 1
+                else:
+                    flat += 1
+        if not priced:
+            return
+        days = sorted(daily)[-14:]
+        st.markdown(
+            "#### 📊 History charts — net moved pips per day")
+        st.caption(
+            "Recorded picks in the history store, each marked "
+            "to the latest stored price (moved pips). "
+            "Marked-to-market — not settled results.")
+        _charted = False
+        try:
+            import plotly.graph_objects as _go
+            _fig = _go.Figure(_go.Bar(
+                x=days,
+                y=[round(daily[d], 1) for d in days],
+                marker_color=[
+                    "#16a34a" if daily[d] >= 0 else "#dc2626"
+                    for d in days]))
+            _fig.update_layout(
+                height=220,
+                margin=dict(l=6, r=6, t=6, b=6),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                xaxis_title="Day (UTC)",
+                yaxis_title="Net moved pips")
+            st.plotly_chart(_fig, use_container_width=True)
+            _charted = True
+        except Exception:
+            _charted = False
+        if not _charted:
+            _mx = max((abs(daily[d]) for d in days),
+                      default=1.0) or 1.0
+            _bars = []
+            for d in days:
+                v = daily[d]
+                w = max(2.0, 100.0 * abs(v) / _mx)
+                c = "#16a34a" if v >= 0 else "#dc2626"
+                _bars.append(
+                    f"<div style='display:flex;align-items:"
+                    f"center;gap:6px;margin:2px 0;'>"
+                    f"<span style='min-width:82px;font-size:"
+                    f"11px;'>{d}</span>"
+                    f"<span style='display:inline-block;"
+                    f"height:12px;width:{w:.0f}%;background:"
+                    f"{c};border-radius:4px;'></span>"
+                    f"<b style='font-size:12px;'>{v:+.1f}</b>"
+                    f"</div>")
+            st.markdown("".join(_bars), unsafe_allow_html=True)
+        _tot = wins + losses + flat
+        if _tot:
+            _wp = 100.0 * wins / _tot
+            _lp = 100.0 * losses / _tot
+            _fp = 100.0 - _wp - _lp
+            st.markdown(
+                f"**Win / loss (marked)** — 🟩 winning {wins} "
+                f"· 🟥 losing {losses} · ⬜ flat {flat} "
+                f"(of {priced} priced picks)")
+            st.markdown(
+                "<div style='display:flex;height:14px;"
+                "border-radius:7px;overflow:hidden;"
+                "margin:2px 0 8px 0;'>"
+                f"<div style='width:{_wp:.1f}%;background:"
+                f"#16a34a;'></div>"
+                f"<div style='width:{_lp:.1f}%;background:"
+                f"#dc2626;'></div>"
+                f"<div style='width:{_fp:.1f}%;background:"
+                f"#94a3b8;'></div></div>",
+                unsafe_allow_html=True)
+    except Exception:
+        pass
 
 
 def _render_eval_history(st, state, sysname):
@@ -3824,7 +4011,28 @@ def _render_eval_history(st, state, sysname):
             st.caption("No checks recorded yet in the last 24 hours \u2014 "
                        "history builds as each window evaluates and is "
                        "kept across app restarts.")
+            _render_history_visuals(st, sysname)
             return
+        import datetime as _dt_hv
+        _now_hv = _dt_hv.datetime.now(
+            _dt_hv.timezone.utc).replace(tzinfo=None)
+
+        def _entry_text_open(win_iso, e):
+            """Entry text for one history row; an OPEN pick
+            (its window + 48h — the system's exit horizon —
+            still ahead) also carries its moved-since-entry
+            figure (user order 2026-11-28)."""
+            try:
+                _win = _pd.Timestamp(win_iso).tz_localize(None)
+                if _win + _pd.Timedelta(hours=48) > _now_hv:
+                    return _hist_entry_text(
+                        e, moved=_moved_text_safe(
+                            e.get("symbol"), e.get("direction"),
+                            e.get("entry")))
+            except Exception:
+                pass
+            return _hist_entry_text(e)
+
         _disp_pairs = []
         for r in rows:
             try:
@@ -3837,7 +4045,9 @@ def _render_eval_history(st, state, sysname):
             _syms = (f"{int(_nev)}/{_C22_N_REQ}"
                      if isinstance(_nev, int) and _nev >= 0 else f"\u2014/{_C22_N_REQ}")
             _ent = r.get("entries") or []
-            _res = (" \u00b7 ".join(_hist_entry_text(e) for e in _ent)
+            _res = (" \u00b7 ".join(
+                        _entry_text_open(r.get("window_utc"), e)
+                        for e in _ent)
                     if _ent else ("Calculation incomplete" if isinstance(_nev, int) and 0 <= _nev < 20 else "\u2014 no entry"))
             _disp_pairs.append((str(r["window_utc"]),
                                 {"Check (MMT)": _check,
@@ -3858,7 +4068,8 @@ def _render_eval_history(st, state, sysname):
             _syms = (f"{int(_nev)}/{_C22_N_REQ}"
                      if isinstance(_nev, int) and _nev >= 0 else f"\u2014/{_C22_N_REQ}")
             _ent = r.get("entries") or []
-            _quicks = [_hist_entry_text(e) for e in _ent
+            _quicks = [_entry_text_open(r.get("window_utc"), e)
+                       for e in _ent
                        if str(e.get("quick", ""))]
             _res = (" \u00b7 ".join(_quicks) if _quicks
                     else "\U0001F7E3 Replay")
@@ -3872,6 +4083,7 @@ def _render_eval_history(st, state, sysname):
         _disp = [_d for _w, _d in _disp_pairs]
         st.dataframe(_pd.DataFrame(_disp),
                      use_container_width=True, hide_index=True)
+        _render_history_visuals(st, sysname)
     except Exception:
         pass
 
@@ -4577,6 +4789,34 @@ _FLOAT_BAR_CSS = (
     "</style>")
 
 
+def _render_signal_system_selectbox(st):
+    """The Signal-system (month/cycle) selector widget —
+    rendered INSIDE the floating control box (user order
+    2026-11-28: the main controls live in the floating glass
+    panel). Same widget key, options and formatter as the
+    old top-of-page selectbox, so the session value and the
+    resolution logic downstream are unchanged; the main
+    flow reads st.session_state["signal_system"] exactly as
+    before. Never raises."""
+    try:
+        _valid_sysids = [_row[1] for _row in _MONTH_PANEL_ORDER]
+        if st.session_state.get("signal_system") not in _valid_sysids:
+            import datetime as _dtf
+            _mnow = _dtf.datetime.now(_dtf.timezone.utc).month
+            st.session_state["signal_system"] = (
+                _MONTH_PANEL_ORDER[_mnow - 1][1]
+                if 1 <= _mnow <= 12 else _valid_sysids[0])
+        st.selectbox(
+            "Signal system",
+            options=[_sys for _m, _sys, _nn, _code
+                     in _MONTH_PANEL_ORDER],
+            format_func=lambda v: _SIGNAL_PANELS[v]["label"],
+            key="signal_system",
+        )
+    except Exception:
+        pass
+
+
 def _render_floating_controls(st, state):
     """Floating control bar (user order 2026-11-16 ~20:56 MMT,
     moved to the upper right 23:10 MMT the same day):
@@ -4585,10 +4825,13 @@ def _render_floating_controls(st, state):
     the TOP-RIGHT of the page. The reminders were migrated here
     from the page bottom so they sit beside the refresh button,
     as ordered; their tick boxes render inside the bar's panel
-    while it is open (open by default, so the ticks show) and
-    persist in session state exactly as before. If the CSS
-    positioning ever fails, the bar simply appears in the page
-    flow at the same place -- the controls work either way.
+    while it is open and persist in session state exactly as
+    before. If the CSS positioning ever fails, the bar simply
+    appears in the page flow at the same place -- the controls
+    work either way.
+    (User order 2026-11-28: the bar is COLLAPSED by default —
+    one small "Controls" button — and the Signal-system
+    (month/cycle) selector moved into it, beside Refresh.)
     Never raises."""
     try:
         st.markdown(_FLOAT_BAR_CSS, unsafe_allow_html=True)
@@ -4598,7 +4841,8 @@ def _render_floating_controls(st, state):
             # CLOSE / OPEN for the whole floating bar (fix
             # 2026-11-25: the bar had no close button and covered
             # the page). Closed = one small button only.
-            if not bool(st.session_state.get("fx_float_open", True)):
+            # Collapsed by default (user order 2026-11-28).
+            if not bool(st.session_state.get("fx_float_open", False)):
                 if st.button("⚙ Controls — tap to open",
                              key="fx_float_open_btn",
                              use_container_width=True):
@@ -4621,6 +4865,11 @@ def _render_floating_controls(st, state):
                     except Exception:
                         pass
                     return
+            # Signal-system (month/cycle) selector — in the
+            # floating box beside Refresh (user order
+            # 2026-11-28).
+            _render_signal_system_selectbox(st)
+            st.markdown("---")
             _c1, _c2 = st.columns(2)
             with _c1:
                 if st.button("\U0001f504 Refresh",
@@ -12138,6 +12387,10 @@ def _render_check_signal_boxes(st, disp, window_mmt, system_label):
                 _tp = str(_r.get("TP", "") or "")
                 _sl = str(_r.get("SL", "") or "")
                 _sc = str(_r.get("Score", "") or "")
+                # Moved since entry (user order 2026-11-28):
+                # against the latest locally stored price.
+                _mv = _moved_text_safe(_sym, _dir,
+                                       _r.get("Entry"))
             except Exception:
                 continue
             _cards.append(
@@ -12152,7 +12405,8 @@ def _render_check_signal_boxes(st, disp, window_mmt, system_label):
                 f"{_html.escape(_dir)} {_sym}</b> \u00b7 Entry "
                 f"{_html.escape(_ent)} | TP {_html.escape(_tp)} | "
                 f"SL {_html.escape(_sl)} \u00b7 Score "
-                f"{_html.escape(_sc)}</div>"
+                f"{_html.escape(_sc)} \u00b7 "
+                f"{_html.escape(_mv)}</div>"
                 f"<div style='margin-top:2px;font-size:12px;"
                 f"color:#475569;'>Strategy: "
                 f"{_html.escape(_strat)}</div>"
@@ -12225,6 +12479,9 @@ def _render_check_filled_box(st, filled, window_mmt, system_label):
             f"\u00b7 Entry {float(filled['entry']):.{_d}f} | TP "
             f"{float(filled['tp']):.{_d}f} | SL "
             f"{float(filled['sl']):.{_d}f}</div>",
+            # Moved since entry (user order 2026-11-28).
+            f"<div style='margin-top:2px;'>"
+            f"{_html.escape(_moved_text_safe(filled.get('symbol'), filled.get('direction'), filled.get('entry')))}</div>",
         ]
         _pct = filled.get("near_pct")
         if isinstance(_pct, (int, float)):
@@ -12494,7 +12751,8 @@ def _render_manual_result_block(st, result, kind):
                 st.markdown(
                     f"TP {p['tp_px']:.5f} · SL "
                     f"{p['sl_px']:.5f} (TP {p['tp_pips']:.0f} "
-                    f"/ SL {p['sl_pips']:.0f} pips)")
+                    f"/ SL {p['sl_pips']:.0f} pips) · "
+                    f"{_moved_text_safe(p.get('symbol'), p.get('direction'), p.get('entry_px'))}")
             else:
                 st.markdown(
                     f"### {p['symbol']} {p['direction']} @ "
@@ -12507,8 +12765,14 @@ def _render_manual_result_block(st, result, kind):
                     p.get("entry_px"), p.get("tp_px"),
                     p.get("sl_px"), p.get("tp_pips"),
                     p.get("sl_pips"))
+                # Moved since entry (user order 2026-11-28).
+                _mv_m = _moved_text_safe(
+                    p.get("symbol"), p.get("direction"),
+                    p.get("entry_px"))
                 if _tpsl:
-                    st.markdown(_tpsl)
+                    st.markdown(f"{_tpsl} · {_mv_m}")
+                else:
+                    st.markdown(_mv_m)
     # Full-way test verdict beside the signal (user order
     # 2026-11-28): PASS for a completed evaluation (a
     # NO SIGNAL with PASS is a valid, different statement
@@ -12567,7 +12831,8 @@ def _render_manual_result_block(st, result, kind):
             f"Recorded in the walked memory: "
             f"**{past['symbol']} {past['direction']} @ "
             f"{past['entry_px']:.5f}**"
-            + (f" \u00b7 {_tpsl_p}" if _tpsl_p else ""))
+            + (f" \u00b7 {_tpsl_p}" if _tpsl_p else "")
+            + f" \u00b7 {_moved_text_safe(past.get('symbol'), past.get('direction'), past.get('entry_px'))}")
     elif past.get("kind") == "no_signal":
         st.markdown(
             "Recorded in the walked memory: **NO SIGNAL**")
@@ -12894,6 +13159,10 @@ def _render_combined_signals_table_live(st, state, month):
                 # plain no-entry note (this branch remains for
                 # windows with no candidate to fill from).
                 _render_second_best(st, payload.get("second_best"))
+        # 28-symbol readiness grid for this window (user
+        # order 2026-11-28): coloured cells from the stored
+        # ranking — display only.
+        _render_readiness_grid(st, payload)
         return payload
     except Exception:
         _p = state.get(_COMBINED_CFG[month]["state_key"])
@@ -13420,11 +13689,15 @@ def _render_precheck_result(st, result):
         if result["status"] == "pick":
             _d = int(result.get("dec", 5))
             _src = ""
+            # Moved since entry (user order 2026-11-28).
+            _mv_pc = _moved_text_safe(
+                result.get("symbol"), result.get("direction"),
+                result.get("entry"))
             st.markdown(
                 f"**\U0001f50e POSSIBLE (pre-check \u2014 not the final signal): "
                 f"{result['direction']} {result['symbol']}** \u2014 entry "
                 f"~{result['entry']:.{_d}f} | SL {result['sl']:.{_d}f} | "
-                f"TP {result['tp']:.{_d}f} \u2014 chance ~{result['pct']}% "
+                f"TP {result['tp']:.{_d}f} \u00b7 {_mv_pc} \u2014 chance ~{result['pct']}% "
                 f"({result['grade']}){_src}")
             st.caption(f"Pre-check for the {_mmt} MMT check, read from the "
                        "still-forming signal candle. The final signal is "
@@ -13468,6 +13741,7 @@ def _render_precheck_result(st, result):
                         f"~{float(_sb_h['entry']):.{_d_pf}f} | SL "
                         f"{float(_sb_h['sl']):.{_d_pf}f} | TP "
                         f"{float(_sb_h['tp']):.{_d_pf}f}"
+                        f" \u00b7 {_moved_text_safe(_sb_h.get('symbol'), _sb_h.get('direction'), _sb_h.get('entry'))}"
                         f"{_pct_pf_txt} \u2014 taken as the "
                         f"filled entry if no equation fires at "
                         f"the {_mmt} check.")
@@ -13720,9 +13994,20 @@ def render_multisymbol_regime_summary(
     _load_saved_if_needed(state)
     context = get_global_symbol_context(state)
 
+    # Floating control bar (user orders 2026-11-16 + 2026-11-28):
+    # rendered BEFORE the selector resolution below because the
+    # Signal-system (month/cycle) selector widget now lives
+    # inside it (collapsed by default), beside Refresh, the TEST
+    # toggles and the check-time reminders. The bar is CSS-fixed
+    # to the top-right, so its position in the render order does
+    # not change where it appears.
+    _render_floating_controls(st, state)
+
     # Signal-system selector: the 12 standing monthly systems ONLY
     # (best-only since 2026-11-06; the cfg panels evaluate the
-    # current registry best via core.signal_mode).
+    # current registry best via core.signal_mode). The widget
+    # itself renders inside the floating control box above; this
+    # block only resolves the session value, exactly as before.
     _combined_choice = None
     try:
         import datetime as _dtm
@@ -13737,12 +14022,7 @@ def render_multisymbol_regime_summary(
             st.session_state["signal_system"] = (
                 _MONTH_PANEL_ORDER[_mnow - 1][1]
                 if 1 <= _mnow <= 12 else _valid_sysids[0])
-        _sys_choice = st.selectbox(
-            "Signal system",
-            options=[_sys for _m, _sys, _nn, _code in _MONTH_PANEL_ORDER],
-            format_func=lambda v: _SIGNAL_PANELS[v]["label"],
-            key="signal_system",
-        )
+        _sys_choice = st.session_state.get("signal_system")
         if _sys_choice in _COMBINED_CFG_SYSIDS:
             # Month cfg panel: keep the router's active system on
             # the month's current BEST system (banner/hours stay
@@ -13788,10 +14068,9 @@ def render_multisymbol_regime_summary(
         (i + 1 for i, _row in enumerate(_MONTH_PANEL_ORDER)
          if _row[1] == _active), None)
 
-    # Floating control bar (user order 2026-11-16 ~20:56 MMT):
-    # Refresh + TEST preview + check-time reminders in one floating
-    # glass bar (the reminders migrated here, beside Refresh).
-    _render_floating_controls(st, state)
+    # (The floating control bar renders earlier in this
+    # function — before the selector resolution — since
+    # 2026-11-28; see the note there.)
 
     # ===== SECTION 1 -- REAL CHECK SIGNAL =====
     # Colour + line law (user order 2026-11-25): every section has

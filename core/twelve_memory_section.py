@@ -570,7 +570,21 @@ def build_memory(month, year, state=None, progress=None):
 
 def render_twelve_memory_section(st):
     st.markdown("---")
-    st.markdown("#### 🔷 Twelve Data API Memory Building")
+    # Highlighted header (user order 2026-11-28): this
+    # section stands out from the others — gradient glass
+    # panel, accent glow border, and a HIGHLIGHT badge.
+    st.markdown(
+        "<div class='fx-accent-glow' style='border:2px solid "
+        "#0ea5e9;border-radius:12px;padding:10px 14px;"
+        "margin:8px 0 6px 0;background:linear-gradient(90deg,"
+        "rgba(14,165,233,.85),rgba(124,58,237,.75));"
+        "color:#fff;font-size:18px;font-weight:800;'>"
+        "🔷 Twelve Data API Memory Building"
+        "<span style='background:#fff;color:#0369a1;"
+        "border-radius:999px;padding:2px 9px;font-size:11px;"
+        "font-weight:800;margin-left:8px;vertical-align:2px;'>"
+        "⭐ HIGHLIGHT</span></div>",
+        unsafe_allow_html=True)
     st.caption(
         "Pick a month and year, then Start: the app downloads "
         "that month's candles (H1 / M15 / M5, 28 symbols) from "
@@ -651,6 +665,51 @@ def render_twelve_memory_section(st):
             f"{comp['only_built']} only in the Twelve build, "
             f"{comp['only_past']} only in the stored past, "
             f"out of {comp['shared_slots']} shared slots.")
+        # Similarity gauge + per-slot match/differ visual
+        # (user order 2026-11-28): rendered from the stored
+        # compare result only — no extra data is loaded.
+        try:
+            _sim_v = float(comp["similarity_pct"])
+            _sim_c = ("#16a34a" if _sim_v >= 70 else
+                      "#d97706" if _sim_v >= 40 else "#dc2626")
+            st.markdown(
+                f"<div style='margin:6px 0 2px 0;"
+                f"font-size:13px;'><b>Similarity</b> "
+                f"{_sim_v:.1f}%</div>"
+                f"<div style='height:14px;border-radius:7px;"
+                f"background:rgba(148,163,184,.35);"
+                f"overflow:hidden;'>"
+                f"<div style='height:100%;"
+                f"width:{max(0.0, min(100.0, _sim_v)):.1f}%;"
+                f"background:{_sim_c};border-radius:7px;'>"
+                f"</div></div>",
+                unsafe_allow_html=True)
+            _cell_colors = {"MATCH": "#16a34a",
+                            "DIFFERENT": "#ea580c",
+                            "ONLY IN TWELVE BUILD": "#2563eb",
+                            "ONLY IN STORED PAST": "#94a3b8"}
+            _cells = []
+            for _s, _a, _b, _verdict in comp.get("rows") or []:
+                _cells.append(
+                    f"<span title='{_s} — {_verdict}' "
+                    f"style='display:inline-block;width:12px;"
+                    f"height:12px;border-radius:3px;"
+                    f"background:"
+                    f"{_cell_colors.get(_verdict, '#64748b')};'>"
+                    f"</span>")
+            if _cells:
+                st.markdown(
+                    "<div style='display:flex;flex-wrap:wrap;"
+                    "gap:3px;margin:6px 0 2px 0;'>"
+                    + "".join(_cells) + "</div>",
+                    unsafe_allow_html=True)
+                st.caption(
+                    "One square per shared slot — 🟩 match · "
+                    "🟧 different · 🟦 only in the Twelve build "
+                    "· ⬜ only in the stored past. Hover a "
+                    "square for its slot.")
+        except Exception:
+            pass
         # OpenRouter narration (user order 2026-11-28): one
         # plain line glossing the similarity. Dormant without
         # an [openrouter] key — the sentence above is then

@@ -3211,6 +3211,104 @@ def _c22_signals_to_display(entries):
     return _pd.DataFrame(rows, columns=["Quick look", "Symbol", "Direction", "Strategy", "Entry", "TP", "SL", "Score"])
 
 
+def _tpsl_prices(symbol, direction, entry, tp=None, sl=None,
+                 tp_pips=None, sl_pips=None):
+    """(tp_price, sl_price, decimals) for a displayed pick
+    (user order 2026-11-28: TP and SL beside every entry).
+    The record's own TP/SL values win; otherwise the system's
+    standing rule — TP = entry ± 90 pips, SL = entry ∓ 30
+    pips, or the record's own tp_pips/sl_pips when it carries
+    them (pip = 0.01 for JPY pairs, 0.0001 otherwise, via the
+    app's own pip_size). Returns None when no price can be
+    derived. Never raises."""
+    try:
+        from core.cycle12_best import pip_size as _pip_size
+        e = float(entry)
+        pip = _pip_size(str(symbol).upper())
+        dec = 3 if pip >= 0.01 else 5
+        buy = str(direction).upper() == "BUY"
+
+        def _num(v):
+            try:
+                f = float(v)
+                return f if f == f else None
+            except Exception:
+                return None
+
+        tpv, slv = _num(tp), _num(sl)
+        if tpv is None:
+            p = _num(tp_pips)
+            tpv = e + (p if p is not None else 90.0) * pip \
+                * (1 if buy else -1)
+        if slv is None:
+            p = _num(sl_pips)
+            slv = e - (p if p is not None else 30.0) * pip \
+                * (1 if buy else -1)
+        return round(tpv, dec), round(slv, dec), dec
+    except Exception:
+        return None
+
+
+def _tpsl_text(symbol, direction, entry, tp=None, sl=None,
+               tp_pips=None, sl_pips=None):
+    """"TP <price> · SL <price>" for a pick, or "" when no
+    prices can be derived."""
+    r = _tpsl_prices(symbol, direction, entry, tp, sl,
+                     tp_pips, sl_pips)
+    if not r:
+        return ""
+    tpv, slv, dec = r
+    return f"TP {tpv:.{dec}f} · SL {slv:.{dec}f}"
+
+
+def _eval_test_status(res):
+    """Full-way test verdict for a calculated result dict
+    (user order 2026-11-28): PASS when the evaluation
+    completed (its 28/28 gate was reached — the calculators
+    only return a non-DATA-ERROR status after the full
+    chain ran), FAIL with the reason kept when it did not.
+    A result with no status yields no verdict — a PASS is
+    never fabricated for an unevaluated window."""
+    try:
+        status = str((res or {}).get("status") or "")
+        if status == "DATA ERROR":
+            return "FAIL", str(
+                (res or {}).get("missing")
+                or "DATA ERROR — evaluation incomplete")
+        if status:
+            return "PASS", ""
+    except Exception:
+        pass
+    return "", ""
+
+
+def _fullway_test_verdict(payload):
+    """Full-way test verdict for a LIVE window payload (user
+    order 2026-11-28): the window's own evaluation status
+    serves as its test status — PASS when the evaluation
+    completed at the payload's own readiness floor, FAIL
+    (reason kept) when the payload is a data failure. A
+    payload that was never evaluated yields no verdict."""
+    try:
+        if not isinstance(payload, dict):
+            return "", ""
+        if payload.get("evaluated_at_utc") is None \
+                and "n_evaluable" not in payload:
+            return "", ""
+        if _payload_data_failed(payload):
+            err = str(((payload.get("diag") or {}).get(
+                "evaluation_error") or ""))
+            if err:
+                return "FAIL", err
+            return "FAIL", (
+                f"price data incomplete — only "
+                f"{payload.get('n_evaluable', 0)}/{_C22_N_REQ} "
+                f"symbols ready (DATA ERROR)")
+        return "PASS", ""
+    except Exception:
+        return "", ""
+
+
 def _entry_row_colors(df):
     """Styler that colors a WHOLE entry row: light blue for BUY, light
     red for SELL (user order 2026-10-26). A row counts as an entry row
@@ -3426,6 +3524,44 @@ def _record_eval_history(sysname, payload, replace=True):
             except Exception:
                 return None
 
+        # Full-way test verdict stored with the evaluation
+        # (user order 2026-11-28): an explicit payload value
+        # wins; otherwise it is derived from the evaluation's
+        # OWN recorded facts — PASS only when the recorded
+        # readiness reached the window's own gate (its
+        # min_evaluable floor when it carries one, else the
+        # symbol count, else 28/28) with no evaluation error;
+        # FAIL (reason kept) when it fell short or errored.
+        # No readiness recorded -> no verdict stored: a PASS
+        # is never fabricated for an unevaluated window.
+        _tst = str(payload.get("test_status") or "").strip().upper()
+        _tsr = str(payload.get("test_reason") or "")
+        if _tst not in ("PASS", "FAIL"):
+            _nev_i = _int_or_none(payload.get("n_evaluable"))
+            _floor_i = _int_or_none(payload.get("min_evaluable"))
+            if _floor_i is None:
+                _floor_i = _int_or_none(payload.get("n_symbols"))
+            if _floor_i is None:
+                _floor_i = _C22_N_REQ
+            _derr = ""
+            if isinstance(payload.get("diag"), dict):
+                _derr = str(payload["diag"].get(
+                    "evaluation_error") or "")
+            if _derr:
+                _tst, _tsr = "FAIL", _derr
+            elif _nev_i is not None and _nev_i >= 0 \
+                    and _nev_i >= _floor_i:
+                _tst = "PASS"
+            elif _nev_i is not None and _nev_i >= 0:
+                _tst = "FAIL"
+                if not _tsr:
+                    _tsr = (f"evaluation incomplete \u2014 "
+                            f"{_nev_i}/{_floor_i} symbols ready "
+                            f"(DATA ERROR)")
+            # A negative readiness (the backfill's "unknown"
+            # marker for seeded last-entry rows) stores no
+            # verdict at all.
+
         path = _eval_history_db_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         conn = _sq.connect(str(path), timeout=10)
@@ -3436,21 +3572,37 @@ def _record_eval_history(sysname, payload, replace=True):
                 "window_mmt TEXT, evaluated_at_utc TEXT, n_symbols INTEGER, "
                 "n_evaluable INTEGER, entries_json TEXT, "
                 "PRIMARY KEY (cycle, window_utc))")
+            for _col in ("test_status TEXT", "test_reason TEXT"):
+                try:
+                    conn.execute(
+                        "ALTER TABLE signal_eval_history "
+                        "ADD COLUMN " + _col)
+                except Exception:
+                    pass
             _verb = "INSERT OR REPLACE" if replace else "INSERT OR IGNORE"
             conn.execute(
                 _verb + " INTO signal_eval_history"
                 " (cycle, window_utc, window_mmt, evaluated_at_utc,"
-                "  n_symbols, n_evaluable, entries_json)"
-                " VALUES (?,?,?,?,?,?,?)",
+                "  n_symbols, n_evaluable, entries_json,"
+                "  test_status, test_reason)"
+                " VALUES (?,?,?,?,?,?,?,?,?)",
                 (str(sysname), win_iso, str(payload.get("window_mmt", "")),
                  ev_iso, _int_or_none(payload.get("n_symbols")),
                  _int_or_none(payload.get("n_evaluable")),
-                 _json.dumps(entries)))
+                 _json.dumps(entries), _tst, _tsr))
             import datetime as _dt
             _cut = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None)
                     - _dt.timedelta(hours=48)).isoformat()
+            # Replay records (cycle "<sysid>:replay", user
+            # order 2026-11-28) are exempt from the 48h
+            # prune: they are the persistent memory's
+            # accumulated replay archive — one small row per
+            # calculated slot — and a replay of an old slot
+            # must stay recorded, not be pruned by its own
+            # insert. Live window rows still prune as before.
             conn.execute(
-                "DELETE FROM signal_eval_history WHERE window_utc < ?", (_cut,))
+                "DELETE FROM signal_eval_history WHERE window_utc < ?"
+                " AND cycle NOT LIKE '%:replay'", (_cut,))
             conn.commit()
         finally:
             conn.close()
@@ -3480,23 +3632,117 @@ def _load_eval_history(sysname, hours=24):
                 - _dt.timedelta(hours=hours)).isoformat()
         conn = _sq.connect(str(path), timeout=10)
         try:
-            cur = conn.execute(
-                "SELECT window_utc, n_symbols, n_evaluable, entries_json "
-                "FROM signal_eval_history WHERE cycle = ? AND window_utc >= ? "
-                "ORDER BY window_utc DESC", (str(sysname), _cut))
+            try:
+                _raw = conn.execute(
+                    "SELECT window_utc, n_symbols, n_evaluable,"
+                    " entries_json, test_status, test_reason "
+                    "FROM signal_eval_history WHERE cycle = ? "
+                    "AND window_utc >= ? "
+                    "ORDER BY window_utc DESC",
+                    (str(sysname), _cut)).fetchall()
+            except Exception:
+                # A store written before the test_status
+                # columns existed (2026-11-28): read the old
+                # shape, verdicts unknown.
+                _raw = [tuple(r) + (None, None) for r in
+                        conn.execute(
+                            "SELECT window_utc, n_symbols,"
+                            " n_evaluable, entries_json "
+                            "FROM signal_eval_history "
+                            "WHERE cycle = ? AND window_utc >= ? "
+                            "ORDER BY window_utc DESC",
+                            (str(sysname), _cut)).fetchall()]
             out = []
-            for win_iso, n_sym, n_ev, ej in cur.fetchall():
+            for win_iso, n_sym, n_ev, ej, tst, tsr in _raw:
                 try:
                     entries = _json.loads(ej or "[]")
                 except Exception:
                     entries = []
-                out.append({"window_utc": win_iso, "n_symbols": n_sym,
-                            "n_evaluable": n_ev, "entries": entries})
+                out.append({"window_utc": win_iso,
+                            "n_symbols": n_sym,
+                            "n_evaluable": n_ev,
+                            "entries": entries,
+                            "test_status": tst or "",
+                            "test_reason": tsr or ""})
             return out
         finally:
             conn.close()
     except Exception:
         return []
+
+
+def _record_replay_history_from_state(state):
+    """Record the latest Replay calculation (section 3) into
+    the synced eval-history store under the month's combined
+    sysid + ":replay", so Replay records accumulate in the
+    persistent memory (GitHub-synced, restored on boot) and
+    show in the last-24-hours history labelled as Replay
+    records (user order 2026-11-28). Runs once per
+    calculation, keyed by the result's recorded_at_utc
+    stamp; the separate ":replay" key means a Replay record
+    never overwrites the live window record for the same
+    slot. Never raises."""
+    try:
+        res = state.get("replay_result")
+        if not isinstance(res, dict):
+            return
+        stamp = res.get("recorded_at_utc")
+        if not stamp \
+                or state.get("_replay_hist_last") == stamp:
+            return
+        import datetime as _dt_rp
+        import pandas as _pd_rp
+        month = res.get("month")
+        if not month:
+            try:
+                month = int(str(res.get("date"))[5:7])
+            except Exception:
+                return
+        sysid = (_COMBINED_CFG.get(int(month))
+                 or {}).get("sysid")
+        if not sysid:
+            return
+        chk = res.get("check") or {}
+        status = str(chk.get("status", ""))
+        _rows = [{"Symbol": "", "Direction": "", "Entry": "",
+                  "TP": "", "SL": "",
+                  "Quick look": "\U0001F7E3 Replay"}]
+        for _p in chk.get("picks") or []:
+            _rows.append({
+                "Symbol": _p.get("symbol", ""),
+                "Direction": _p.get("direction", ""),
+                "Entry": _p.get("entry_px"),
+                "TP": _p.get("tp_px"),
+                "SL": _p.get("sl_px"),
+                "Quick look": str(_p.get("entry_line") or "")})
+        if not chk.get("picks"):
+            _rows.append({
+                "Symbol": "", "Direction": "", "Entry": "",
+                "TP": "", "SL": "",
+                "Quick look": f"\U0001F7E3 Replay \u00b7 "
+                              f"{status}"})
+        if res.get("compare"):
+            _rows.append({
+                "Symbol": "", "Direction": "", "Entry": "",
+                "TP": "", "SL": "",
+                "Quick look": str(res["compare"])})
+        slot = res.get("slot")
+        _tst_rp, _tsr_rp = _eval_test_status(chk)
+        _record_eval_history(str(sysid) + ":replay", {
+            "window_utc": slot,
+            "window_mmt": _c22_window_mmt_label(
+                int(_pd_rp.Timestamp(slot).hour)),
+            "evaluated_at_utc": _dt_rp.datetime.now(
+                _dt_rp.timezone.utc).replace(tzinfo=None),
+            "n_symbols": _C22_N_REQ,
+            "n_evaluable": (0 if status == "DATA ERROR"
+                            else _C22_N_REQ),
+            "test_status": _tst_rp,
+            "test_reason": _tsr_rp,
+            "signals": _pd_rp.DataFrame(_rows)})
+        state["_replay_hist_last"] = stamp
+    except Exception:
+        pass
 
 
 def _backfill_eval_history_from_state(state):
@@ -3520,6 +3766,39 @@ def _backfill_eval_history_from_state(state):
         pass
 
 
+def _hist_entry_text(e):
+    """One history entry's display text: its Quick look, with
+    TP/SL PRICES appended when the entry is a pick whose line
+    does not already carry them (user order 2026-11-28: TP
+    and SL beside every entry, history rows included)."""
+    try:
+        e = e or {}
+        quick = str(e.get("quick", "") or "")
+        sym = str(e.get("symbol") or "")
+        if not sym:
+            return quick
+        tpsl = _tpsl_text(sym, e.get("direction"),
+                          e.get("entry"), e.get("tp"),
+                          e.get("sl"))
+        if tpsl and tpsl.split(" \u00b7 ")[0] not in quick:
+            quick = (quick + " \u00b7 " + tpsl) if quick \
+                else tpsl
+        return quick
+    except Exception:
+        return str((e or {}).get("quick", "") or "")
+
+
+def _hist_test_text(r):
+    """A history row's stored full-way test verdict, for
+    display: PASS, FAIL with its reason, or "" when the
+    record carries no verdict (never invented)."""
+    tst = str((r or {}).get("test_status") or "")
+    if tst == "FAIL":
+        reason = str((r or {}).get("test_reason") or "")
+        return f"FAIL \u2014 {reason}" if reason else "FAIL"
+    return tst
+
+
 def _render_eval_history(st, state, sysname):
     """Last-24-hour history table for one system panel: every check
     window in the last 24 hours, how many symbols evaluated (x/28), and
@@ -3530,13 +3809,23 @@ def _render_eval_history(st, state, sysname):
     try:
         _backfill_eval_history_from_state(state)
         rows = _load_eval_history(sysname, hours=24)
+        # Replay records (user order 2026-11-28): section 3's
+        # calculations are recorded under "<sysid>:replay"
+        # and merged into this table, labelled as Replay
+        # records, newest first alongside the live rows.
+        _replay_rows = []
+        try:
+            _replay_rows = _load_eval_history(
+                str(sysname) + ":replay", hours=24)
+        except Exception:
+            _replay_rows = []
         st.markdown("### \U0001F559 Last 24 hours \u2014 every check")
-        if not rows:
+        if not rows and not _replay_rows:
             st.caption("No checks recorded yet in the last 24 hours \u2014 "
                        "history builds as each window evaluates and is "
                        "kept across app restarts.")
             return
-        _disp = []
+        _disp_pairs = []
         for r in rows:
             try:
                 _mmt = (_pd.Timestamp(r["window_utc"])
@@ -3548,10 +3837,39 @@ def _render_eval_history(st, state, sysname):
             _syms = (f"{int(_nev)}/{_C22_N_REQ}"
                      if isinstance(_nev, int) and _nev >= 0 else f"\u2014/{_C22_N_REQ}")
             _ent = r.get("entries") or []
-            _res = (" \u00b7 ".join(str(e.get("quick", "")) for e in _ent)
+            _res = (" \u00b7 ".join(_hist_entry_text(e) for e in _ent)
                     if _ent else ("Calculation incomplete" if isinstance(_nev, int) and 0 <= _nev < 20 else "\u2014 no entry"))
-            _disp.append({"Check (MMT)": _check, "Symbols": _syms,
-                          "Result": _res})
+            _disp_pairs.append((str(r["window_utc"]),
+                                {"Check (MMT)": _check,
+                                 "Symbols": _syms,
+                                 "Result": _res,
+                                 "Full-way test":
+                                     _hist_test_text(r)}))
+        for r in _replay_rows:
+            try:
+                _mmt = (_pd.Timestamp(r["window_utc"])
+                        + _pd.Timedelta(hours=6, minutes=30))
+                _check = (_mmt.strftime("%b %d \u00b7 %H:%M")
+                          + " \u00b7 \U0001F7E3 Replay")
+            except Exception:
+                _check = (str(r["window_utc"])
+                          + " \u00b7 \U0001F7E3 Replay")
+            _nev = r.get("n_evaluable")
+            _syms = (f"{int(_nev)}/{_C22_N_REQ}"
+                     if isinstance(_nev, int) and _nev >= 0 else f"\u2014/{_C22_N_REQ}")
+            _ent = r.get("entries") or []
+            _quicks = [_hist_entry_text(e) for e in _ent
+                       if str(e.get("quick", ""))]
+            _res = (" \u00b7 ".join(_quicks) if _quicks
+                    else "\U0001F7E3 Replay")
+            _disp_pairs.append((str(r["window_utc"]),
+                                {"Check (MMT)": _check,
+                                 "Symbols": _syms,
+                                 "Result": _res,
+                                 "Full-way test":
+                                     _hist_test_text(r)}))
+        _disp_pairs.sort(key=lambda _kv: _kv[0], reverse=True)
+        _disp = [_d for _w, _d in _disp_pairs]
         st.dataframe(_pd.DataFrame(_disp),
                      use_container_width=True, hide_index=True)
     except Exception:
@@ -3974,11 +4292,24 @@ def _basis_caption(payload):
             "data_basis") or "")
     except Exception:
         basis = ""
+    out = ""
     if basis == "fallback":
-        return " \u00b7 Data basis: fallback data (Twelve Data)"
-    if basis == "assembled":
-        return " \u00b7 Data basis: assembled-from-M5 data"
-    return ""
+        out = " \u00b7 Data basis: fallback data (Twelve Data)"
+    elif basis == "assembled":
+        out = " \u00b7 Data basis: assembled-from-M5 data"
+    # Full-way test verdict beside every live signal (user
+    # order 2026-11-28): the window's own evaluation status
+    # serves as its test status; nothing is shown for a
+    # window that was not evaluated.
+    try:
+        _tst, _tsr = _fullway_test_verdict(payload)
+    except Exception:
+        _tst, _tsr = "", ""
+    if _tst == "PASS":
+        out += " \u00b7 Full-way test: PASS"
+    elif _tst == "FAIL":
+        out += f" \u00b7 Full-way test: FAIL \u2014 {_tsr}"
+    return out
 
 
 def _diag_notes(payload):
@@ -11969,8 +12300,89 @@ def _manual_check_calculate(month, slot, state=None):
             method = "synthesized"
     _system, mod = _month_module(int(month))
     past = _recorded_past(mod, slot)
+    compare = _compare(chk, past)
+    # Finnhub verification (user order 2026-11-28): when a
+    # Finnhub key is configured, cross-check the signal bar's
+    # closes — the Twelve bars this calculation used (served
+    # from the section's own per-window cache, so no extra
+    # Twelve credits) against Finnhub's. Dormant without the
+    # key; never blocks or alters the signal.
+    verification = None
+    try:
+        from core.data import finnhub_verify as _fv_calc
+        if _fv_calc.is_configured() \
+                and chk.get("status") != "DATA ERROR":
+            from core.replay_section import (
+                _twelve_frames, _twelve_pool)
+            _sig = slot - _pd.Timedelta(hours=1, minutes=30)
+            _ent = slot - _pd.Timedelta(minutes=30)
+            _frames = _twelve_frames(
+                _twelve_pool(state), list(mod.SYMBOLS), "H1",
+                _ent, [])
+            _closes = {}
+            for _s, _f in _frames.items():
+                try:
+                    _col = ("Close" if "Close" in _f.columns
+                            else "close")
+                    _closes[_s] = float(_f.loc[_sig, _col])
+                except Exception:
+                    continue
+            verification = _fv_calc.verify_gate_bars(
+                list(mod.SYMBOLS), _sig, _closes)
+    except Exception:
+        verification = None
+    # Record into the synced eval-history store (user order
+    # 2026-11-28: EVERY evaluation records, manual Calculate
+    # included, so the result lives in the persistent memory
+    # — GitHub-synced, restored on boot — not only in this
+    # session). Gap-filling (replace=False): a live window
+    # record for the same slot is never overwritten.
+    try:
+        _sysid = (_COMBINED_CFG.get(int(month))
+                  or {}).get("sysid")
+        if _sysid:
+            import datetime as _dt_mc
+            _rows = []
+            for _p in chk.get("picks") or []:
+                _rows.append({
+                    "Symbol": _p.get("symbol", ""),
+                    "Direction": _p.get("direction", ""),
+                    "Entry": _p.get("entry_px"),
+                    "TP": _p.get("tp_px"),
+                    "SL": _p.get("sl_px"),
+                    "Quick look": (
+                        "\U0001F9EE "
+                        + str(_p.get("entry_line") or ""))})
+            if verification is not None \
+                    and verification.get("status") in (
+                        "AGREE", "DISAGREE"):
+                _rows.append({
+                    "Symbol": "", "Direction": "",
+                    "Entry": "", "TP": "", "SL": "",
+                    "Quick look": (
+                        "\U0001F50E "
+                        + _fv_calc.verdict_text(verification))})
+            _tst_mc, _tsr_mc = _eval_test_status(chk)
+            _record_eval_history(_sysid, {
+                "window_utc": slot,
+                "window_mmt": _c22_window_mmt_label(
+                    int(slot.hour)),
+                "evaluated_at_utc": _dt_mc.datetime.now(
+                    _dt_mc.timezone.utc).replace(tzinfo=None),
+                "n_symbols": len(mod.SYMBOLS),
+                "n_evaluable": (
+                    0 if chk.get("status") == "DATA ERROR"
+                    else len(mod.SYMBOLS)),
+                "test_status": _tst_mc,
+                "test_reason": _tsr_mc,
+                "signals": (_pd.DataFrame(_rows)
+                            if _rows else None)},
+                replace=False)
+    except Exception:
+        pass
     return {"slot": slot, "check": chk, "past": past,
-            "compare": _compare(chk, past), "method": method}
+            "compare": compare, "method": method,
+            "verification": verification}
 
 
 def _manual_precheck_compare_text(pre, past):
@@ -12021,6 +12433,31 @@ def _manual_precheck_calculate(month, slot, state=None):
     pre = replay_precheck(int(month), slot, state=state)
     _system, mod = _month_module(int(month))
     past = _recorded_past(mod, slot)
+    # Record into the synced precheck day log (user order
+    # 2026-11-28: EVERY evaluation records, manual Calculate
+    # included — the same store the live precheck writes,
+    # GitHub-synced and restored on boot). Symbol + side
+    # only, per the precheck delivery law. Never raises.
+    try:
+        if pre.get("status") != "DATA ERROR":
+            from core.precheck_day_log import (
+                record_precheck as _rpc_man)
+            _pick0 = (pre.get("picks") or [None])[0]
+            _rpc_man(
+                int(month), _system,
+                _c22_window_mmt_label(int(slot.hour)),
+                "pick" if _pick0 else "none",
+                symbol=(_pick0 or {}).get("symbol"),
+                direction=(_pick0 or {}).get("direction"),
+                note="manual Calculate")
+            try:
+                from core.data import (
+                    github_saveback as _gsb_man)
+                _gsb_man.saveback_history_files()
+            except Exception:
+                pass
+    except Exception:
+        pass
     return {"slot": slot, "precheck": pre, "past": past,
             "compare": _manual_precheck_compare_text(pre, past)}
 
@@ -12062,6 +12499,29 @@ def _render_manual_result_block(st, result, kind):
                 st.markdown(
                     f"### {p['symbol']} {p['direction']} @ "
                     f"{p['entry_px']:.5f}")
+                # TP and SL beside the entry (user order
+                # 2026-11-28): the pick's own values when it
+                # carries them, else the standing 90/30 rule.
+                _tpsl = _tpsl_text(
+                    p.get("symbol"), p.get("direction"),
+                    p.get("entry_px"), p.get("tp_px"),
+                    p.get("sl_px"), p.get("tp_pips"),
+                    p.get("sl_pips"))
+                if _tpsl:
+                    st.markdown(_tpsl)
+    # Full-way test verdict beside the signal (user order
+    # 2026-11-28): PASS for a completed evaluation (a
+    # NO SIGNAL with PASS is a valid, different statement
+    # from DATA ERROR), FAIL with the reason for a DATA
+    # ERROR. Nothing is shown when there is no verdict.
+    _tst_b, _tsr_b = _eval_test_status(res)
+    if _tst_b == "PASS":
+        st.caption(
+            "✅ Full-way test: PASS — the full signal "
+            "chain evaluated all 28 symbols for this slot.")
+    elif _tst_b == "FAIL":
+        st.caption(
+            f"⛔ Full-way test: FAIL — {_tsr_b}")
     if res.get("basis"):
         st.caption(
             f"Data basis: {_basis_label(res['basis'])}")
@@ -12071,12 +12531,43 @@ def _render_manual_result_block(st, result, kind):
             "in the loaded data, so the entry was synthesized "
             "from the signal close — the same method as the "
             "live final at the check moment.")
+    # Finnhub verification stamp (user order 2026-11-28):
+    # the cross-check verdict under a calculated check,
+    # worded by OpenRouter when configured, else the plain
+    # verdict text. Cached on the result dict, so re-renders
+    # never re-call. Absent entirely when Finnhub is not
+    # configured — the block then renders exactly as before.
+    _ver = result.get("verification") if kind == "check" \
+        else None
+    if _ver and _ver.get("status") in ("AGREE", "DISAGREE"):
+        if "verification_line" not in result:
+            try:
+                from core.data import narration as _narr_v
+                from core.data.finnhub_verify import (
+                    verdict_text as _vtext)
+                result["verification_line"] = _narr_v.one_line(
+                    "verification_stamp",
+                    {"verdict": _ver.get("status"),
+                     "compared": _ver.get("compared"),
+                     "worst": [s for s, _d in
+                               (_ver.get("worst") or [])]},
+                    fallback=_vtext(_ver))
+            except Exception:
+                result["verification_line"] = None
+        if result.get("verification_line"):
+            st.caption(
+                f"\U0001F50E {result['verification_line']}")
     st.markdown("**COMPARE WITH MEMORY**")
     if past.get("kind") == "pick":
+        _tpsl_p = _tpsl_text(
+            past.get("symbol"), past.get("direction"),
+            past.get("entry_px"), tp_pips=past.get("tp_pips"),
+            sl_pips=past.get("sl_pips"))
         st.markdown(
             f"Recorded in the walked memory: "
             f"**{past['symbol']} {past['direction']} @ "
-            f"{past['entry_px']:.5f}**")
+            f"{past['entry_px']:.5f}**"
+            + (f" \u00b7 {_tpsl_p}" if _tpsl_p else ""))
     elif past.get("kind") == "no_signal":
         st.markdown(
             "Recorded in the walked memory: **NO SIGNAL**")
@@ -13453,6 +13944,14 @@ def render_multisymbol_regime_summary(
         from core.replay_section import (
             render_replay_section as _render_replay)
         _render_replay(st)
+        # Record the Replay calculation into the synced
+        # eval-history store (user order 2026-11-28), once
+        # per calculation, so it accumulates in the
+        # persistent memory and shows in History above.
+        try:
+            _record_replay_history_from_state(state)
+        except Exception:
+            pass
     except Exception as _replay_exc:
         # Never vanish silently (fix 2026-11-26): the old bare
         # `except: pass` made ANY app-environment failure look

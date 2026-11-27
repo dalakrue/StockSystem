@@ -270,6 +270,20 @@ def _twelve_fetch(state, symbols, tf, *, end_ts, deadline=None):
                 frames[sym] = frame
     finally:
         _rs._TWELVE_WAIT_LIMIT_S = prev_wait
+    # Store the loaded OHLC (user order 2026-11-28): the
+    # fallback bars fetched here are persisted into the app's
+    # candle store (INSERT OR IGNORE — existing bars always
+    # win, provider-labelled TWELVE_DATA), so the next read
+    # finds them in the repository instead of re-fetching.
+    # Background-thread write; never raises.
+    try:
+        from core.data.store_loaded_ohlc import (
+            store_loaded_ohlc_async)
+        store_loaded_ohlc_async(frames, tf,
+                                source_status="FALLBACK_TWELVE",
+                                run_id="check_twelve_fallback")
+    except Exception:
+        pass
     return frames, errors
 
 

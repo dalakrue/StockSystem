@@ -539,6 +539,22 @@ def build_memory(month, year, state=None, progress=None):
                f"({walked} of {len(slots)} slots walked)")
     else:
         report(1.0, "Done")
+    # ---- Persistent memory (user order 2026-11-28): the
+    # built month is saved into the GitHub-synced store as
+    # data/walk_ledgers_hist/<cycle>_<year>.json, so a month
+    # built once is available to every section — but ONLY
+    # when the repo does not already hold that month-year;
+    # an existing historical ledger is never overwritten.
+    # Dormant without the save-back token, like the rest of
+    # the save-back. Never raises.
+    persistent_status = None
+    try:
+        from core.data import github_saveback as _gsb_mem
+        persistent_status = _gsb_mem.saveback_new_bytes(
+            json.dumps(built_state, indent=1).encode("utf-8"),
+            f"data/walk_ledgers_hist/{cycle}_{year}.json")
+    except Exception:
+        persistent_status = None
     return {"status": "DATA ERROR" if stop_missing else "OK",
             "missing": stop_missing,
             "partial": bool(stop_missing),
@@ -548,7 +564,8 @@ def build_memory(month, year, state=None, progress=None):
             "skipped": skipped,
             "delivered": len(built_state.get("delivered", [])),
             "state": built_state, "compare": compare,
-            "past_name": past_name, "xlsx": xlsx}
+            "past_name": past_name, "xlsx": xlsx,
+            "persistent_status": persistent_status}
 
 
 def render_twelve_memory_section(st):
@@ -614,6 +631,16 @@ def render_twelve_memory_section(st):
             + (f" {len(result['skipped'])} slot(s) recorded "
                f"DATA ERROR (market closed) and skipped."
                if result.get("skipped") else ""))
+    if result.get("persistent_status") == "saved":
+        st.caption(
+            "💾 Saved to persistent memory — this month-year "
+            "is now in the GitHub-synced store, available to "
+            "every section.")
+    elif result.get("persistent_status") == "exists":
+        st.caption(
+            "💾 Persistent memory already holds this "
+            "month-year — the stored ledger was kept exactly "
+            "as it was (never overwritten).")
     if comp:
         st.markdown(
             f"**Compare vs stored past "
@@ -624,6 +651,29 @@ def render_twelve_memory_section(st):
             f"{comp['only_built']} only in the Twelve build, "
             f"{comp['only_past']} only in the stored past, "
             f"out of {comp['shared_slots']} shared slots.")
+        # OpenRouter narration (user order 2026-11-28): one
+        # plain line glossing the similarity. Dormant without
+        # an [openrouter] key — the sentence above is then
+        # the whole display, exactly as before. Cached on
+        # the result dict, so re-renders never re-call.
+        if "narration_similarity" not in result:
+            try:
+                from core.data import narration as _narr_mem
+                result["narration_similarity"] = \
+                    _narr_mem.one_line(
+                        "similarity",
+                        {"month_year": (f"{_MONTH_NAMES[month - 1]} "
+                                        f"{year}"),
+                         "cycle": result["cycle"],
+                         "similarity_pct": round(
+                             float(comp["similarity_pct"]), 1),
+                         "match": comp["match"],
+                         "differ": comp["differ"],
+                         "shared_slots": comp["shared_slots"]})
+            except Exception:
+                result["narration_similarity"] = None
+        if result.get("narration_similarity"):
+            st.caption(f"🧾 {result['narration_similarity']}")
     else:
         st.caption("No stored past found for this month-year "
                    "to compare against.")

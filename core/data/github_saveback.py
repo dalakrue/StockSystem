@@ -44,6 +44,15 @@ and restored on boot when the local copy is missing
 render), so after any code push / redeploy the history shows
 exactly as before. Still never the candle cache, never the
 canonical feed.
+
+Memory-build extension (user order 2026-11-28): a month
+built in the Twelve Memory Building section is also saved
+into the persistent store — as
+``data/walk_ledgers_hist/<cycle>_<year>.json`` via
+saveback_new_bytes — but ONLY when the repo does not already
+hold that month-year; an existing historical ledger is never
+overwritten, so a month built once is available to every
+section forever, exactly as built.
 """
 from __future__ import annotations
 
@@ -255,6 +264,61 @@ def saveback_file(local_path, repo_rel=None, token=None):
         return _push_bytes(repo_rel, raw, token)
     except Exception:
         return False
+
+
+def saveback_new_bytes(raw, repo_rel, token=None):
+    """Create ``repo_rel`` in the repo holding ``raw`` — ONLY
+    if the repo does not already hold a file at that path
+    (user order 2026-11-28: a month built once in the Twelve
+    Memory Building section is saved to the persistent store
+    exactly once; an existing historical ledger is NEVER
+    overwritten).
+
+    Returns "saved" (the repo now holds ``raw`` at the path),
+    "exists" (the repo already holds a file there — left
+    exactly as it was), "dormant" (no token configured) or
+    "failed". Synchronous (the caller is a user-clicked build,
+    not the signal path) with the module's short timeout.
+    Never raises."""
+    try:
+        if token is None:
+            token = _secret_token()
+        if not token:
+            return "dormant"
+        if not raw:
+            return "failed"
+        try:
+            status, meta = _http_json(
+                "GET", _contents_url(repo_rel)
+                + f"?ref={_BRANCH}", token)
+        except Exception:
+            return "failed"
+        if status == 200:
+            return "exists"
+        if status != 404:
+            return "failed"
+        name, latest = _describe(repo_rel, raw)
+        message = f"save-back: {name} memory (Twelve build)"
+        if latest:
+            message += f" @ {latest}"
+        payload = {
+            "message": message,
+            "content": base64.b64encode(raw).decode("ascii"),
+            "branch": _BRANCH,
+        }
+        try:
+            status, _ = _http_json(
+                "PUT", _contents_url(repo_rel), token, payload)
+        except Exception:
+            return "failed"
+        if status in (200, 201):
+            digest = hashlib.sha256(raw).hexdigest()
+            with _LOCK:
+                _PUSHED[repo_rel] = digest
+            return "saved"
+        return "failed"
+    except Exception:
+        return "failed"
 
 
 def _push_thread(repo_rel, raw, token):

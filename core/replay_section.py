@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import importlib
+import json
 import os
 import tempfile
 import time
@@ -237,6 +238,20 @@ def _twelve_frames(pool, symbols, tf, end_ts, errors):
         f = _twelve_frame(pool, sym, tf, end_ts, errors)
         if f is not None:
             out[sym] = f
+    # Store the loaded OHLC (user order 2026-11-28): bars
+    # loaded from Twelve are persisted into the app's candle
+    # store (INSERT OR IGNORE — existing bars always win),
+    # so loaded data accumulates locally and later reads hit
+    # the store instead of re-fetching. Background-thread
+    # write; never raises, never slows the calculation.
+    try:
+        from core.data.store_loaded_ohlc import (
+            store_loaded_ohlc_async)
+        store_loaded_ohlc_async(out, tf,
+                                source_status="LOADED_TWELVE",
+                                run_id="replay_twelve_load")
+    except Exception:
+        pass
     return out
 
 
@@ -596,32 +611,94 @@ def replay_precheck(month: int, slot, state=None) -> dict:
 # Compare to the past — read-only, AFTER the calculation
 # ------------------------------------------------------------------
 
-def _recorded_past(mod, slot):
-    """The slot's recorded result from the walk ledger
-    (read-only): {"kind": "pick", ...} / {"kind": "no_signal"}
-    / {"kind": "none"}. Never used by the calculation."""
-    try:
-        form = mod.load_state_form()
-        delivered = getattr(form, "delivered", []) or []
-        processed = getattr(form, "processed", []) or []
-    except Exception:
-        return {"kind": "none"}
+def _past_from_lists(delivered, processed, slot):
+    """The slot's recorded result from one ledger's
+    delivered / processed lists, or None when the ledger
+    holds no record for the slot."""
     slot = pd.Timestamp(slot)
-    for r in delivered:
+    for r in delivered or []:
         try:
             if pd.Timestamp(r["check"]) == slot:
                 return {"kind": "pick",
                         "symbol": r["symbol"],
                         "direction": r["direction"],
-                        "entry_px": float(r["entry_px"])}
+                        "entry_px": float(r["entry_px"]),
+                        "tp_pips": r.get("tp_pips"),
+                        "sl_pips": r.get("sl_pips")}
         except Exception:
             continue
-    for p in processed:
+    for p in processed or []:
         try:
             if pd.Timestamp(p) == slot:
                 return {"kind": "no_signal"}
         except Exception:
             continue
+    return None
+
+
+def _system_of(mod):
+    """The registry cycle name for a cycle module
+    (core.cycle93aj_best -> cycle93aj), or None."""
+    try:
+        name = str(getattr(mod, "__name__", "")).rsplit(".", 1)[-1]
+        if name.endswith("_best"):
+            return name[:-len("_best")]
+    except Exception:
+        pass
+    return None
+
+
+def _recorded_past_hist(system, slot):
+    """The slot's recorded result from the repo's historical
+    archive (data/walk_ledgers_hist/<cycle>_<year>.json) —
+    the persistent store's full archive (user order
+    2026-11-28), consulted only when the current walk ledger
+    holds no record for the slot. Read-only; never used by
+    the calculation."""
+    try:
+        if not system:
+            return None
+        slot = pd.Timestamp(slot)
+        here = os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__)))
+        path = os.path.join(
+            here, "data", "walk_ledgers_hist",
+            f"{system}_{slot.year}.json")
+        if not os.path.exists(path):
+            return None
+        with open(path) as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return None
+        found = _past_from_lists(
+            data.get("delivered"), data.get("processed"), slot)
+        if found is not None:
+            found["source"] = "hist"
+        return found
+    except Exception:
+        return None
+
+
+def _recorded_past(mod, slot):
+    """The slot's recorded result from the walk ledger
+    (read-only): {"kind": "pick", ...} / {"kind": "no_signal"}
+    / {"kind": "none"}. Falls back to the repo's historical
+    archive when the current ledger holds no record for the
+    slot (the returned dict then carries source="hist").
+    Never used by the calculation."""
+    try:
+        form = mod.load_state_form()
+        delivered = getattr(form, "delivered", []) or []
+        processed = getattr(form, "processed", []) or []
+    except Exception:
+        delivered, processed = [], []
+    found = _past_from_lists(delivered, processed, slot)
+    if found is not None:
+        found["source"] = "ledger"
+        return found
+    hist = _recorded_past_hist(_system_of(mod), slot)
+    if hist is not None:
+        return hist
     return {"kind": "none"}
 
 
@@ -662,6 +739,9 @@ def replay_slot(d: _dt.date, slot, state=None) -> dict:
     _system, mod = _month_module(d.month)
     past = _recorded_past(mod, slot)
     return {"date": str(d), "slot": str(slot),
+            "month": int(d.month),
+            "recorded_at_utc": _dt.datetime.now(
+                _dt.timezone.utc).isoformat(),
             "check": check, "precheck": precheck,
             "past": past, "compare": _compare(check, past)}
 
@@ -766,17 +846,39 @@ def render_replay_section(st):
 
     past = res.get("past") or {"kind": "none"}
     st.markdown("**COMPARE TO PAST**")
+    _hist_note = (" (from the historical archive)"
+                  if past.get("source") == "hist" else "")
     if past["kind"] == "pick":
         st.markdown(
             f"Recorded at the time: **{past['symbol']} "
-            f"{past['direction']} @ {past['entry_px']:.5f}**")
+            f"{past['direction']} @ {past['entry_px']:.5f}**"
+            f"{_hist_note}")
     elif past["kind"] == "no_signal":
-        st.markdown("Recorded at the time: **NO SIGNAL**")
+        st.markdown(
+            f"Recorded at the time: **NO SIGNAL**{_hist_note}")
     else:
         st.markdown("Recorded at the time: — (no recorded "
                     "result for this slot)")
     if res.get("compare"):
         st.markdown(res["compare"])
+        # OpenRouter narration (user order 2026-11-28): one
+        # plain line on WHY a DIFFERENT verdict differs.
+        # Dormant without an [openrouter] key — the compare
+        # text above is then the whole display, exactly as
+        # before. Cached on the result dict, so re-renders
+        # never re-call.
+        if str(res["compare"]).startswith("DIFFERENT") \
+                and "narration_reason" not in res:
+            try:
+                from core.data import narration as _narr
+                res["narration_reason"] = _narr.one_line(
+                    "replay_different",
+                    {"compare": str(res["compare"]),
+                     "slot": str(res.get("slot", ""))})
+            except Exception:
+                res["narration_reason"] = None
+        if res.get("narration_reason"):
+            st.caption(f"🧾 {res['narration_reason']}")
 
     pre = res["precheck"]
     st.markdown("**PRECHECK (check − 15 min)**")

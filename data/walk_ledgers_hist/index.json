@@ -108,6 +108,42 @@
   "md5": "39e4676df086cfea7defe0df9552bf9f"
  },
  {
+  "month": 2,
+  "year": 2016,
+  "cycle": "85s",
+  "file": "cycle85s_2016.json",
+  "processed": 63,
+  "delivered": 63,
+  "md5": "da0335bbd07264441c71e270b45ffb9b"
+ },
+ {
+  "month": 3,
+  "year": 2016,
+  "cycle": "86o",
+  "file": "cycle86o_2016.json",
+  "processed": 69,
+  "delivered": 61,
+  "md5": "6d8c7939f52f7ad6b2a11dad138279ab"
+ },
+ {
+  "month": 4,
+  "year": 2016,
+  "cycle": "87p",
+  "file": "cycle87p_2016.json",
+  "processed": 63,
+  "delivered": 58,
+  "md5": "332ca1cee7b3dd3ff9126bd1f3966b5a"
+ },
+ {
+  "month": 5,
+  "year": 2016,
+  "cycle": "88t",
+  "file": "cycle88t_2016.json",
+  "processed": 66,
+  "delivered": 51,
+  "md5": "988760a7e9ff91807147e0fd65ca28bd"
+ },
+ {
   "month": 6,
   "year": 2016,
   "cycle": "89x",
@@ -315,6 +351,15 @@
   "md5": "992cb4014c0466fa99e62bf99db9e5f8"
  },
  {
+  "month": 6,
+  "year": 2018,
+  "cycle": "89x",
+  "file": "cycle89x_2018.json",
+  "processed": 63,
+  "delivered": 57,
+  "md5": "97caaa99695b4ff56946ad169daed013"
+ },
+ {
   "month": 7,
   "year": 2018,
   "cycle": "78m",
@@ -376,6 +421,42 @@
   "processed": 60,
   "delivered": 60,
   "md5": "698836c4994db754bd5d7fa1788f9f1d"
+ },
+ {
+  "month": 3,
+  "year": 2019,
+  "cycle": "86o",
+  "file": "cycle86o_2019.json",
+  "processed": 63,
+  "delivered": 58,
+  "md5": "560e1c00d9b0adab2ecb49696dddf2c9"
+ },
+ {
+  "month": 4,
+  "year": 2019,
+  "cycle": "87p",
+  "file": "cycle87p_2019.json",
+  "processed": 66,
+  "delivered": 61,
+  "md5": "78f50a625c74fafbee1dc32e4cc46dd7"
+ },
+ {
+  "month": 5,
+  "year": 2019,
+  "cycle": "88t",
+  "file": "cycle88t_2019.json",
+  "processed": 69,
+  "delivered": 53,
+  "md5": "9f94d16ac8cb503cdb82e0bacf83f31c"
+ },
+ {
+  "month": 6,
+  "year": 2019,
+  "cycle": "89x",
+  "file": "cycle89x_2019.json",
+  "processed": 60,
+  "delivered": 53,
+  "md5": "a7ddaf266050b873502eb5af27c877b1"
  },
  {
   "month": 7,
@@ -567,6 +648,15 @@
   "md5": "0594ca488c7c26c701f52bc931b2deb8"
  },
  {
+  "month": 7,
+  "year": 2021,
+  "cycle": "78m",
+  "file": "cycle78m_2021.json",
+  "processed": 66,
+  "delivered": 68,
+  "md5": "681a445dc75fc1adab78a01998fbda0d"
+ },
+ {
   "month": 8,
   "year": 2021,
   "cycle": "67w",
@@ -639,6 +729,15 @@
   "md5": "d9b9a17e7f8d7b5021e21f4e562bd649"
  },
  {
+  "month": 6,
+  "year": 2022,
+  "cycle": "89x",
+  "file": "cycle89x_2022.json",
+  "processed": 66,
+  "delivered": 58,
+  "md5": "7389f820584d70aeffe8cd4bf98da683"
+ },
+ {
   "month": 7,
   "year": 2022,
   "cycle": "78m",
@@ -684,6 +783,15 @@
   "md5": "c18d00496e228ee78a6d40fc619125a3"
  },
  {
+  "month": 3,
+  "year": 2023,
+  "cycle": "86o",
+  "file": "cycle86o_2023.json",
+  "processed": 69,
+  "delivered": 64,
+  "md5": "919f49dd5e43e0b8c4a09f61d5cdaab2"
+ },
+ {
   "month": 4,
   "year": 2023,
   "cycle": "87p",
@@ -702,6 +810,15 @@
   "md5": "69fbcff28a46bfee8f04dcd86469e96a"
  },
  {
+  "month": 6,
+  "year": 2023,
+  "cycle": "89x",
+  "file": "cycle89x_2023.json",
+  "processed": 66,
+  "delivered": 57,
+  "md5": "554e0debd3d74f30de6dc1d5a684b0fe"
+ },
+ {
   "month": 11,
   "year": 2023,
   "cycle": "93aj",
@@ -709,6 +826,33 @@
   "processed": 66,
   "delivered": 61,
   "md5": "b1eabe3dda1b1f22dd6a00001fffeb56"
+ },
+ {
+  "month": 1,
+  "year": 2024,
+  "cycle": "60k",
+  "file": "cycle60k_2024.json",
+  "processed": 66,
+  "delivered": 39,
+  "md5": "5c35c609c9344ed687902df6a14b968f"
+ },
+ {
+  "month": 2,
+  "year": 2024,
+  "cycle": "85s",
+  "file": "cycle85s_2024.json",
+  "processed": 63,
+  "delivered": 63,
+  "md5": "d4daaba9ec02bc8fd3318f59e9f329da"
+ },
+ {
+  "month": 3,
+  "year": 2024,
+  "cycle": "86o",
+  "file": "cycle86o_2024.json",
+  "processed": 63,
+  "delivered": 62,
+  "md5": "e49966ae1b10fa6106d4f3bce3b67dde"
  },
  {
   "month": 4,
@@ -781,6 +925,60 @@
   "processed": 63,
   "delivered": 60,
   "md5": "cf89ff27923c48968115c72d2287b150"
+ },
+ {
+  "month": 1,
+  "year": 2025,
+  "cycle": "60k",
+  "file": "cycle60k_2025.json",
+  "processed": 66,
+  "delivered": 50,
+  "md5": "104623336f78721dffd36eac7c42292f"
+ },
+ {
+  "month": 2,
+  "year": 2025,
+  "cycle": "85s",
+  "file": "cycle85s_2025.json",
+  "processed": 60,
+  "delivered": 60,
+  "md5": "b9bf9312e50c55a019bd72befd73b7f8"
+ },
+ {
+  "month": 3,
+  "year": 2025,
+  "cycle": "86o",
+  "file": "cycle86o_2025.json",
+  "processed": 63,
+  "delivered": 57,
+  "md5": "7dbe9d11d1871019ea9f801924798545"
+ },
+ {
+  "month": 4,
+  "year": 2025,
+  "cycle": "87p",
+  "file": "cycle87p_2025.json",
+  "processed": 66,
+  "delivered": 59,
+  "md5": "fdd04602fda43093c29d577ec682f4a8"
+ },
+ {
+  "month": 5,
+  "year": 2025,
+  "cycle": "88t",
+  "file": "cycle88t_2025.json",
+  "processed": 66,
+  "delivered": 52,
+  "md5": "12d0fb3889632610a18845a6ab40efba"
+ },
+ {
+  "month": 6,
+  "year": 2025,
+  "cycle": "89x",
+  "file": "cycle89x_2025.json",
+  "processed": 63,
+  "delivered": 59,
+  "md5": "a282dfe0347605ab338737caf97fa1b5"
  },
  {
   "month": 11,

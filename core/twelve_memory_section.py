@@ -352,6 +352,22 @@ def build_memory(month, year, state=None, progress=None):
                 absent = [s for s in symbols if s not in bars]
                 bad = sorted(set(m15_missing) | set(absent))
             if bad:
+                if len(bad) == len(symbols) and all(
+                        data["M15"][s].index.max() > entry_bar
+                        for s in symbols):
+                    # Market closed (user ruling 2026-11-27):
+                    # Twelve has H1 bars for the day but no M15
+                    # session at all (e.g. Christmas Day), while
+                    # the downloaded data continues past the
+                    # slot. Record DATA ERROR for the slot and
+                    # walk on.
+                    skipped.append(str(slot))
+                    report(0.30 + 0.65 * (i + 1) / len(slots),
+                           f"Walking {_MONTH_NAMES[month - 1]} "
+                           f"{year}: slot {i + 1}/{len(slots)} "
+                           f"({slot:%Y-%m-%d %H:%M} UTC) — DATA "
+                           f"ERROR (market closed), skipped")
+                    continue
                 return {"status": "DATA ERROR",
                         "missing": (f"{slot}: M15 entry window "
                                     f"from Twelve Data missing "

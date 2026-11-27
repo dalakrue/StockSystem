@@ -1,0 +1,861 @@
+{
+ "label": "TRUE PRECHECKS - Nov 2026 (user method 2026-11-26): re-walk with precheck stops; live in-progress memory; frames cut at the signal close (check -30); entry candle synthesized from the signal close",
+ "month": "2026-11",
+ "slots": 51,
+ "precheck_picks": 42,
+ "precheck_none": 9,
+ "precheck_differs_from_check": 10,
+ "precheck_entry_differs_only": 0,
+ "precheck_same_as_check": 41,
+ "rewalk_reproduces_reference": true,
+ "rows": [
+  {
+   "slot_utc": "2026-11-02T13:30:00",
+   "precheck": {
+    "symbol": "CADJPY",
+    "direction": "BUY",
+    "entry_px": 112.964
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "CADJPY",
+    "direction": "BUY",
+    "entry_px": 112.964
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-02T15:30:00",
+   "precheck": {
+    "symbol": "NZDCHF",
+    "direction": "SELL",
+    "entry_px": 0.46152
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPUSD",
+    "direction": "BUY",
+    "entry_px": 1.34197
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-02T17:30:00",
+   "precheck": {
+    "symbol": "GBPAUD",
+    "direction": "BUY",
+    "entry_px": 1.91334
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPAUD",
+    "direction": "BUY",
+    "entry_px": 1.91334
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-03T13:30:00",
+   "precheck": {
+    "symbol": "CADCHF",
+    "direction": "SELL",
+    "entry_px": 0.58574
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "CADCHF",
+    "direction": "SELL",
+    "entry_px": 0.58574
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-03T15:30:00",
+   "precheck": {
+    "symbol": "EURNZD",
+    "direction": "BUY",
+    "entry_px": 1.99089
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURNZD",
+    "direction": "BUY",
+    "entry_px": 1.99089
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-03T17:30:00",
+   "precheck": {
+    "symbol": "CHFJPY",
+    "direction": "BUY",
+    "entry_px": 193.184
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "CHFJPY",
+    "direction": "BUY",
+    "entry_px": 193.184
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-04T13:30:00",
+   "precheck": {
+    "symbol": "AUDCHF",
+    "direction": "SELL",
+    "entry_px": 0.5721
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "AUDCHF",
+    "direction": "SELL",
+    "entry_px": 0.5721
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-04T15:30:00",
+   "precheck": {
+    "symbol": "NZDCHF",
+    "direction": "SELL",
+    "entry_px": 0.45967
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "CHFJPY",
+    "direction": "SELL",
+    "entry_px": 193.897
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-04T17:30:00",
+   "precheck": {
+    "symbol": "GBPUSD",
+    "direction": "SELL",
+    "entry_px": 1.34746
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPUSD",
+    "direction": "SELL",
+    "entry_px": 1.34746
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-05T13:30:00",
+   "precheck": {
+    "symbol": "AUDJPY",
+    "direction": "SELL",
+    "entry_px": 110.925
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "AUDJPY",
+    "direction": "SELL",
+    "entry_px": 110.925
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-05T15:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": null,
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-05T17:30:00",
+   "precheck": {
+    "symbol": "EURGBP",
+    "direction": "BUY",
+    "entry_px": 0.83325
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURGBP",
+    "direction": "BUY",
+    "entry_px": 0.83325
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-06T13:30:00",
+   "precheck": {
+    "symbol": "NZDCHF",
+    "direction": "BUY",
+    "entry_px": 0.45411
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "NZDCHF",
+    "direction": "BUY",
+    "entry_px": 0.45411
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-06T15:30:00",
+   "precheck": {
+    "symbol": "EURUSD",
+    "direction": "BUY",
+    "entry_px": 1.11591
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURUSD",
+    "direction": "BUY",
+    "entry_px": 1.11591
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-06T17:30:00",
+   "precheck": {
+    "symbol": "AUDCAD",
+    "direction": "BUY",
+    "entry_px": 0.96937
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "AUDCAD",
+    "direction": "BUY",
+    "entry_px": 0.96937
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-09T13:30:00",
+   "precheck": {
+    "symbol": "CADCHF",
+    "direction": "BUY",
+    "entry_px": 0.58069
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "CADCHF",
+    "direction": "BUY",
+    "entry_px": 0.58069
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-09T15:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": null,
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-09T17:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": null,
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-10T13:30:00",
+   "precheck": {
+    "symbol": "GBPCHF",
+    "direction": "BUY",
+    "entry_px": 1.10123
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPCHF",
+    "direction": "BUY",
+    "entry_px": 1.10123
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-10T15:30:00",
+   "precheck": {
+    "symbol": "GBPAUD",
+    "direction": "SELL",
+    "entry_px": 1.94524
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPAUD",
+    "direction": "SELL",
+    "entry_px": 1.94524
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-10T17:30:00",
+   "precheck": {
+    "symbol": "CADJPY",
+    "direction": "BUY",
+    "entry_px": 111.873
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "CADJPY",
+    "direction": "BUY",
+    "entry_px": 111.873
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-11T13:30:00",
+   "precheck": {
+    "symbol": "GBPCAD",
+    "direction": "SELL",
+    "entry_px": 1.89426
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPCAD",
+    "direction": "SELL",
+    "entry_px": 1.89426
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-11T15:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": null,
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-11T17:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": null,
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-12T13:30:00",
+   "precheck": {
+    "symbol": "AUDJPY",
+    "direction": "SELL",
+    "entry_px": 109.023
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "AUDJPY",
+    "direction": "SELL",
+    "entry_px": 109.023
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-12T15:30:00",
+   "precheck": {
+    "symbol": "GBPAUD",
+    "direction": "BUY",
+    "entry_px": 1.94421
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPAUD",
+    "direction": "BUY",
+    "entry_px": 1.94421
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-12T17:30:00",
+   "precheck": {
+    "symbol": "CADJPY",
+    "direction": "SELL",
+    "entry_px": 112.039
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "NZDJPY",
+    "direction": "SELL",
+    "entry_px": 88.577
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-13T13:30:00",
+   "precheck": {
+    "symbol": "EURAUD",
+    "direction": "BUY",
+    "entry_px": 1.62848
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPJPY",
+    "direction": "SELL",
+    "entry_px": 211.577
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-13T15:30:00",
+   "precheck": {
+    "symbol": "USDCAD",
+    "direction": "BUY",
+    "entry_px": 1.42479
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "USDCAD",
+    "direction": "BUY",
+    "entry_px": 1.42479
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-13T17:30:00",
+   "precheck": {
+    "symbol": "USDJPY",
+    "direction": "SELL",
+    "entry_px": 159.912
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "USDJPY",
+    "direction": "SELL",
+    "entry_px": 159.912
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-16T13:30:00",
+   "precheck": {
+    "symbol": "GBPAUD",
+    "direction": "BUY",
+    "entry_px": 1.95479
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPAUD",
+    "direction": "BUY",
+    "entry_px": 1.95479
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-16T15:30:00",
+   "precheck": {
+    "symbol": "NZDCAD",
+    "direction": "SELL",
+    "entry_px": 0.78763
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "NZDCAD",
+    "direction": "SELL",
+    "entry_px": 0.78763
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-16T17:30:00",
+   "precheck": {
+    "symbol": "CHFJPY",
+    "direction": "SELL",
+    "entry_px": 190.108
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURCAD",
+    "direction": "SELL",
+    "entry_px": 1.57359
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-17T13:30:00",
+   "precheck": {
+    "symbol": "AUDNZD",
+    "direction": "SELL",
+    "entry_px": 1.22538
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "AUDNZD",
+    "direction": "SELL",
+    "entry_px": 1.22538
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-17T15:30:00",
+   "precheck": {
+    "symbol": "USDCAD",
+    "direction": "BUY",
+    "entry_px": 1.42995
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "USDCAD",
+    "direction": "BUY",
+    "entry_px": 1.42995
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-17T17:30:00",
+   "precheck": {
+    "symbol": "AUDCHF",
+    "direction": "SELL",
+    "entry_px": 0.56548
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURNZD",
+    "direction": "SELL",
+    "entry_px": 2.00116
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-18T13:30:00",
+   "precheck": {
+    "symbol": "EURUSD",
+    "direction": "BUY",
+    "entry_px": 1.09683
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURUSD",
+    "direction": "BUY",
+    "entry_px": 1.09683
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-18T15:30:00",
+   "precheck": {
+    "symbol": "AUDCHF",
+    "direction": "SELL",
+    "entry_px": 0.56632
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "AUDCHF",
+    "direction": "SELL",
+    "entry_px": 0.56632
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-18T17:30:00",
+   "precheck": {
+    "symbol": "GBPCHF",
+    "direction": "SELL",
+    "entry_px": 1.109
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "GBPCHF",
+    "direction": "SELL",
+    "entry_px": 1.109
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-19T13:30:00",
+   "precheck": {
+    "symbol": "NZDCAD",
+    "direction": "SELL",
+    "entry_px": 0.78942
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "NZDCAD",
+    "direction": "SELL",
+    "entry_px": 0.78942
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-19T15:30:00",
+   "precheck": {
+    "symbol": "CADJPY",
+    "direction": "SELL",
+    "entry_px": 111.649
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "CADJPY",
+    "direction": "SELL",
+    "entry_px": 111.649
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-19T17:30:00",
+   "precheck": {
+    "symbol": "EURCHF",
+    "direction": "SELL",
+    "entry_px": 0.92616
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURCHF",
+    "direction": "SELL",
+    "entry_px": 0.92616
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-20T13:30:00",
+   "precheck": {
+    "symbol": "NZDUSD",
+    "direction": "SELL",
+    "entry_px": 0.55011
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "NZDUSD",
+    "direction": "SELL",
+    "entry_px": 0.55011
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-20T15:30:00",
+   "precheck": {
+    "symbol": "EURUSD",
+    "direction": "SELL",
+    "entry_px": 1.09826
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURUSD",
+    "direction": "SELL",
+    "entry_px": 1.09826
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-20T17:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": {
+    "symbol": "EURUSD",
+    "direction": "SELL",
+    "entry_px": 1.09796
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-23T13:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": null,
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-23T15:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": null,
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-23T17:30:00",
+   "precheck": null,
+   "near_miss": {
+    "-0.2": null,
+    "-0.1": null,
+    "0.1": null,
+    "0.2": null
+   },
+   "check_pick": {
+    "symbol": "AUDCAD",
+    "direction": "SELL",
+    "entry_px": 0.95167
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-24T13:30:00",
+   "precheck": {
+    "symbol": "EURGBP",
+    "direction": "SELL",
+    "entry_px": 0.83681
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURGBP",
+    "direction": "SELL",
+    "entry_px": 0.83681
+   },
+   "precheck_differs_from_check": false,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-24T15:30:00",
+   "precheck": {
+    "symbol": "AUDJPY",
+    "direction": "SELL",
+    "entry_px": 105.709
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "AUDUSD",
+    "direction": "SELL",
+    "entry_px": 0.66406
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  },
+  {
+   "slot_utc": "2026-11-24T17:30:00",
+   "precheck": {
+    "symbol": "AUDJPY",
+    "direction": "BUY",
+    "entry_px": 105.77
+   },
+   "near_miss": null,
+   "check_pick": {
+    "symbol": "EURAUD",
+    "direction": "SELL",
+    "entry_px": 1.65162
+   },
+   "precheck_differs_from_check": true,
+   "precheck_entry_differs_only": false,
+   "ready": 28
+  }
+ ]
+}

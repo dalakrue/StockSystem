@@ -13074,6 +13074,24 @@ def render_multisymbol_regime_summary(
         except Exception:
             pass
 
+    # ===== Twelve Data API Memory Building (user order
+    # 2026-11-27) =====
+    # Immediately after Replay: pick a month + year and build
+    # that month's memory from Twelve Data candles, with a
+    # progress bar, a compare against the stored past, and an
+    # XLSX download.
+    try:
+        from core.twelve_memory_section import (
+            render_twelve_memory_section as _render_twmem)
+        _render_twmem(st)
+    except Exception as _twmem_exc:
+        try:
+            st.error(f"🔷 TWELVE MEMORY section failed to "
+                     f"render: {type(_twmem_exc).__name__}: "
+                     f"{_twmem_exc}")
+        except Exception:
+            pass
+
     # ===== History (user order 2026-11-22) =====
     # The very bottom of the dashboard: the last 24 CHECK and
     # PRECHECK live replay tables from the canonical feed —

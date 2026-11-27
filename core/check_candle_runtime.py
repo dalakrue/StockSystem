@@ -61,6 +61,15 @@ def normalize_ohlc(frame, min_bars=1):
     if not set(required).issubset(out.columns):
         return None
     out[required] = out[required].apply(pd.to_numeric, errors="coerce")
+    if "Volume" in out.columns:
+        # Twelve wire values carry volume as a string; left
+        # unconverted it later breaks the M5->M15 assembly
+        # (seg["Volume"].sum() concatenates strings and the
+        # float() raises — found by the 2026-11-27 Nov-2025
+        # memory-build fix test). Numeric volume is a no-op
+        # for repository frames.
+        out["Volume"] = pd.to_numeric(out["Volume"],
+                                      errors="coerce")
     values = out[required].to_numpy(dtype=float)
     valid = np.isfinite(values).all(axis=1) & (values > 0).all(axis=1)
     valid &= (out.High >= out[["Open", "Close"]].max(axis=1)).to_numpy()

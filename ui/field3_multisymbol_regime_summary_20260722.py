@@ -3379,7 +3379,13 @@ def _record_eval_history(sysname, payload, replace=True):
                 return v
 
         entries = []
-        st.caption(f"Check candles ready: {payload.get('n_evaluable', 0)}/{_C22_N_REQ}" + _basis_caption(payload))
+        # (A stray st.caption(...) line copied from the panel
+        # renderers used to sit here; `st` does not exist in
+        # this scope, so it raised NameError on every call and
+        # the function's own except swallowed it — the eval
+        # history was never written. Removed 2026-11-27 as
+        # part of the history save-back work: this function is
+        # local sqlite only and renders nothing.)
         disp = payload.get("signals")
         if isinstance(disp, _pd.DataFrame) and not disp.empty:
             for _, r in disp.iterrows():
@@ -3448,6 +3454,14 @@ def _record_eval_history(sysname, payload, replace=True):
             conn.commit()
         finally:
             conn.close()
+        # History save-back (user order 2026-11-27): persist
+        # the eval-history DB to GitHub like the walk ledgers,
+        # so the last-24-hours history survives redeploys.
+        try:
+            from core.data import github_saveback as _gsb
+            _gsb.saveback_history_files()
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -11914,7 +11928,297 @@ def _render_check_filled_box(st, filled, window_mmt, system_label):
         return
 
 
+# ----------------------------------------------------------------
+# Manual CHOOSE + CALCULATE for sections 1 & 2 (user order
+# 2026-11-27): the live sections evaluate on their own and can
+# disagree with the walked memory, and gave no way to pick a
+# slot, force a calculation, or see the memory comparison.
+# These blocks add, UNDER each live section: a date + check-time
+# picker, a Calculate button that runs the app's stateless
+# Twelve calculation for the chosen slot (28/28 gate unchanged,
+# walked ledgers read-only), a staged progress bar, and a
+# COMPARE block against the walked memory's recorded result.
+# The live-window automatic behaviour is untouched.
+
+def _manual_check_calculate(month, slot, state=None):
+    """Section 1 Calculate: the stateless CHECK for one chosen
+    slot (core.replay_section.replay_check — Twelve route,
+    28/28 gate). If the full entry-bar data is not available
+    for the slot (replay_check DATA ERROR — e.g. the H1 entry
+    bar is not in the loaded data yet), fall back to the
+    check-moment method: the stateless evaluation on the
+    signal-close frames with the entry synthesized
+    (replay_precheck's evaluation — the same method as the
+    proven live final), and label it via "method". Returns the
+    result, the walked memory's recorded past for the slot and
+    the compare text."""
+    import pandas as _pd
+    from core.replay_section import (
+        _compare, _month_module, _recorded_past, replay_check,
+        replay_precheck)
+    slot = _pd.Timestamp(slot)
+    chk = replay_check(int(month), slot, state=state)
+    method = "full"
+    if chk.get("status") == "DATA ERROR":
+        pre = replay_precheck(int(month), slot, state=state)
+        if pre.get("status") != "DATA ERROR":
+            chk = {"status": pre["status"],
+                   "picks": pre.get("picks", []),
+                   "basis": "twelve",
+                   "missing": chk.get("missing", "")}
+            method = "synthesized"
+    _system, mod = _month_module(int(month))
+    past = _recorded_past(mod, slot)
+    return {"slot": slot, "check": chk, "past": past,
+            "compare": _compare(chk, past), "method": method}
+
+
+def _manual_precheck_compare_text(pre, past):
+    """Compare text for section 2: the calculated precheck vs
+    the walked memory's recorded CHECK for the same slot."""
+    if pre.get("status") == "DATA ERROR":
+        return ("Not compared — the precheck calculation did "
+                "not run.")
+    calc = (pre.get("picks") or [None])[0]
+    calc_txt = ("NO SIGNAL" if calc is None else
+                f"{calc['symbol']} {calc['direction']} @ "
+                f"{calc['entry_px']:.5f}")
+    if past.get("kind") == "none":
+        return ("No recorded check for this slot in the walked "
+                "memory — nothing to compare.")
+    if past.get("kind") == "pick":
+        rec = (f"{past['symbol']} {past['direction']} @ "
+               f"{past['entry_px']:.5f}")
+        if calc is not None \
+                and calc["symbol"] == past["symbol"] \
+                and calc["direction"] == past["direction"]:
+            return (f"✅ AGREES with the walked memory — its "
+                    f"recorded check is {rec}; this precheck "
+                    f"gives {calc_txt} (the entry can differ "
+                    f"by a few pips: the precheck synthesizes "
+                    f"it).")
+        return (f"⚠️ DIFFERENT — the walked memory's "
+                f"recorded check is {rec}; this precheck "
+                f"gives {calc_txt}.")
+    if calc is None:
+        return ("✅ AGREES with the walked memory — its "
+                "recorded check is NO SIGNAL, and this "
+                "precheck also gives NO SIGNAL.")
+    return (f"⚠️ DIFFERENT — the walked memory's recorded "
+            f"check is NO SIGNAL; this precheck gives "
+            f"{calc_txt}.")
+
+
+def _manual_precheck_calculate(month, slot, state=None):
+    """Section 2 Calculate: the stateless PRECHECK for one
+    chosen slot (core.replay_section.replay_precheck — frames
+    cut at the signal close, entry synthesized), compared with
+    the walked memory's recorded check for the slot."""
+    import pandas as _pd
+    from core.replay_section import (
+        _month_module, _recorded_past, replay_precheck)
+    slot = _pd.Timestamp(slot)
+    pre = replay_precheck(int(month), slot, state=state)
+    _system, mod = _month_module(int(month))
+    past = _recorded_past(mod, slot)
+    return {"slot": slot, "precheck": pre, "past": past,
+            "compare": _manual_precheck_compare_text(pre, past)}
+
+
+def _render_manual_result_block(st, result, kind):
+    """Shared display for the manual Calculate results: the
+    calculated signal, then the COMPARE WITH MEMORY block.
+    kind is "check" or "precheck"."""
+    from core.replay_section import _basis_label
+    res = (result["check"] if kind == "check"
+           else result["precheck"])
+    past = result["past"]
+    st.markdown("**CALCULATED CHECK**" if kind == "check"
+                else "**CALCULATED PRECHECK**")
+    if res.get("status") == "DATA ERROR":
+        st.error(f"DATA ERROR — {res.get('missing', '')}")
+    elif res.get("status") == "NO SIGNAL" \
+            or not res.get("picks"):
+        st.markdown("**NO SIGNAL** — no entry at this slot.")
+        sb = res.get("second_best")
+        if sb:
+            st.markdown(
+                f"Second best (closest real candidate): "
+                f"**{sb['symbol']} {sb['direction']}**")
+        nm = res.get("near_miss")
+        if nm:
+            st.markdown(
+                f"Near miss: **{nm['symbol']} "
+                f"{nm['direction']}** — {nm['reason']}")
+    else:
+        for p in res["picks"]:
+            if p.get("entry_line"):
+                st.markdown(f"### {p['entry_line']}")
+                st.markdown(
+                    f"TP {p['tp_px']:.5f} · SL "
+                    f"{p['sl_px']:.5f} (TP {p['tp_pips']:.0f} "
+                    f"/ SL {p['sl_pips']:.0f} pips)")
+            else:
+                st.markdown(
+                    f"### {p['symbol']} {p['direction']} @ "
+                    f"{p['entry_px']:.5f}")
+    if res.get("basis"):
+        st.caption(
+            f"Data basis: {_basis_label(res['basis'])}")
+    if result.get("method") == "synthesized":
+        st.caption(
+            "Check-moment method: the H1 entry bar was not "
+            "in the loaded data, so the entry was synthesized "
+            "from the signal close — the same method as the "
+            "live final at the check moment.")
+    st.markdown("**COMPARE WITH MEMORY**")
+    if past.get("kind") == "pick":
+        st.markdown(
+            f"Recorded in the walked memory: "
+            f"**{past['symbol']} {past['direction']} @ "
+            f"{past['entry_px']:.5f}**")
+    elif past.get("kind") == "no_signal":
+        st.markdown(
+            "Recorded in the walked memory: **NO SIGNAL**")
+    else:
+        st.markdown(
+            "Recorded in the walked memory: — (no result "
+            "recorded for this slot)")
+    st.markdown(result["compare"])
+
+
+def _render_manual_check_calculate(st, state, month):
+    """Section 1 add-on: CHOOSE a slot + CALCULATE button +
+    progress bar + memory compare, under the live check
+    table."""
+    from core.replay_section import (
+        _default_replay_date, slots_for_date)
+    st.markdown("---")
+    st.markdown("**🧮 Calculate a chosen check**")
+    st.caption(
+        "Pick a date and check time, then Calculate: the app "
+        "loads that slot's candles, calculates the check for "
+        "it, and compares the result with the walked memory's "
+        "recorded result for the same slot. The live table "
+        "above is unchanged.")
+    d = st.date_input("Date", value=_default_replay_date(),
+                      key=f"manual_check_date_{month}")
+    slots = slots_for_date(d)
+    if not slots:
+        st.caption("No check times on this date (weekend).")
+        return
+    labels = [lbl for _ts, lbl in slots]
+    choice = st.selectbox("Check time", labels,
+                          key=f"manual_check_slot_{month}")
+    slot = {lbl: ts for ts, lbl in slots}[choice]
+    res_key = f"manual_check_result_{month}"
+    if st.button("Calculate check",
+                 key=f"manual_check_btn_{month}"):
+        bar = st.progress(0.0)
+        note = st.empty()
+
+        def _stage(frac, text):
+            bar.progress(min(max(float(frac), 0.0), 1.0))
+            note.caption(
+                f"{text} — **{int(round(100 * frac))}%**")
+
+        _stage(0.05, "Loading this slot's candles and "
+                     "calculating the check")
+        try:
+            result = _manual_check_calculate(
+                month, slot, state=st.session_state)
+        except Exception as exc:
+            result = {
+                "slot": slot,
+                "check": {"status": "DATA ERROR",
+                          "missing": (f"calculation failed: "
+                                      f"{type(exc).__name__}: "
+                                      f"{exc}")},
+                "past": {"kind": "none"},
+                "compare": ("Not compared — the calculation "
+                            "did not run."),
+                "method": "full"}
+        st.session_state[res_key] = result
+        _stage(0.85, "Comparing with the walked memory")
+        _stage(1.0, "Done")
+    result = st.session_state.get(res_key)
+    if result and str(result.get("slot")) == str(slot):
+        _render_manual_result_block(st, result, "check")
+
+
+def _render_precheck_manual_calculate(st, state, month):
+    """Section 2 add-on: CHOOSE a slot + CALCULATE button +
+    progress bar + memory compare, under the live precheck
+    blocks."""
+    from core.replay_section import (
+        _default_replay_date, slots_for_date)
+    st.markdown("---")
+    st.markdown("**🧮 Calculate a chosen precheck**")
+    st.caption(
+        "Pick a date and check time, then Calculate: the app "
+        "calculates the precheck for that slot (candles cut "
+        "at the signal close, entry synthesized — the early "
+        "read) and compares it with the walked memory's "
+        "recorded check for the same slot. The automatic "
+        "precheck above is unchanged.")
+    d = st.date_input("Date", value=_default_replay_date(),
+                      key=f"manual_pre_date_{month}")
+    slots = slots_for_date(d)
+    if not slots:
+        st.caption("No check times on this date (weekend).")
+        return
+    labels = [lbl for _ts, lbl in slots]
+    choice = st.selectbox("Check time", labels,
+                          key=f"manual_pre_slot_{month}")
+    slot = {lbl: ts for ts, lbl in slots}[choice]
+    res_key = f"manual_pre_result_{month}"
+    if st.button("Calculate precheck",
+                 key=f"manual_pre_btn_{month}"):
+        bar = st.progress(0.0)
+        note = st.empty()
+
+        def _stage(frac, text):
+            bar.progress(min(max(float(frac), 0.0), 1.0))
+            note.caption(
+                f"{text} — **{int(round(100 * frac))}%**")
+
+        _stage(0.05, "Loading this slot's candles and "
+                     "calculating the precheck")
+        try:
+            result = _manual_precheck_calculate(
+                month, slot, state=st.session_state)
+        except Exception as exc:
+            result = {
+                "slot": slot,
+                "precheck": {"status": "DATA ERROR",
+                             "missing": (f"calculation failed: "
+                                         f"{type(exc).__name__}"
+                                         f": {exc}")},
+                "past": {"kind": "none"},
+                "compare": ("Not compared — the calculation "
+                            "did not run.")}
+        st.session_state[res_key] = result
+        _stage(0.85, "Comparing with the walked memory")
+        _stage(1.0, "Done")
+    result = st.session_state.get(res_key)
+    if result and str(result.get("slot")) == str(slot):
+        _render_manual_result_block(st, result, "precheck")
+
+
 def _render_combined_signals_table(st, state, month):
+    """Live month signals table (unchanged) + the manual
+    CHOOSE/CALCULATE block appended underneath (user order
+    2026-11-27). Returns the live payload (or None)."""
+    payload = _render_combined_signals_table_live(st, state,
+                                                  month)
+    try:
+        _render_manual_check_calculate(st, state, month)
+    except Exception:
+        pass
+    return payload
+
+
+def _render_combined_signals_table_live(st, state, month):
     """Month signals table (best-only since 2026-11-06).
 
     Shows the month's BEST system's pick at the latest check.
@@ -12500,6 +12804,15 @@ def _compute_precheck_possible(month, state):
                 symbol=result.get("symbol"),
                 direction=result.get("direction"),
                 second_best=_sb_log)
+            # History save-back (user order 2026-11-27): the
+            # precheck day log persists to GitHub like the
+            # walk ledgers, so today's precheck signals
+            # survive a redeploy.
+            try:
+                from core.data import github_saveback as _gsb2
+                _gsb2.saveback_history_files()
+            except Exception:
+                pass
         except Exception:
             pass
         return result
@@ -12899,6 +13212,16 @@ def render_multisymbol_regime_summary(
     2026-11-16 23:11 MMT).
     """
     _auto_refresh_field3(st)
+    # History restore on boot (user order 2026-11-27): if this
+    # deployment's local history files are missing (fresh
+    # redeploy), pull the save-backed copies back from GitHub
+    # once, on a background thread, so the history sections
+    # below show exactly what was recorded before.
+    try:
+        from core.data import github_saveback as _gsb_boot
+        _gsb_boot.restore_history_files_async()
+    except Exception:
+        pass
     from ui.monthly_equation_panel import render_monthly_panel
     # Shared data pipeline only (its expander UI is hidden); the signal
     # panels fetch their own H1/M15 frames via the provider chain.
@@ -13079,6 +13402,17 @@ def render_multisymbol_regime_summary(
     # day, kept for the whole Myanmar day. (Skipped for the
     # canonical-feed month: the History section below carries
     # the chain's precheck rows.)
+    # Manual CHOOSE + CALCULATE for the precheck (user order
+    # 2026-11-27): pick any slot, force the precheck
+    # calculation, compare with the walked memory. Additive —
+    # the automatic precheck above is unchanged.
+    try:
+        if _active_month is not None:
+            _render_precheck_manual_calculate(st, state,
+                                              _active_month)
+    except Exception:
+        pass
+
     if not (_feed is not None and _active_month == _cur_month):
         _render_precheck_day_table(st)
 

@@ -119,6 +119,51 @@ def _fetch_window(pool, sym, tf, start_ts, end_ts, errors):
     return out
 
 
+def _merge_frames(old, fresh):
+    """Merge a fresh re-fetch into a downloaded frame: fresh
+    bars win on shared stamps, the result is sorted and
+    deduped, with the Datetime column the consumers read."""
+    if old is None or not len(old):
+        out = fresh
+    elif fresh is None or not len(fresh):
+        out = old
+    else:
+        out = pd.concat([old, fresh])
+        out = out.loc[~out.index.duplicated(keep="last")]
+        out = out.sort_index()
+    if out is not None and len(out):
+        out = out.assign(Datetime=out.index)
+    return out
+
+
+def _refetch_window(pool, sym, tf, end_ts, bars=500):
+    """One FRESH Twelve window for ONE symbol/timeframe ending
+    at end_ts — the walk's second chance for a single-symbol
+    gap (fix 2026-11-27): the month download fetches each
+    series once, so a hole in that one response (e.g. EURUSD
+    M15 at 2025-11-03 17:30, where the series the download
+    returned was missing the entry window while other feeds
+    carry it) otherwise reaches the walk unrepaired. Returns a
+    normalized frame like _fetch_window's, or None."""
+    interval = _TF_INTERVAL[tf]
+    step = _TF_STEP_MIN[tf]
+    values, _note = _twelve_fetch_values(
+        pool, sym, interval, bars, pd.Timestamp(end_ts),
+        step_minutes=step)
+    if not values:
+        return None
+    frame = normalize_ohlc(pd.DataFrame(values), 1)
+    if frame is None or frame.empty:
+        return None
+    frame = frame.loc[:pd.Timestamp(end_ts)]
+    if frame.empty:
+        return None
+    if tf in ("M15", "M5"):
+        frame = frame.assign(Datetime=frame.index)
+        frame.attrs["data_basis"] = "twelve"
+    return frame
+
+
 def _past_ledger(cycle, year, month):
     """The stored past for this month-year, read AFTER the walk
     for comparison only: the 2026 walk ledgers, else the
@@ -381,6 +426,53 @@ def build_memory(month, year, state=None, progress=None):
                 absent = [s for s in symbols if s not in bars]
                 bad = sorted(set(m15_missing) | set(absent))
             if bad:
+                # Second chance (fix 2026-11-27): ONE fresh
+                # Twelve re-fetch of each bad symbol's M15 + M5
+                # window ending at this slot's entry bar — the
+                # month download fetched each series once, so a
+                # hole in that single response (the live
+                # 2025-11-03 EURUSD case) otherwise stops the
+                # build unrepaired. Fresh bars are merged into
+                # the month data (later slots benefit too), the
+                # slot frames are rebuilt, and the M5->M15
+                # assembly runs again. Only a window STILL
+                # incomplete after both falls through to the
+                # market-closed skip / DATA ERROR stop below.
+                for sym in bad:
+                    fresh15 = _refetch_window(pool, sym, "M15",
+                                              entry_bar)
+                    if fresh15 is not None and len(fresh15):
+                        data["M15"][sym] = _merge_frames(
+                            data["M15"].get(sym), fresh15)
+                        f15 = data["M15"][sym].loc[:entry_bar]
+                        if len(f15) > 400:
+                            f15 = f15.iloc[-400:]
+                        m15_frames[sym] = f15
+                    fresh5 = _refetch_window(pool, sym, "M5",
+                                             slot)
+                    if fresh5 is not None and len(fresh5):
+                        data["M5"][sym] = _merge_frames(
+                            data["M5"].get(sym), fresh5)
+                        # The M5 parts of the entry bar itself
+                        # live past entry_bar (entry_bar+5/+10),
+                        # so the repaired M5 frame is cut at the
+                        # slot — the same bound replay_check
+                        # fetches M5 with.
+                        f5 = data["M5"][sym].loc[:slot]
+                        if len(f5) > 400:
+                            f5 = f5.iloc[-400:]
+                        m5_frames[sym] = f5
+                for sym in bad:
+                    filled, n_asm = _assemble_m15_from_twelve_m5(
+                        m15_frames.get(sym), m5_frames.get(sym),
+                        slot)
+                    if n_asm:
+                        m15_frames[sym] = filled
+                bars = _m15_bars(mod, m15_frames)
+                _ok, m15_missing = _window_ok(bars, slot)
+                absent = [s for s in symbols if s not in bars]
+                bad = sorted(set(m15_missing) | set(absent))
+            if bad:
                 if len(bad) == len(symbols) and all(
                         _feed_ended_or_continues(
                             data["M15"][s].index, entry_bar,
@@ -434,7 +526,19 @@ def build_memory(month, year, state=None, progress=None):
                        note=(f"PARTIAL — stopped early: "
                              f"{stop_missing}"
                              if stop_missing else None))
-    report(1.0, "Done")
+    if stop_missing:
+        # Progress truth (fix 2026-11-27): a partial run must
+        # never show 100% / "Done" — the bar and the % text
+        # show the true walked share: slots walked plus slots
+        # recorded skipped, out of the month's slots.
+        walked = len(built_state.get("processed", [])) \
+            + len(skipped)
+        frac = walked / len(slots) if slots else 0.0
+        report(frac,
+               f"Partial — {int(round(100 * frac))}% "
+               f"({walked} of {len(slots)} slots walked)")
+    else:
+        report(1.0, "Done")
     return {"status": "DATA ERROR" if stop_missing else "OK",
             "missing": stop_missing,
             "partial": bool(stop_missing),

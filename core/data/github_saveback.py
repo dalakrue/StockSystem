@@ -31,6 +31,19 @@ Safety contract (the signal path depends on it):
   network. Only the (tiny) local file reads + hashing are synchronous.
 - Scope: ``data/walk_ledgers_new8/*.json`` only — never the candle
   cache, never the canonical feed.
+
+History extension (user order 2026-11-27): the app's recorded
+HISTORY — the precheck day log (``data/precheck_day_log.json``,
+behind "Today's precheck signals") and the signal evaluation
+history DB (``data/signal_eval_history.sqlite3``, behind the
+"Last 24 hours" tables and the month signals history) — is
+persisted and restored the same way: pushed when it changes
+(saveback_history_files, called from the history write points),
+and restored on boot when the local copy is missing
+(restore_history_files_async, called once from the Field 3
+render), so after any code push / redeploy the history shows
+exactly as before. Still never the candle cache, never the
+canonical feed.
 """
 from __future__ import annotations
 
@@ -297,3 +310,131 @@ def saveback_walk_ledgers(root=None, token=None):
     except Exception:
         pass
     return scheduled
+
+
+# ----------------------------------------------------------------
+# History save-back (user order 2026-11-27) — see the module
+# docstring. Same safety contract as the ledger path above.
+_HISTORY_RELS = (
+    "data/precheck_day_log.json",
+    "data/signal_eval_history.sqlite3",
+)
+_RESTORE_STARTED = False
+
+
+def saveback_history_files(root=None, token=None):
+    """Push the history files whose content changed, on daemon
+    threads like saveback_walk_ledgers. Returns the
+    repo-relative paths scheduled (possibly empty). Never
+    raises."""
+    scheduled = []
+    try:
+        if token is None:
+            token = _secret_token()
+        if not token:
+            return scheduled
+        base = root or _repo_root()
+        for repo_rel in _HISTORY_RELS:
+            local = os.path.join(base, *repo_rel.split("/"))
+            try:
+                with open(local, "rb") as fh:
+                    raw = fh.read()
+            except Exception:
+                continue
+            if not raw:
+                continue
+            digest = hashlib.sha256(raw).hexdigest()
+            with _LOCK:
+                if _PUSHED.get(repo_rel) == digest \
+                        or repo_rel in _INFLIGHT:
+                    continue
+                _INFLIGHT.add(repo_rel)
+            thread = threading.Thread(
+                target=_push_thread, args=(repo_rel, raw, token),
+                daemon=True,
+                name=f"saveback-{os.path.basename(repo_rel)}")
+            thread.start()
+            scheduled.append(repo_rel)
+    except Exception:
+        pass
+    return scheduled
+
+
+def _fetch_bytes(repo_rel, token):
+    """The repo copy of one file via the Contents API, or
+    None. Raises only on transport failure; callers swallow."""
+    status, meta = _http_json(
+        "GET", _contents_url(repo_rel) + f"?ref={_BRANCH}", token)
+    if status != 200 or not isinstance(meta, dict):
+        return None
+    content = meta.get("content")
+    if isinstance(content, str) \
+            and meta.get("encoding") == "base64":
+        try:
+            return base64.b64decode(content)
+        except Exception:
+            return None
+    return None
+
+
+def restore_history_files(root=None, token=None):
+    """Boot restore: for each history file MISSING locally (or
+    zero bytes), write the repo copy back, so the history
+    displays read the restored store. A local file that exists
+    is never overwritten — it is this deployment's own newest
+    record. Returns the repo-relative paths restored. Never
+    raises."""
+    restored = []
+    try:
+        if token is None:
+            token = _secret_token()
+        if not token:
+            return restored
+        base = root or _repo_root()
+        for repo_rel in _HISTORY_RELS:
+            local = os.path.join(base, *repo_rel.split("/"))
+            try:
+                if os.path.isfile(local) \
+                        and os.path.getsize(local) > 0:
+                    continue
+            except Exception:
+                continue
+            try:
+                raw = _fetch_bytes(repo_rel, token)
+            except Exception:
+                raw = None
+            if not raw:
+                continue
+            try:
+                os.makedirs(os.path.dirname(local),
+                            exist_ok=True)
+                tmp = local + ".restore-tmp"
+                with open(tmp, "wb") as fh:
+                    fh.write(raw)
+                os.replace(tmp, local)
+                restored.append(repo_rel)
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return restored
+
+
+def restore_history_files_async():
+    """Once-per-process boot restore on a daemon thread, so
+    the first render never waits on the network; later renders
+    read the restored files from disk. Returns True iff the
+    restore thread was started by this call. Never raises."""
+    global _RESTORE_STARTED
+    try:
+        with _LOCK:
+            if _RESTORE_STARTED:
+                return False
+            _RESTORE_STARTED = True
+        thread = threading.Thread(
+            target=restore_history_files, daemon=True,
+            name="saveback-restore-history")
+        thread.start()
+        return True
+    except Exception:
+        return False

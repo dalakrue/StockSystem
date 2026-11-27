@@ -10998,6 +10998,10 @@ def _auto_refresh_field3(st: Any, interval_ms: int = 60_000) -> None:
     Fallback inside a window only: a ``<meta http-equiv="refresh">``
     tag with the same interval.
     """
+    # DISABLED by user order 2026-11-27 ~20:00 MMT: the user does not
+    # want the page auto-refreshing every 1 minute. No auto-refresh is
+    # installed at any time now; the manual Refresh button remains.
+    return
     try:
         month = _visible_panel_month(st)
         sched = _precheck_schedule(month)

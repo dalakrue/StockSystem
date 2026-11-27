@@ -17,6 +17,8 @@ failure falls back silently to the manual Settings flow.
 """
 from __future__ import annotations
 
+import contextlib
+import threading
 from collections.abc import MutableMapping
 from typing import Any
 
@@ -41,8 +43,13 @@ def _has_completed_generation(state: MutableMapping[str, Any]) -> bool:
         return False
 
 
-def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
-    """Attempt the one-time startup auto-load. Never raises."""
+def maybe_auto_load_field3(state: MutableMapping[str, Any],
+                           *, _headless: bool = False) -> dict[str, Any]:
+    """Attempt the one-time startup auto-load. Never raises.
+
+    _headless is for the background-thread wrapper below: streamlit
+    spinners belong to a script run, so the thread runs without
+    them. The load/calculation itself is identical."""
     outcome: dict[str, Any] = {"attempted": False, "ok": False, "reason": ""}
     try:
         if state.get(AUTO_LOAD_FLAG):
@@ -77,6 +84,10 @@ def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
         state[AUTO_LOAD_FLAG] = True
 
         import streamlit as st
+
+        def _spin(msg):
+            return (contextlib.nullcontext() if _headless
+                    else st.spinner(msg))
 
         from core.fixed_fx_universe_20260918 import fixed_groups
         from core.multi_symbol_load_manager_20260707 import (
@@ -121,7 +132,7 @@ def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
         )
         _m15_warm.start()
 
-        with st.spinner("Loading market data from Twelve Data…"):
+        with _spin("Loading market data from Twelve Data…"):
             load_all_selectors_safely(state, groups, timeframe)
 
         _m15_warm.join(timeout=120)
@@ -150,7 +161,7 @@ def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
             pass
         mark_run_group(state, scope, run_symbols)
 
-        with st.spinner("Calculating regime ranking…"):
+        with _spin("Calculating regime ranking…"):
             fast_result = run_super_quick_field3(
                 state, symbols=run_symbols, timeframe=timeframe
             )
@@ -169,4 +180,108 @@ def maybe_auto_load_field3(state: MutableMapping[str, Any]) -> dict[str, Any]:
         return outcome
 
 
-__all__ = ["maybe_auto_load_field3", "AUTO_LOAD_FLAG", "AUTO_LOAD_ERROR"]
+# ---------------------------------------------------------------------
+# Background wrapper (speed fix 2026-11-28, user order: the app must
+# reach its dashboard in 1-5 s outside check windows). The synchronous
+# auto-load above used to run BEFORE the first paint -- the user
+# watched "Loading market data from Twelve Data..." for minutes.
+# Now the runner calls maybe_auto_load_field3_async(): the load runs
+# on a daemon thread against a detached copy of the session state
+# (the load/calculation chain takes `state` as a parameter and never
+# touches st.session_state directly), the dashboard paints at once
+# from last-known state, and when the thread lands, the next rerun
+# merges the produced keys into the real session state. A key the
+# user changed in the meantime is never overwritten: only keys the
+# thread created, or that still hold the exact snapshot object, are
+# merged back.
+# ---------------------------------------------------------------------
+_BG_LOCK = threading.Lock()
+_BG_RUNNING = False
+_BG_PENDING: dict[str, Any] | None = None
+
+
+def _snapshot_state(state: MutableMapping[str, Any]) -> dict[str, Any]:
+    try:
+        return {k: state[k] for k in list(state.keys())}
+    except Exception:
+        return dict(state)  # type: ignore[arg-type]
+
+
+def _merge_detached(state: MutableMapping[str, Any],
+                    snapshot: dict[str, Any],
+                    detached: dict[str, Any]) -> None:
+    for key, value in detached.items():
+        if key not in state:
+            state[key] = value
+        elif key in snapshot and state.get(key) is snapshot[key] \
+                and value is not snapshot[key]:
+            state[key] = value
+
+
+def maybe_auto_load_field3_async(
+        state: MutableMapping[str, Any]) -> dict[str, Any]:
+    """Non-blocking startup auto-load. Never raises.
+
+    Returns immediately with one of: generation_already_present /
+    auto_load_merged (a finished background load was merged into
+    the session) / auto_load_running_in_background /
+    auto_load_started_in_background / the synchronous outcome when
+    there was nothing to load.
+    """
+    global _BG_RUNNING, _BG_PENDING
+    outcome: dict[str, Any] = {"attempted": False, "ok": False,
+                               "reason": ""}
+    try:
+        if _has_completed_generation(state):
+            outcome["reason"] = "generation_already_present"
+            return outcome
+        with _BG_LOCK:
+            pending = _BG_PENDING
+            if pending is not None:
+                _BG_PENDING = None
+        if pending is not None:
+            _merge_detached(state, pending["snapshot"],
+                            pending["detached"])
+            merged = dict(pending["outcome"])
+            merged["merged_into_session"] = True
+            if _has_completed_generation(state):
+                merged["ok"] = True
+            return merged
+        with _BG_LOCK:
+            if _BG_RUNNING:
+                outcome["attempted"] = True
+                outcome["reason"] = "auto_load_running_in_background"
+                return outcome
+            if state.get(AUTO_LOAD_FLAG):
+                outcome["reason"] = "already_attempted_this_session"
+                return outcome
+            _BG_RUNNING = True
+        snapshot = _snapshot_state(state)
+        detached = dict(snapshot)
+
+        def _work() -> None:
+            global _BG_RUNNING, _BG_PENDING
+            try:
+                result = maybe_auto_load_field3(detached,
+                                                _headless=True)
+            except Exception as exc:  # the sync call never raises
+                result = {"attempted": True, "ok": False,
+                          "reason": f"{type(exc).__name__}: {exc}"}
+            with _BG_LOCK:
+                _BG_PENDING = {"snapshot": snapshot,
+                               "detached": detached,
+                               "outcome": result}
+                _BG_RUNNING = False
+
+        threading.Thread(target=_work, daemon=True,
+                         name="auto_load_field3_bg").start()
+        outcome["attempted"] = True
+        outcome["reason"] = "auto_load_started_in_background"
+        return outcome
+    except Exception as exc:
+        outcome["reason"] = f"{type(exc).__name__}: {exc}"
+        return outcome
+
+
+__all__ = ["maybe_auto_load_field3", "maybe_auto_load_field3_async",
+           "AUTO_LOAD_FLAG", "AUTO_LOAD_ERROR"]

@@ -40,6 +40,43 @@ def _run_startup_migrations() -> None:
         import logging
         logging.getLogger(__name__).exception("Startup migration failed: %s", type(exc).__name__)
 
+def _start_startup_work_in_background() -> None:
+    """Speed fix 2026-11-28 (user order: the app must open in 1-5 s
+    outside check windows): everything heavy that used to run
+    synchronously before the UI now starts on daemon threads.
+
+    - The candle-cache restore (an ~890 MB rebuild on a cold boot)
+      starts immediately and overlaps the runner's local startup.
+    - The startup migrations run once per DB file version per
+      process instead of on every rerun (two of them re-scan the
+      whole candle store per call -- ~49 s on a small VM). No
+      calculation can outrun its migration: CandleRepository still
+      runs the deployment migration synchronously on construction,
+      and the calculation orchestrator repeats it, exactly as
+      _run_startup_migrations' own note describes.
+    """
+    try:
+        from core.multi_symbol_field10_20260701 import DB_PATH
+        try:
+            from core.data.cache_boot import ensure_cache_db_async
+            ensure_cache_db_async(DB_PATH)
+        except Exception:
+            pass
+        try:
+            _st = DB_PATH.stat()
+            stamp = (_st.st_size, _st.st_mtime_ns)
+        except Exception:
+            stamp = None
+        from core.startup_once_20261128 import claim
+        if claim("startup_migrations", stamp):
+            import threading
+            threading.Thread(
+                target=_run_startup_migrations, daemon=True,
+                name="startup_migrations").start()
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
-    _run_startup_migrations()
+    _start_startup_work_in_background()
     run_app()

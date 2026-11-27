@@ -46,6 +46,17 @@ def run_app():
         category=UserWarning,
         module=r"sklearn\.metrics\._classification",
     )
+    # Speed fix 2026-11-28: start the candle-cache restore NOW, on a
+    # background thread, so it overlaps the (local-only) startup
+    # below instead of blocking the first paint inside the first
+    # repository construction. Idempotent; never raises.
+    try:
+        from core.data.cache_boot import ensure_cache_db_async
+        from core.data.deployment_migrations_20260705 import (
+            DEFAULT_DB_PATH as _BOOT_DB_PATH)
+        ensure_cache_db_async(_BOOT_DB_PATH)
+    except Exception:
+        pass
     try:
         install_streamlit_compat()
     except Exception:
@@ -300,9 +311,15 @@ def run_app():
             # universe and run Super Quick so the ranking table appears after a
             # short wait. Runs at most once per session; any failure falls back
             # silently to the manual Settings flow.
-            from core.auto_load_startup_20261019 import maybe_auto_load_field3
+            # Speed fix 2026-11-28: the load now runs on a background
+            # thread (async wrapper) -- the dashboard paints at once
+            # from last-known state and the ranking fills in on a
+            # later rerun when the load lands. The synchronous entry
+            # point is unchanged for any other caller.
+            from core.auto_load_startup_20261019 import (
+                maybe_auto_load_field3_async)
 
-            _auto_outcome = maybe_auto_load_field3(st.session_state)
+            _auto_outcome = maybe_auto_load_field3_async(st.session_state)
             # Keep the outcome visible for diagnosis instead of
             # swallowing it silently (fix 2026-11-25).
             st.session_state["auto_load_outcome_20261125"] = _auto_outcome

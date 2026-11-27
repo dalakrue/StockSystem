@@ -8,7 +8,7 @@ import sqlite3
 import streamlit as st
 
 from core.data.candle_repository import CandleRepository
-from core.data.deployment_migrations_20260705 import DEFAULT_DB_PATH, migrate_deployment_schema
+from core.data.deployment_migrations_20260705 import DEFAULT_DB_PATH
 from core.runtime_selection_20260705 import latest_completed_candle, normalize_symbols, normalize_timeframe
 
 
@@ -23,7 +23,15 @@ def _rows(db_path: Path, table: str) -> list[dict[str, Any]]:
 
 def render_provider_health_panel(state: MutableMapping[str, Any] | Mapping[str, Any] | None = None) -> None:
     state = state if isinstance(state, Mapping) else st.session_state
-    migrate_deployment_schema(DEFAULT_DB_PATH)
+    # Speed fix 2026-11-28: this is a display-only panel (inside a
+    # collapsed expander). It used to run the deployment migration
+    # and a full repository construction on EVERY render -- the
+    # migration re-scans the whole candle store (~80 s on a small
+    # VM) whenever the DB file changed, which blocked the sidebar
+    # and with it the first paint. It now reads the store as-is
+    # with a light repository; the migration still runs on the
+    # calculation paths' constructions and in the background at
+    # app start, and the panel's numbers fill in once it lands.
     from core.twelve_data_key_pool import TwelveDataKeyPool
     key_pool_status = TwelveDataKeyPool.from_state(state).status_snapshot()
     connections = {row.get("provider"): row for row in _rows(DEFAULT_DB_PATH, "api_connection_state")}
@@ -31,7 +39,8 @@ def render_provider_health_panel(state: MutableMapping[str, Any] | Mapping[str, 
     selected = normalize_symbols(state.get("multi_symbol_selected_20260701"), default_top10=True)
     timeframe = normalize_timeframe(state.get("timeframe") or "H1")
     expected = latest_completed_candle(timeframe=timeframe)
-    repository = CandleRepository(DEFAULT_DB_PATH)
+    repository = CandleRepository(DEFAULT_DB_PATH, ensure_cache=False,
+                                  migrate=False)
     current = 0
     needing = 0
     for symbol in selected:

@@ -317,6 +317,118 @@ def _validate_finnhub_once(state: MutableMapping[str, Any]) -> dict[str, Any]:
     return {"ok": bool(result.get("ok")), "status": result.get("availability", "UNKNOWN"), "message": result.get("message", "")}
 
 
+def _attempt_auto_connect(state: MutableMapping[str, Any],
+                          status: Mapping[str, Any]) -> dict[str, Any]:
+    """The provider auto-connect itself (extracted 2026-11-28 so it
+    can run on a background thread against a detached state copy).
+    Performs exactly the connections and state writes the inline
+    block in run_guarded_startup used to perform."""
+    fragment: dict[str, Any] = {}
+    if status.get("second_api_configured"):
+        try:
+            market = _connect_market(state)
+        except Exception as exc:
+            market = {"ok": False, "status": "CONNECT_ERROR", "message": f"{type(exc).__name__}: {exc}"}
+        fragment["market_connection"] = market
+        source = str(market.get("source") or "").upper()
+        twelve_ok = bool(market.get("ok") and source in {"TWELVE", "TWELVE_DATA", "CACHE"})
+        state["twelve_data_connected"] = twelve_ok
+        state["twelve_connected"] = twelve_ok
+        state["twelve_last_auto_connect_20260706"] = time.time()
+        state["twelve_last_auto_connect_message_20260706"] = str(market.get("message") or market.get("status") or "")
+    else:
+        fragment["market_connection"] = {"ok": False, "status": "NOT_CONFIGURED"}
+
+    if status.get("finnhub_configured"):
+        try:
+            finnhub = _validate_finnhub_once(state)
+        except Exception as exc:
+            finnhub = {"ok": False, "status": "CONNECT_ERROR", "message": f"{type(exc).__name__}: {exc}"}
+        fragment["finnhub_connection"] = finnhub
+    else:
+        fragment["finnhub_connection"] = {"ok": False, "status": "NOT_CONFIGURED"}
+
+    fragment["auto_connected"] = bool(
+        (fragment.get("market_connection") or {}).get("ok")
+        or (fragment.get("finnhub_connection") or {}).get("ok")
+    )
+    return fragment
+
+
+# Background auto-connect (speed fix 2026-11-28, user order: no
+# network fetch may block the first paint outside check windows).
+# _connect_market does a forced-live fetch; it used to run inline in
+# run_guarded_startup before the dashboard could paint. Now it runs
+# on a daemon thread against a detached copy of the state, and the
+# next run_guarded_startup call merges the outcome back (only keys
+# the thread created or that still hold the snapshot object -- a
+# key the user changed meanwhile is never overwritten). Until the
+# merge lands, the startup result honestly reports
+# CONNECTING_IN_BACKGROUND.
+import threading as _connect_threading
+
+_CONNECT_LOCK = _connect_threading.Lock()
+_CONNECT_RUNNING: str | None = None
+_CONNECT_PENDING: dict[str, Any] | None = None
+
+
+def _auto_connect_background(state: MutableMapping[str, Any],
+                             status: Mapping[str, Any],
+                             identity: str) -> dict[str, Any]:
+    global _CONNECT_RUNNING, _CONNECT_PENDING
+    with _CONNECT_LOCK:
+        pending = _CONNECT_PENDING
+        if pending is not None and pending.get("identity") == identity:
+            _CONNECT_PENDING = None
+        else:
+            pending = None
+    if pending is not None:
+        snapshot = pending["snapshot"]
+        for key, value in pending["detached"].items():
+            if key not in state:
+                state[key] = value
+            elif key in snapshot and state.get(key) is snapshot[key] \
+                    and value is not snapshot[key]:
+                state[key] = value
+        return dict(pending["fragment"])
+    connecting = {
+        "market_connection": {"ok": False, "status": "CONNECTING_IN_BACKGROUND"},
+        "finnhub_connection": {"ok": False, "status": "CONNECTING_IN_BACKGROUND"},
+        "auto_connected": False,
+        "connect_deferred": True,
+    }
+    with _CONNECT_LOCK:
+        if _CONNECT_RUNNING is not None:
+            return connecting
+        _CONNECT_RUNNING = identity
+    try:
+        snapshot = {k: state[k] for k in list(state.keys())}
+    except Exception:
+        snapshot = dict(state)  # type: ignore[arg-type]
+    detached = dict(snapshot)
+    status_copy = dict(status)
+
+    def _work() -> None:
+        global _CONNECT_RUNNING, _CONNECT_PENDING
+        try:
+            fragment = _attempt_auto_connect(detached, status_copy)
+        except Exception as exc:
+            fragment = {"market_connection": {"ok": False, "status": "CONNECT_ERROR",
+                                              "message": f"{type(exc).__name__}: {exc}"},
+                        "finnhub_connection": {"ok": False, "status": "CONNECT_ERROR"},
+                        "auto_connected": False}
+        with _CONNECT_LOCK:
+            _CONNECT_PENDING = {"identity": identity,
+                                "snapshot": snapshot,
+                                "detached": detached,
+                                "fragment": fragment}
+            _CONNECT_RUNNING = None
+
+    _connect_threading.Thread(target=_work, daemon=True,
+                              name="secure_startup_connect").start()
+    return connecting
+
+
 def run_guarded_startup(state: MutableMapping[str, Any], home_namespace: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Connect configured providers once after any successful login.
 
@@ -356,34 +468,12 @@ def run_guarded_startup(state: MutableMapping[str, Any], home_namespace: Mapping
     }
 
     if state.get("auto_connect_after_login_20260619", True):
-        if status.get("second_api_configured"):
-            try:
-                market = _connect_market(state)
-            except Exception as exc:
-                market = {"ok": False, "status": "CONNECT_ERROR", "message": f"{type(exc).__name__}: {exc}"}
-            result["market_connection"] = market
-            source = str(market.get("source") or "").upper()
-            twelve_ok = bool(market.get("ok") and source in {"TWELVE", "TWELVE_DATA", "CACHE"})
-            state["twelve_data_connected"] = twelve_ok
-            state["twelve_connected"] = twelve_ok
-            state["twelve_last_auto_connect_20260706"] = time.time()
-            state["twelve_last_auto_connect_message_20260706"] = str(market.get("message") or market.get("status") or "")
-        else:
-            result["market_connection"] = {"ok": False, "status": "NOT_CONFIGURED"}
-
-        if status.get("finnhub_configured"):
-            try:
-                finnhub = _validate_finnhub_once(state)
-            except Exception as exc:
-                finnhub = {"ok": False, "status": "CONNECT_ERROR", "message": f"{type(exc).__name__}: {exc}"}
-            result["finnhub_connection"] = finnhub
-        else:
-            result["finnhub_connection"] = {"ok": False, "status": "NOT_CONFIGURED"}
-
-        result["auto_connected"] = bool(
-            (result.get("market_connection") or {}).get("ok")
-            or (result.get("finnhub_connection") or {}).get("ok")
-        )
+        # Speed fix 2026-11-28: the connect itself (a forced-live
+        # fetch) runs on a background thread; this call returns at
+        # once and the outcome is merged on a later call. The
+        # identity/attempt bookkeeping above stays synchronous, so
+        # the attempt still happens at most once per identity.
+        result.update(_auto_connect_background(state, status, identity))
 
     latest = _latest_h1(state.get("last_df"))
     published = _canonical_latest(state)

@@ -270,7 +270,12 @@ def run_deferred_refresh():
             or (selected[0] if selected else st.session_state.get("symbol") or "EURUSD")
         )
         timeframe = normalize_timeframe(st.session_state.get("timeframe") or "H1")
-        cached = CandleRepository().load(
+        # Light construction (speed fix 2026-11-28): this pre-render
+        # read must never trigger the cache restore or the deployment
+        # migration -- it reads whatever store is already on disk
+        # (the background restore fills it in when ready) and simply
+        # finds no rows on a not-yet-restored cold boot.
+        cached = CandleRepository(ensure_cache=False, migrate=False).load(
             symbol,
             timeframe,
             limit=int(st.session_state.get("connector_bars", 600) or 600),

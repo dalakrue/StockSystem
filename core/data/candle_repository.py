@@ -117,10 +117,22 @@ def normalize_frame(
 
 
 class CandleRepository:
-    def __init__(self, db_path: str | Path | None = None) -> None:
+    def __init__(self, db_path: str | Path | None = None, *,
+                 ensure_cache: bool = True,
+                 migrate: bool = True) -> None:
+        # Defaults preserve the historical behaviour exactly: every
+        # construction restores the cache snapshot if needed and runs
+        # the deployment migration. Read-only display paths that must
+        # never block first paint (speed fix 2026-11-28: the runner's
+        # deferred cache read and the symbols-loaded box) pass
+        # ensure_cache=False, migrate=False and simply read whatever
+        # store is already on disk; the background restore kicked off
+        # at app start fills it in when ready.
         self.db_path = Path(db_path or DEFAULT_DB_PATH)
-        ensure_cache_db(self.db_path)
-        migrate_deployment_schema(self.db_path)
+        if ensure_cache:
+            ensure_cache_db(self.db_path)
+        if migrate:
+            migrate_deployment_schema(self.db_path)
 
     def connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self.db_path), timeout=20)

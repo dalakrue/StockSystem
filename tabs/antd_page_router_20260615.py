@@ -339,9 +339,23 @@ def _render_settings() -> None:
         st.session_state['settings_h1_default_initialized_20260729'] = True
     if not st.session_state.get('startup_top30_load_attempted_20260824'):
         st.session_state['startup_top30_load_attempted_20260824'] = True
-        st.session_state['settings_top_load_all_requested_20260823'] = True
-        st.session_state['settings_top_super_quick_requested_20260823'] = True
-        st.session_state['startup_top30_load_status_20260824'] = 'QUEUED'
+        # Speed fix 2026-11-28 (user order: the app must open in
+        # 1-5 s outside check windows): this first-open block used
+        # to queue a top-30 load + Super Quick request that the
+        # selectors section below then executed SYNCHRONOUSLY in
+        # the same render -- the dashboard could not paint until
+        # the whole load finished. The identical work (load the
+        # universe, run Super Quick) now goes to the background
+        # auto-load and merges into the session when it lands.
+        # The Quick Action buttons below still queue their
+        # requests exactly as before (explicit user actions).
+        try:
+            from core.auto_load_startup_20261019 import (
+                maybe_auto_load_field3_async)
+            maybe_auto_load_field3_async(st.session_state)
+        except Exception:
+            pass
+        st.session_state['startup_top30_load_status_20260824'] = 'QUEUED_BACKGROUND'
     # UI overhaul (2026-11-16): the duplicate in-body Settings
     # heading is gone -- render_settings_sidebar owns the one title.
     st.markdown('#### ⚡ Quick Actions')

@@ -410,7 +410,22 @@ def render_multi_symbol_selectors(
             # provider completion here could block the signal page for minutes.
             if bool(canonical_status.get("ready")):
                 state["auto_super_quick_after_open_20260917"] = True
-                load_all_clicked = True
+                # Speed fix 2026-11-28 (user order: the app must open
+                # in 1-5 s outside check windows): this trigger used
+                # to set load_all_clicked and run the full selector
+                # load SYNCHRONOUSLY inside the sidebar render --
+                # minutes of "Loading market data" before the
+                # dashboard could paint. The identical load + Super
+                # Quick now runs through the background auto-load
+                # (same machinery the Field 3 startup uses); the
+                # results merge into the session when they land.
+                # The manual Load buttons below are unchanged.
+                try:
+                    from core.auto_load_startup_20261019 import (
+                        maybe_auto_load_field3_async)
+                    maybe_auto_load_field3_async(state)
+                except Exception:
+                    pass
 
         action_requested = bool(load_s1_clicked or load_s2_clicked or load_s3_clicked or load_all_clicked or retry_failed_clicked or retry_s1_clicked or retry_s2_clicked or retry_s3_clicked or force_retry_clicked)
         if action_requested:

@@ -25,6 +25,7 @@ import json
 import os
 import shutil
 import sqlite3
+import threading
 import urllib.request
 from pathlib import Path
 
@@ -44,6 +45,36 @@ def _fetch_bytes(url: str) -> bytes | None:
         with urllib.request.urlopen(
                 req, timeout=_DOWNLOAD_TIMEOUT_SECONDS) as resp:
             return resp.read()
+    except Exception:
+        return None
+
+# Speed fix 2026-11-28 (user order: app must open in 1-5 s outside
+# check windows): a cold restore rebuilds an ~890 MB DB (~14 s of
+# gunzip + verify on a small VM) and the warm "does the store match
+# the snapshot" check costs a full-table COUNT (~0.6 s). Both used to
+# run synchronously inside every CandleRepository construction, i.e.
+# on the first-paint path. Now:
+# - _RESTORE_LOCK serializes restores/verifications per process, so
+#   the background restore (below) and a synchronous caller can never
+#   interleave on the same files; a synchronous caller that arrives
+#   mid-restore simply waits for the remainder instead of redoing it.
+# - _VERIFIED memoizes "this exact DB file version was verified
+#   against this exact manifest version" so repeat warm checks are
+#   ~free. Any write to the DB or manifest changes its size/mtime
+#   and invalidates the memo, so correctness never depends on it.
+# - ensure_cache_db_async() starts the restore on a daemon thread
+#   (same pattern as github_saveback.restore_history_files_async)
+#   so the dashboard can paint from last-known state immediately.
+_RESTORE_LOCK = threading.Lock()
+_VERIFIED: dict[str, tuple[int, int, int, int]] = {}
+_ASYNC_STARTED: set[str] = set()
+_ASYNC_LOCK = threading.Lock()
+
+
+def _file_stamp(path: Path) -> tuple[int, int] | None:
+    try:
+        st = path.stat()
+        return (int(st.st_size), int(st.st_mtime_ns))
     except Exception:
         return None
 
@@ -90,6 +121,36 @@ def ensure_cache_db(db_path) -> bool:
     exists (fallback), otherwise downloaded from dalakrue/fx-data.
     Returns True when a restore happened. Never raises.
     """
+    with _RESTORE_LOCK:
+        return _ensure_cache_db_locked(db_path)
+
+
+def ensure_cache_db_async(db_path) -> bool:
+    """Start ensure_cache_db on a daemon thread (once per process per
+    path). Returns True when a thread was started. Never raises.
+
+    The dashboard must not wait for a cold restore: the app entry
+    points call this first, the page paints from last-known state,
+    and the first synchronous caller that truly needs the store
+    either finds the restore done or waits out the remainder under
+    _RESTORE_LOCK -- exactly the old behaviour, minus the wait on
+    the paint path.
+    """
+    try:
+        key = str(Path(db_path))
+        with _ASYNC_LOCK:
+            if key in _ASYNC_STARTED:
+                return False
+            _ASYNC_STARTED.add(key)
+        threading.Thread(
+            target=ensure_cache_db, args=(db_path,),
+            daemon=True, name="cache_boot_restore").start()
+        return True
+    except Exception:
+        return False
+
+
+def _ensure_cache_db_locked(db_path) -> bool:
     tmp_gz = None
     tmp_db = None
     try:
@@ -98,8 +159,15 @@ def ensure_cache_db(db_path) -> bool:
         parts_dir = db_path.parent / _PARTS_DIRNAME
         manifest_path = parts_dir / _MANIFEST_NAME
         local = manifest_path.exists()
+        db_stamp = _file_stamp(db_path)
+        man_stamp = _file_stamp(manifest_path) if local else None
         if local:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if (db_stamp is not None and man_stamp is not None
+                    and _VERIFIED.get(str(db_path))
+                    == (db_stamp[0], db_stamp[1],
+                        man_stamp[0], man_stamp[1])):
+                return False  # this exact file version already verified
         else:
             raw_manifest = _fetch_bytes(
                 _REMOTE_PARTS_BASE + "/" + _MANIFEST_NAME)
@@ -107,6 +175,10 @@ def ensure_cache_db(db_path) -> bool:
                 return False
             manifest = json.loads(raw_manifest.decode("utf-8"))
         if _store_matches_manifest(db_path, manifest):
+            if db_stamp is not None and man_stamp is not None:
+                _VERIFIED[str(db_path)] = (
+                    db_stamp[0], db_stamp[1],
+                    man_stamp[0], man_stamp[1])
             return False  # store already holds at least the snapshot
         part_names = sorted(manifest.get("parts") or [])
         if not part_names:
@@ -151,6 +223,11 @@ def ensure_cache_db(db_path) -> bool:
 
         os.replace(tmp_db, db_path)
         tmp_db = None
+        new_stamp = _file_stamp(db_path)
+        if new_stamp is not None and man_stamp is not None:
+            _VERIFIED[str(db_path)] = (
+                new_stamp[0], new_stamp[1],
+                man_stamp[0], man_stamp[1])
         return True
     except Exception:
         return False

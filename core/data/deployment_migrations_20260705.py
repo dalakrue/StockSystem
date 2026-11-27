@@ -12,6 +12,30 @@ SCHEMA_VERSION = 2026070802
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB_PATH = ROOT / "data" / "multi_symbol_field10_20260701.sqlite3"
 
+# Speed fix 2026-11-28 (user order: app must open in 1-5 s outside
+# check windows): this migration is additive and idempotent, but its
+# normalized-schema step re-scans the whole candles table (~860k
+# rows) on every call, and it is called from EVERY CandleRepository
+# construction -- measured ~80 s per construction on a small VM,
+# several of them before the dashboard could paint. The full work
+# still runs for each distinct DB file version; repeat calls in the
+# same process for an unchanged file return the cached report.
+# Any write that changes the file's size/mtime (a restore replacing
+# it, candle upserts) invalidates the memo and the next call runs
+# the full migration again, exactly as before this memo existed.
+import threading as _threading
+
+_MIGRATION_MEMO: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
+_MIGRATION_MEMO_LOCK = _threading.Lock()
+
+
+def _migration_stamp(path: Path) -> tuple[int, int] | None:
+    try:
+        st = path.stat()
+        return (int(st.st_size), int(st.st_mtime_ns))
+    except Exception:
+        return None
+
 
 def _columns(conn: sqlite3.Connection, table: str) -> set[str]:
     return {str(row[1]) for row in conn.execute(f'PRAGMA table_info("{table}")').fetchall()}
@@ -44,6 +68,26 @@ def _transaction(path: Path):
 
 
 def migrate_deployment_schema(db_path: str | Path | None = None) -> dict[str, Any]:
+    path = Path(db_path or DEFAULT_DB_PATH)
+    stamp = _migration_stamp(path)
+    if stamp is not None:
+        with _MIGRATION_MEMO_LOCK:
+            hit = _MIGRATION_MEMO.get(str(path))
+        if hit is not None and hit[0] == stamp:
+            return {**hit[1], "memoized_reuse": True}
+    report = _migrate_deployment_schema_full(db_path)
+    if stamp is not None and report.get("ok"):
+        # Re-stamp AFTER the run: the migration itself may have
+        # written to the file; the memo must describe the file as it
+        # stands once the work is done.
+        after = _migration_stamp(path)
+        if after is not None:
+            with _MIGRATION_MEMO_LOCK:
+                _MIGRATION_MEMO[str(path)] = (after, report)
+    return report
+
+
+def _migrate_deployment_schema_full(db_path: str | Path | None = None) -> dict[str, Any]:
     path = Path(db_path or DEFAULT_DB_PATH)
     now = datetime.now(timezone.utc).isoformat()
     backup_path = path.with_suffix(path.suffix + ".pre_normalized_20260707.bak")

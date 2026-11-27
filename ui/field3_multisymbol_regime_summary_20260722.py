@@ -3079,7 +3079,13 @@ def _render_symbols_loaded_box(st, context, state=None):
             from core.multi_symbol_load_manager_20260707 import (
                 is_valid_candle_df as _is_valid_frame,
             )
-            _repo = CandleRepository(_DB_PATH)
+            # Light construction (speed fix 2026-11-28): this display
+            # chip counts what is already in the store; it must never
+            # trigger the cache restore or the deployment migration
+            # on the paint path. The background restore kicked off at
+            # app start fills the store in when ready.
+            _repo = CandleRepository(_DB_PATH, ensure_cache=False,
+                                     migrate=False)
             for _sym in required:
                 if _sym in have:
                     continue
@@ -13007,14 +13013,18 @@ def _render_combined_signals_table_live(st, state, month):
                 stored_win = None
         latest_win = _latest_entry_window_utc(now_utc, hours=hours)
         live_ok = in_check_window(month, now_utc)
-        # AUTO-CALCULATE ON OPEN (user order 2026-11-25): when the
-        # app is opened and the latest check has not been evaluated
-        # yet in this session, evaluate it ONCE on open -- even
-        # outside the live window -- so opening the app always
-        # loads data and calculates. Inside the live window the
-        # old rule is unchanged. The on-open run is once per
-        # session per window (session flag), so reruns do not
-        # re-fetch again and again.
+        # AUTO-CALCULATE ON OPEN (user order 2026-11-25), narrowed
+        # by the speed order 2026-11-28: opening the app must reach
+        # the dashboard in seconds with NO network fetch outside a
+        # check/precheck window, so the on-open evaluation now runs
+        # ONLY inside the live check window (where it is scoped to
+        # that window's symbols/timeframes, as before). Outside the
+        # window the stored payload below renders unchanged -- the
+        # last-known state -- and the Refresh button remains the
+        # explicit way to force a fresh fetch. Inside the live
+        # window the old rule is unchanged: evaluate the latest
+        # check once per session per window (session flag), so
+        # reruns do not re-fetch again and again.
         _open_key = f"auto_calc_on_open::{month}::{latest_win}"
         _auto_on_open = (
             latest_win is not None
@@ -13022,7 +13032,7 @@ def _render_combined_signals_table_live(st, state, month):
                  or _payload_data_failed(payload))
             and not state.get(_open_key))
         fresh_this_window = False
-        if ((live_ok or _auto_on_open)
+        if (live_ok
                 and latest_win is not None
                 and (stored_win is None or stored_win != latest_win
                 or _payload_data_failed(payload))
@@ -13992,6 +14002,19 @@ def render_multisymbol_regime_summary(
     # panels fetch their own H1/M15 frames via the provider chain.
     render_monthly_panel(st, state)
     _load_saved_if_needed(state)
+    # Speed fix 2026-11-28: when the startup data load is running
+    # in the background, say so plainly -- everything below is the
+    # last saved state and fills in when the load lands.
+    try:
+        _al = state.get("auto_load_outcome_20261125")
+        if isinstance(_al, dict) and str(_al.get("reason") or "") in (
+                "auto_load_started_in_background",
+                "auto_load_running_in_background"):
+            st.caption("⏳ Fresh market data is loading in the "
+                       "background — showing the last saved state; "
+                       "the tables fill in when it lands.")
+    except Exception:
+        pass
     context = get_global_symbol_context(state)
 
     # Floating control bar (user orders 2026-11-16 + 2026-11-28):

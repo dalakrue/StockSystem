@@ -23,6 +23,23 @@ elsewhere in the app are unchanged; this applies only to
 this memory-building section.) Nothing here reads the
 Dukascopy store for the calculation; the stored past is read
 only AFTER the walk, for the comparison.
+
+Modes (user order 2026-11-28): the section takes FOUR choices
+— month, year, CHECK TYPE and EXIT TYPE. CHECK walks and
+compares as above and additionally settles the picks in a
+live replay on the section's own downloaded Twelve M15
+frames only (TP +90 / SL -30, net = gross - 2.5 per pick;
+the exit type picks the 48h close or TP/SL-only ending).
+PRECHECK evaluates, before each slot is stepped, the true
+precheck of that slot on a snapshot clone of the in-progress
+walk state with the frames close-cut at check - 15 min —
+the M15 entry bar, which has not opened yet at the cutoff,
+is synthesized flat at the last completed M15 close —
+those precheck picks are the run's recorded results and are
+compared against the stored past's CHECK picks; the walk
+itself still steps every slot with the normal check
+evaluation, so the built memory is the true check walk in
+both modes.
 """
 import io
 import json
@@ -35,7 +52,8 @@ import pandas as pd
 
 from core.replay_section import (
     _month_module, _twelve_pool, _twelve_fetch_values,
-    _m15_bars, _window_ok, _assemble_m15_from_twelve_m5)
+    _m15_bars, _window_ok, _assemble_m15_from_twelve_m5,
+    _pick_view)
 from core.check_candle_runtime import normalize_ohlc
 
 _MONTH_NAMES = ["January", "February", "March", "April", "May",
@@ -171,6 +189,209 @@ def _refetch_window(pool, sym, tf, end_ts, bars=500):
     return frame
 
 
+def _pip_of(sym):
+    return 0.01 if str(sym).endswith("JPY") else 0.0001
+
+
+_REPLAY_TP_PIPS = 90.0
+_REPLAY_SL_PIPS = 30.0
+_REPLAY_COST_PIPS = 2.5
+
+
+def _settle_picks(delivered, m15_data, exit_type):
+    """Live-replay settlement of the build's picks on the
+    section's OWN downloaded Twelve M15 frames only (healed /
+    assembled bars in those frames are still the section's
+    Twelve data; nothing here reads Dukascopy or the local
+    store). Conventions (the proven settlement scripts):
+    entry at check - 30 min at the pick's entry price; bars
+    scanned in order from the entry stamp; first touch of
+    TP +90 / SL -30 wins; a bar touching both settles as SL;
+    the exit time recorded is the deciding bar's stamp and
+    the exit price the touched level. Exit type "48h": a
+    pick still open at entry + 48h closes at the last bar
+    ending <= entry + 48h (reason 48H). Exit type "tpsl":
+    no time exit — an untouched pick stays OPEN, marked at
+    the last downloaded bar. net = gross - 2.5 per pick.
+    Returns (rows, totals)."""
+    rows = []
+    for d in delivered:
+        sym = d["symbol"]
+        direction = d["direction"]
+        pip = _pip_of(sym)
+        sgn = 1 if direction == "BUY" else -1
+        entry = float(d["entry_px"])
+        slot = pd.Timestamp(d["check"])
+        entry_time = slot - pd.Timedelta(minutes=30)
+        tp_px = entry + sgn * _REPLAY_TP_PIPS * pip
+        sl_px = entry - sgn * _REPLAY_SL_PIPS * pip
+        deadline = entry_time + pd.Timedelta(hours=48)
+        frame = m15_data.get(sym) if m15_data else None
+        reason = None
+        exit_time = None
+        exit_px = None
+        last = None
+        if frame is not None and len(frame):
+            bars = frame.loc[entry_time:]
+            for ts, row in bars.iterrows():
+                if exit_type == "48h" and ts + pd.Timedelta(
+                        minutes=15) > deadline:
+                    break
+                hi = float(row["High"])
+                lo = float(row["Low"])
+                last = (ts, float(row["Close"]))
+                hit_tp = hi >= tp_px if sgn > 0 else lo <= tp_px
+                hit_sl = lo <= sl_px if sgn > 0 else hi >= sl_px
+                if hit_tp and hit_sl:
+                    reason, exit_time, exit_px = "SL", ts, sl_px
+                    break
+                if hit_tp:
+                    reason, exit_time, exit_px = "TP", ts, tp_px
+                    break
+                if hit_sl:
+                    reason, exit_time, exit_px = "SL", ts, sl_px
+                    break
+        if reason is None:
+            if last is not None:
+                reason = "48H" if exit_type == "48h" else "OPEN"
+                exit_time, exit_px = last
+            else:
+                reason, exit_time, exit_px = "OPEN", entry_time, \
+                    entry
+        gross = round((exit_px - entry) * sgn / pip, 1)
+        rows.append({
+            "slot": str(slot), "symbol": sym,
+            "direction": direction, "entry_px": entry,
+            "entry_time": str(entry_time),
+            "exit_time": str(exit_time), "exit_px": exit_px,
+            "reason": reason, "gross": gross,
+            "net": round(gross - _REPLAY_COST_PIPS, 1)})
+    other_label = "48H" if exit_type == "48h" else "OPEN"
+    totals = {
+        "tp": sum(1 for r in rows if r["reason"] == "TP"),
+        "sl": sum(1 for r in rows if r["reason"] == "SL"),
+        "other": sum(1 for r in rows
+                     if r["reason"] == other_label),
+        "other_label": other_label,
+        "gross": round(sum(r["gross"] for r in rows), 1),
+        "net": round(sum(r["net"] for r in rows), 1),
+        "picks": len(rows)}
+    return rows, totals
+
+
+def _view_for(d):
+    """TP/SL price view of one delivered pick (the sections
+    1/2 rule: the pick's own tp/sl pips win; the system-wide
+    90/30 stands in when a ledger row omits them)."""
+    try:
+        return _pick_view(d)
+    except Exception:
+        pip = _pip_of(d["symbol"])
+        sgn = 1 if d["direction"] == "BUY" else -1
+        entry = float(d["entry_px"])
+        return {"symbol": d["symbol"],
+                "direction": d["direction"], "entry_px": entry,
+                "tp_px": entry + sgn * 90.0 * pip,
+                "sl_px": entry - sgn * 30.0 * pip}
+
+
+def _precheck_frames(data, symbols, slot):
+    """The frames for one slot's true precheck: the build's
+    downloaded bars close-cut at check - 15 min (proven
+    stamps: an H1 bar counts only when it has CLOSED by the
+    cutoff, so the last real H1 stamp is slot - 75 min;
+    M15 slot - 30; M5 slot - 20), with the walk's own
+    window sizes. The panel deals from the M15 entry bar
+    (stamp slot - 15), which has not closed — has not even
+    opened — at the cutoff, so that one bar is SYNTHESIZED
+    flat at the last completed M15 close (the proven
+    synthesis principle: the entry candle is synthesized
+    from data available at the moment, never taken from
+    the real entry bar). No real bar that closes after
+    check - 15 min reaches the evaluation."""
+    h1_cut = slot - pd.Timedelta(minutes=75)
+    m15_cut = slot - pd.Timedelta(minutes=30)
+    m5_cut = slot - pd.Timedelta(minutes=20)
+    entry_bar = slot - pd.Timedelta(minutes=15)
+    frames, m15_frames, m5_frames = {}, {}, {}
+    for sym in symbols:
+        f = data["H1"][sym].loc[:h1_cut]
+        if len(f) > 450:
+            f = f.iloc[-450:]
+        frames[sym] = f
+        f15 = data["M15"][sym].loc[:m15_cut]
+        if len(f15):
+            row = f15.iloc[[-1]].copy()
+            last_close = float(row["Close"].iloc[0])
+            row.index = pd.DatetimeIndex([entry_bar])
+            for col in ("Open", "High", "Low", "Close"):
+                row[col] = last_close
+            if "Datetime" in row.columns:
+                row["Datetime"] = entry_bar
+            f15 = pd.concat([f15, row]).sort_index(
+                kind="stable")
+        if len(f15) > 400:
+            f15 = f15.iloc[-400:]
+        m15_frames[sym] = f15
+        f5 = data["M5"][sym].loc[:m5_cut]
+        if len(f5) > 400:
+            f5 = f5.iloc[-400:]
+        m5_frames[sym] = f5
+    return frames, m15_frames, m5_frames
+
+
+def _precheck_pick(mod, state_path, frames, slot, m15_frames,
+                   m5_frames):
+    """Evaluate ONE slot's true precheck on a snapshot clone
+    of the in-progress walk state: the walk's state file is
+    copied, the module's state handle is pointed at a form
+    loaded from the copy for this one call, and the original
+    handle is restored afterwards. The clone writes only to
+    its own copy — the walk's state file, state form and
+    memory are never touched by a precheck. Returns the pick
+    dicts the clone dealt for the slot, in stored-state
+    format (possibly empty). Never raises."""
+    import shutil
+    tmpdir = tempfile.mkdtemp(prefix="twelve_precheck_")
+    clone_path = os.path.join(tmpdir, "clone_state.json")
+    prev_form = getattr(mod, "_STATE", None)
+    try:
+        if state_path and os.path.exists(state_path):
+            shutil.copyfile(state_path, clone_path)
+        mod._STATE = mod.load_state_form(path=clone_path)
+        dealt = mod.panel_entries(frames, slot,
+                                  m15_frames=m15_frames,
+                                  open_symbols=(),
+                                  m5_frames=m5_frames)
+        picks = []
+        if os.path.exists(clone_path):
+            with open(clone_path) as f:
+                clone_state = json.load(f)
+            want = str(pd.Timestamp(slot))
+            for d in clone_state.get("delivered", []):
+                if str(pd.Timestamp(d["check"])) == want:
+                    picks.append(d)
+        if not picks and dealt is not None and len(dealt):
+            for _, r in dealt.iterrows():
+                picks.append({
+                    "check": str(pd.Timestamp(r["check"])),
+                    "symbol": r["symbol"],
+                    "direction": r["direction"],
+                    "entry_px": float(r["entry_px"]),
+                    "tp_pips": float(r["tp_pips"]),
+                    "sl_pips": float(r["sl_pips"]),
+                    "exit_time": str(pd.Timestamp(
+                        r["exit_time"])),
+                    "mult": float(r["mult"]),
+                    "layer": r.get("layer", "")})
+        return picks
+    except Exception:
+        return []
+    finally:
+        mod._STATE = prev_form
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 class BuildInterrupted(Exception):
     """Raised only by the explicit _interrupt_after_walked
     test/stop hook in build_memory — the simulated crash.
@@ -288,26 +509,40 @@ def _compare(built_state, past):
 
 def _xlsx_bytes(month, year, cycle, built_state, compare,
                 past_name, skipped=(), note=None,
-                skip_reasons=None, healed=0):
+                skip_reasons=None, healed=0, picks=None,
+                replay=None, mode="CHECK", exit_type="48h"):
     buf = io.BytesIO()
     delivered = built_state.get("delivered", [])
+    # The Picks sheet carries the run's recorded results:
+    # the walk's picks in CHECK mode, the precheck picks
+    # (marked) in PRECHECK mode.
+    pick_rows = picks if picks is not None else delivered
     processed = [str(t).replace("T", " ")[:19]
                  for t in built_state.get("processed", [])]
     skipped = [str(t).replace("T", " ")[:19] for t in skipped]
     by_slot = {}
-    for d in delivered:
+    for d in pick_rows:
         by_slot[str(d["check"]).replace("T", " ")[:19]] = d
-    summary = pd.DataFrame([
+    summary_rows = [
         ("Month", f"{_MONTH_NAMES[month - 1]} {year}"),
         ("Cycle (system)", cycle),
         ("Data basis", "Twelve Data API (downloaded at build "
                        "time)"),
+        ("Build mode", ("PRECHECK — data cut at check "
+                        "- 15 min" if mode == "PRECHECK"
+                        else "CHECK")),
         ("Slots walked", len(processed)),
         ("Slots skipped — DATA ERROR", len(skipped)),
         ("Slots healed (re-fetch / M5 assembly)", healed),
-        ("Picks delivered", len(delivered)),
+        ("Picks delivered", len(pick_rows)),
         ("Result note", note or "complete run"),
         ("Compared against", past_name or "no stored past found"),
+    ]
+    if mode == "PRECHECK":
+        summary_rows.append(
+            ("Comparison basis",
+             "precheck picks vs the stored past's CHECK picks"))
+    summary_rows += [
         ("Shared slots", compare["shared_slots"] if compare
          else ""),
         ("Matching picks", compare["match"] if compare else ""),
@@ -315,7 +550,24 @@ def _xlsx_bytes(month, year, cycle, built_state, compare,
          else ""),
         ("Similarity %", (round(compare["similarity_pct"], 1)
                           if compare else "")),
-    ], columns=["Item", "Value"])
+    ]
+    if replay:
+        tot = replay["totals"]
+        summary_rows += [
+            ("Live replay basis",
+             "the build's own Twelve Data M15 only — TP +90 / "
+             "SL -30 pips, net = gross - 2.5 per pick, exit "
+             "type: " + ("48h close" if exit_type == "48h"
+                         else "TP/SL only (no time exit)")),
+            ("Live replay — TP exits", tot["tp"]),
+            ("Live replay — SL exits", tot["sl"]),
+            (f"Live replay — {tot['other_label']} exits",
+             tot["other"]),
+            ("Live replay — gross pips", tot["gross"]),
+            ("Live replay — net pips", tot["net"]),
+        ]
+    summary = pd.DataFrame(summary_rows, columns=["Item",
+                                                  "Value"])
     picks = pd.DataFrame([{
         "check_utc": str(d["check"]).replace("T", " "),
         "symbol": d["symbol"], "direction": d["direction"],
@@ -324,7 +576,8 @@ def _xlsx_bytes(month, year, cycle, built_state, compare,
         "exit_time_utc": str(d.get("exit_time", "")).replace(
             "T", " "),
         "mult": d.get("mult"), "layer": d.get("layer"),
-    } for d in delivered])
+        **({"mode": "precheck"} if mode == "PRECHECK" else {}),
+    } for d in pick_rows])
     slots = pd.DataFrame([{
         "slot_utc": s,
         "pick": (f"{by_slot[s]['symbol']} "
@@ -350,11 +603,27 @@ def _xlsx_bytes(month, year, cycle, built_state, compare,
                 "result": r,
             } for s, a, b, r in compare["rows"]])
             comp.to_excel(xw, sheet_name="Compare", index=False)
+        if replay:
+            rep = pd.DataFrame([{
+                "slot_utc": str(r["slot"]).replace("T", " "),
+                "symbol": r["symbol"],
+                "direction": r["direction"],
+                "entry_px": r["entry_px"],
+                "exit_time_utc": str(r["exit_time"]).replace(
+                    "T", " "),
+                "exit_px": r["exit_px"],
+                "reason": r["reason"],
+                "gross_pips": r["gross"],
+                "net_pips": r["net"],
+            } for r in replay["rows"]])
+            rep.to_excel(xw, sheet_name="Live replay",
+                         index=False)
     return buf.getvalue()
 
 
 def build_memory(month, year, state=None, progress=None,
-                 resume=True, _interrupt_after_walked=None):
+                 resume=True, _interrupt_after_walked=None,
+                 check_type="CHECK", exit_type="48h"):
     """Download the month's candles from Twelve Data and walk
     its cycle over them. progress(frac, text) is called as work
     advances. Returns a result dict. Hardening (2026-11-28):
@@ -365,7 +634,23 @@ def build_memory(month, year, state=None, progress=None,
     result always covers the whole month: walked N, healed H,
     skipped S. A DATA ERROR status is returned only when the
     build cannot start at all (no slots, no key pool) or the
-    walk machinery itself produced no state."""
+    walk machinery itself produced no state.
+
+    Modes (2026-11-28): check_type "CHECK" (default) settles
+    the walk's picks in a live replay on the build's own
+    Twelve M15 frames (exit_type "48h" or "tpsl") and compares
+    them against the stored past. check_type "PRECHECK"
+    evaluates each slot's true precheck (snapshot clone,
+    frames close-cut at check - 15 min) before the slot is
+    stepped; those precheck picks are the recorded results
+    and are compared against the stored past's CHECK picks,
+    while the walk itself still steps every slot with the
+    normal check evaluation."""
+    check_type = str(check_type or "CHECK").upper()
+    if check_type not in ("CHECK", "PRECHECK"):
+        check_type = "CHECK"
+    exit_type = str(exit_type or "48h").lower()
+    exit_type = "48h" if "48" in exit_type else "tpsl"
     def report(frac, text):
         if progress is not None:
             progress(frac, text)
@@ -488,6 +773,8 @@ def build_memory(month, year, state=None, progress=None,
     skipped = []
     skip_reasons = {}
     healed_slots = []
+    precheck_picks: list = []
+    precheck_slots: list = []
     if resume_rec:
         skipped = [str(s) for s in resume_rec.get("skipped",
                                                   [])]
@@ -497,6 +784,31 @@ def build_memory(month, year, state=None, progress=None,
         healed_slots = [str(s) for s in
                         resume_rec.get("healed_slots", [])]
         events = list(resume_rec.get("events", [])) + events
+        if check_type == "PRECHECK":
+            # Precheck results accumulate in the progress
+            # record like everything else, so a resumed
+            # precheck run keeps the picks of the slots it
+            # does not re-walk. A record saved before
+            # precheck tracking (or by a CHECK run) cannot
+            # supply them — those slots are named honestly
+            # instead of being silently absent.
+            precheck_picks = list(
+                resume_rec.get("precheck_picks") or [])
+            precheck_slots = [str(s) for s in
+                              resume_rec.get("precheck_slots")
+                              or []]
+            seen = set(precheck_slots)
+            missing_pc = [s for s in
+                          resume_rec.get("processed", [])
+                          if str(s) not in seen]
+            if missing_pc:
+                events.append(
+                    f"ℹ Saved progress holds no precheck "
+                    f"results for {len(missing_pc)} already-"
+                    f"walked slot(s) (the record predates "
+                    f"precheck tracking or came from a CHECK "
+                    f"run) — those slots show no precheck "
+                    f"pick in this run.")
 
     _push_gate = {"last": 0.0}
 
@@ -516,12 +828,16 @@ def build_memory(month, year, state=None, progress=None,
             rec = {
                 "cycle": cycle, "year": int(year),
                 "month": int(month),
+                "check_type": check_type,
+                "exit_type": exit_type,
                 "total_slots": len(slots),
                 "processed": (state_now or {}).get(
                     "processed", []),
                 "skipped": list(skipped),
                 "skip_reasons": dict(skip_reasons),
                 "healed_slots": list(healed_slots),
+                "precheck_picks": list(precheck_picks),
+                "precheck_slots": list(precheck_slots),
                 "events": list(events),
                 "state": state_now,
                 "complete": bool(complete),
@@ -755,6 +1071,21 @@ def build_memory(month, year, state=None, progress=None,
                     f"{len(bad)} symbols after re-fetch + M5 "
                     f"assembly: {', '.join(bad)}")
                 continue
+            if check_type == "PRECHECK":
+                # True precheck (2026-11-28): BEFORE this
+                # slot is stepped, evaluate it on a snapshot
+                # clone of the walk state as it stands now,
+                # with the frames close-cut at check - 15
+                # min. The clone never writes to the walk —
+                # the step below is the slot's only write.
+                pc_frames, pc_m15, pc_m5 = _precheck_frames(
+                    data, symbols, slot)
+                for d in _precheck_pick(
+                        mod, state_path, pc_frames, slot,
+                        pc_m15, pc_m5):
+                    precheck_picks.append(d)
+                precheck_slots.append(str(slot))
+                _save_progress()
             try:
                 mod.panel_entries(frames, slot,
                                   m15_frames=m15_frames,
@@ -803,7 +1134,19 @@ def build_memory(month, year, state=None, progress=None,
     # naming walked / healed / skipped counts.
     report(0.97, "Comparing against the stored past…")
     past, past_name = _past_ledger(cycle, year, month)
-    compare = _compare(built_state, past) if past else None
+    if check_type == "PRECHECK":
+        # The recorded results of a precheck run are the
+        # precheck picks; they are compared against the
+        # stored past's CHECK picks (the past ledgers hold
+        # check results) over the walk's processed slots.
+        compare_state = {
+            "processed": built_state.get("processed", []),
+            "delivered": precheck_picks}
+        compare = _compare(compare_state, past) if past \
+            else None
+    else:
+        compare = _compare(built_state, past) if past \
+            else None
     slot_errors = [{"slot": s, "reason": skip_reasons[s]}
                    for s in skipped
                    if not skip_reasons.get(
@@ -823,10 +1166,62 @@ def build_memory(month, year, state=None, progress=None,
                 f"{len(healed_slots)} healed")
     else:
         note = None
+    # ---- Live replay + per-slot display lines (CHECK
+    # mode): settle the walk's picks on the build's own
+    # Twelve M15 frames and shape the sections 1/2 display
+    # standard — symbol · direction · entry · TP · SL ·
+    # test verdict · moved — for every pick. In PRECHECK
+    # mode the lines carry the precheck picks (no replay:
+    # a precheck is never settled).
+    replay = None
+    pick_lines = []
+    if check_type == "CHECK":
+        rows, totals = _settle_picks(
+            built_state.get("delivered", []), data["M15"],
+            exit_type)
+        replay = {"rows": rows, "totals": totals}
+        for d, r in zip(built_state.get("delivered", []),
+                        rows):
+            view = _view_for(d)
+            frame = data["M15"].get(d["symbol"])
+            moved_txt = "moved: —"
+            if frame is not None and len(frame):
+                last_close = float(frame["Close"].iloc[-1])
+                mv = (last_close - float(d["entry_px"])) * (
+                    1 if d["direction"] == "BUY" else -1) \
+                    / _pip_of(d["symbol"])
+                moved_txt = f"moved: {mv:+.1f} pips"
+            pick_lines.append({
+                "check (UTC)": str(d["check"]).replace(
+                    "T", " "),
+                "symbol": d["symbol"],
+                "direction": d["direction"],
+                "entry": float(d["entry_px"]),
+                "TP": view["tp_px"], "SL": view["sl_px"],
+                "test (live replay)":
+                    f"{r['reason']} (net {r['net']:+.1f})",
+                "moved": moved_txt})
+    else:
+        for d in precheck_picks:
+            view = _view_for(d)
+            pick_lines.append({
+                "check (UTC)": str(d["check"]).replace(
+                    "T", " "),
+                "symbol": d["symbol"],
+                "direction": d["direction"],
+                "entry": float(d["entry_px"]),
+                "TP": view["tp_px"], "SL": view["sl_px"],
+                "test (live replay)": "—",
+                "moved": "moved: —"})
     xlsx = _xlsx_bytes(month, year, cycle, built_state, compare,
                        past_name, skipped=skipped,
                        skip_reasons=skip_reasons,
-                       healed=len(healed_slots), note=note)
+                       healed=len(healed_slots), note=note,
+                       picks=(precheck_picks
+                              if check_type == "PRECHECK"
+                              else None),
+                       replay=replay, mode=check_type,
+                       exit_type=exit_type)
     if slot_errors or skipped:
         report(1.0,
                f"Done — {walked_n} walked, "
@@ -859,6 +1254,8 @@ def build_memory(month, year, state=None, progress=None,
     return {"status": "OK",
             "missing": None,
             "partial": False,
+            "check_type": check_type,
+            "exit_type": exit_type,
             "total_slots": len(slots),
             "cycle": cycle,
             "slots": len(built_state.get("processed", [])),
@@ -870,7 +1267,18 @@ def build_memory(month, year, state=None, progress=None,
             "events": events,
             "progress_record": _progress_rel(cycle, year),
             "download_missing": download_missing,
-            "delivered": len(built_state.get("delivered", [])),
+            "delivered": (len(precheck_picks)
+                          if check_type == "PRECHECK"
+                          else len(built_state.get(
+                              "delivered", []))),
+            "display_picks": (precheck_picks
+                              if check_type == "PRECHECK"
+                              else built_state.get(
+                                  "delivered", [])),
+            "precheck_picks": precheck_picks,
+            "replay": replay,
+            "pick_lines": pick_lines,
+            "m15_frames": data["M15"],
             "state": built_state, "compare": compare,
             "past_name": past_name, "xlsx": xlsx,
             "persistent_status": persistent_status}
@@ -894,14 +1302,19 @@ def render_twelve_memory_section(st):
         "⭐ HIGHLIGHT</span></div>",
         unsafe_allow_html=True)
     st.caption(
-        "Pick a month and year, then Start: the app downloads "
-        "that month's candles (H1 / M15 / M5, 28 symbols) from "
-        "the Twelve Data API, walks the month's cycle over them "
-        "to build its memory, compares the result against the "
-        "stored past, and gives you an Excel (XLSX) download. "
-        "Calculation data: Twelve Data only. The app's live "
-        "memory is not touched. A full month takes a while — "
-        "keep this tab open and watch the progress bar.")
+        "Pick a month, year, check type and exit type, then "
+        "Start: the app downloads that month's candles "
+        "(H1 / M15 / M5, 28 symbols) from the Twelve Data API, "
+        "walks the month's cycle over them to build its "
+        "memory, compares the result against the stored "
+        "past, and gives you an Excel (XLSX) download. CHECK "
+        "also settles the picks in a live replay on the "
+        "downloaded Twelve candles; PRECHECK records each "
+        "slot's true precheck (data cut at check − 15 min) "
+        "instead. Calculation data: Twelve Data only. The "
+        "app's live memory is not touched. A full month "
+        "takes a while — keep this tab open and watch the "
+        "progress bar.")
     c1, c2 = st.columns(2)
     with c1:
         month_name = st.selectbox(
@@ -911,8 +1324,20 @@ def render_twelve_memory_section(st):
         year = st.selectbox(
             "Year", list(range(2026, 2014, -1)),
             index=1, key="twmem_year")
+    c3, c4 = st.columns(2)
+    with c3:
+        check_type = st.selectbox(
+            "Check type", ["CHECK", "PRECHECK"],
+            index=0, key="twmem_check_type")
+    with c4:
+        exit_label = st.selectbox(
+            "Exit type (live replay, CHECK mode)",
+            ["48h close", "TP/SL only (no time exit)"],
+            index=0, key="twmem_exit_type")
+    exit_type = "48h" if exit_label.startswith("48h") \
+        else "tpsl"
     month = _MONTH_NAMES.index(month_name) + 1
-    store_key = f"twmem_result_{year}_{month}"
+    store_key = f"twmem_result_{year}_{month}_{check_type}"
     # Saved-progress state (user order 2026-11-28): a partial
     # progress record for the chosen month-year — local copy
     # checked every render (cheap), GitHub restore attempted
@@ -952,7 +1377,9 @@ def render_twelve_memory_section(st):
         with st.spinner("Building memory from Twelve Data…"):
             _res = build_memory(month, int(year),
                                 state=st.session_state,
-                                progress=_prog)
+                                progress=_prog,
+                                check_type=check_type,
+                                exit_type=exit_type)
         st.session_state[store_key] = _res
         st.session_state.pop(_gh_key, None)
 
@@ -962,10 +1389,18 @@ def render_twelve_memory_section(st):
                      key="twmem_start"):
             _run_build()
     with bc2:
-        if _partial_rec and st.button(
-                "↻ Recalculate (resume)",
-                key="twmem_resume"):
+        # Recalculate is ALWAYS visible (user order
+        # 2026-11-28): enabled only when a saved partial
+        # progress record exists for the chosen month-year;
+        # disabled with a caption otherwise.
+        if st.button("↻ Recalculate (resume)",
+                     key="twmem_resume",
+                     disabled=not _partial_rec):
             _run_build()
+        if not _partial_rec:
+            st.caption(
+                "No saved partial progress for this "
+                "month-year — nothing to resume.")
     result = st.session_state.get(store_key)
     if not result:
         return
@@ -988,6 +1423,11 @@ def render_twelve_memory_section(st):
             f"({result['cycle']}) from Twelve Data: "
             f"{result['slots']} slots walked, "
             f"{result['delivered']} picks delivered."
+            + (" (PRECHECK mode — the picks are the true "
+               "prechecks, data cut at check − 15 min; the "
+               "walked memory is the check walk.)"
+               if result.get("check_type") == "PRECHECK"
+               else "")
             + (f" {result['healed']} slot(s) healed by "
                f"re-fetch / M5 assembly."
                if result.get("healed") else "")
@@ -1026,10 +1466,16 @@ def render_twelve_memory_section(st):
             "month-year — the stored ledger was kept exactly "
             "as it was (never overwritten).")
     if comp:
+        if result.get("check_type") == "PRECHECK":
+            _cmp_head = (f"**Compare — precheck picks vs "
+                         f"stored past CHECK picks "
+                         f"({result['past_name']}): similarity ")
+        else:
+            _cmp_head = (f"**Compare vs stored past "
+                         f"({result['past_name']}): similarity ")
         st.markdown(
-            f"**Compare vs stored past "
-            f"({result['past_name']}): similarity "
-            f"{comp['similarity_pct']:.1f}%** — "
+            _cmp_head
+            + f"{comp['similarity_pct']:.1f}%** — "
             f"{comp['match']} matching picks, "
             f"{comp['differ']} different, "
             f"{comp['only_built']} only in the Twelve build, "
@@ -1120,11 +1566,31 @@ def render_twelve_memory_section(st):
         file_name=(f"{result['cycle']}_{year}.json"),
         mime="application/json",
         key=f"twmem_dljson_{year}_{month}")
-    picks = result["state"].get("delivered", [])
-    if picks:
-        st.dataframe(pd.DataFrame([{
-            "check (UTC)": str(d["check"]).replace("T", " "),
-            "symbol": d["symbol"],
-            "direction": d["direction"],
-            "entry": d["entry_px"],
-        } for d in picks]), use_container_width=True)
+    if result.get("replay"):
+        _tot = result["replay"]["totals"]
+        st.markdown(
+            f"**Live replay (the build's own Twelve M15, "
+            f"TP +90 / SL −30, net = gross − 2.5 per pick, "
+            f"exit: {'48h close' if result.get('exit_type') == '48h' else 'TP/SL only'}): "
+            f"TP {_tot['tp']} · SL {_tot['sl']} · "
+            f"{_tot['other_label']} {_tot['other']} — "
+            f"gross {_tot['gross']:+.1f} pips, "
+            f"net {_tot['net']:+.1f} pips.**")
+    _lines = result.get("pick_lines")
+    if _lines:
+        if result.get("check_type") == "PRECHECK":
+            st.caption("Precheck picks — evaluated on a "
+                       "snapshot of the walk state with data "
+                       "cut at check − 15 min.")
+        st.dataframe(pd.DataFrame(_lines),
+                     use_container_width=True)
+    else:
+        picks = result["state"].get("delivered", [])
+        if picks:
+            st.dataframe(pd.DataFrame([{
+                "check (UTC)": str(d["check"]).replace(
+                    "T", " "),
+                "symbol": d["symbol"],
+                "direction": d["direction"],
+                "entry": d["entry_px"],
+            } for d in picks]), use_container_width=True)

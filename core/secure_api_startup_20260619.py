@@ -41,13 +41,33 @@ def _secret_bool(section: str, name: str, default: bool) -> bool:
     return value.lower() in {"1", "true", "yes", "on", "enabled"}
 
 
+_SECRET_CACHE: dict = {}
+_SECRET_TTL = 60.0
+
+
 def _first_secret(*paths: tuple[str, ...]) -> str:
-    """Return the first configured Streamlit secret from accepted aliases."""
+    """Return the first configured Streamlit secret from accepted aliases.
+
+    Memoized process-wide for 60 s (freeze fix 2026-11-28):
+    Streamlit Secrets are app-global and effectively static
+    per deployment, but the settings sidebar re-probed every
+    alias path on every rerun (~850 st.secrets lookups per
+    render — a top cost of the control-toggle freeze).
+    Session-state / pasted keys are NOT cached: resolve_api_key
+    checks them before this function, so a pasted key still
+    takes effect immediately."""
+    key = tuple(tuple(p) for p in paths)
+    now = time.time()
+    hit = _SECRET_CACHE.get(key)
+    if hit and now - hit[0] < _SECRET_TTL:
+        return hit[1]
+    value = ""
     for path in paths:
         value = _secret_path(*path)
         if value:
-            return value
-    return ""
+            break
+    _SECRET_CACHE[key] = (now, value)
+    return value
 
 
 def _provider_config(provider: str) -> dict[str, Any] | None:
@@ -185,8 +205,41 @@ def _credential_source(provider: str, state: Mapping[str, Any]) -> str:
     return "Not configured"
 
 
+_STATUS_CACHE: dict = {"ts": 0.0, "fp": None, "value": None}
+_STATUS_TTL = 20.0
+
+
+def _status_fingerprint(state: Mapping[str, Any]) -> str:
+    parts = []
+    for prov in ("finnhub", "second_api", "twelve_key_2",
+                 "alpha_vantage", "fred"):
+        cfg = _provider_config(prov)
+        if not cfg:
+            continue
+        for name in cfg["state"]:
+            parts.append((name, str(state.get(name) or ""),
+                          str(state.get(f"{name}_source")
+                              or "")))
+    return sha256(repr(parts).encode()).hexdigest()
+
+
 def secure_secret_status(state: Mapping[str, Any] | None = None) -> dict[str, Any]:
     state = state or {}
+    # Memoized for 20 s per state fingerprint (freeze fix
+    # 2026-11-28): the status re-probed every credential
+    # source on every render. A changed session value (e.g.
+    # a freshly pasted key) changes the fingerprint, so the
+    # status still refreshes immediately when it matters.
+    try:
+        _fp = _status_fingerprint(state)
+        _now = time.time()
+        if _STATUS_CACHE.get("fp") == _fp \
+                and _now - float(_STATUS_CACHE.get("ts") or 0) \
+                < _STATUS_TTL \
+                and _STATUS_CACHE.get("value") is not None:
+            return dict(_STATUS_CACHE["value"])
+    except Exception:
+        _fp = None
     sources = {
         "finnhub": _credential_source("finnhub", state),
         "twelve_key_1": _credential_source("second_api", state),
@@ -196,7 +249,7 @@ def secure_secret_status(state: Mapping[str, Any] | None = None) -> dict[str, An
     }
     key1 = bool(resolve_api_key("second_api", state))
     key2 = bool(resolve_api_key("twelve_key_2", state))
-    return {
+    _out = {
         "finnhub_configured": bool(resolve_api_key("finnhub", state)),
         "second_api_configured": key1,
         "twelve_key_1_configured": key1,
@@ -210,6 +263,13 @@ def secure_secret_status(state: Mapping[str, Any] | None = None) -> dict[str, An
         "alpha_vantage_source": sources["alpha"],
         "fred_source": sources["fred"],
     }
+    try:
+        if _fp is not None:
+            _STATUS_CACHE.update(
+                {"ts": time.time(), "fp": _fp, "value": _out})
+    except Exception:
+        pass
+    return _out
 
 def initialize_secure_settings(state: MutableMapping[str, Any]) -> None:
     try:

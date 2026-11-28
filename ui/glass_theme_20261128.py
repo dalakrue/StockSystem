@@ -115,6 +115,155 @@ section[data-testid="stSidebar"] {
     box-shadow: 0 0 0 2px rgba(14,165,233,.45),
                 0 0 22px rgba(14,165,233,.40);
 }
+
+/* ===== Round 2 (user order 2026-11-28): readable text,
+   watery glass, click effects, display modes, card grid == */
+/* Bigger, readable base text on phone AND laptop. */
+.stApp, .stApp p, .stApp li, .stApp label {
+    font-size: 1.06rem;
+    line-height: 1.5;
+}
+[data-testid="stMarkdownContainer"] p { font-size: 1.06rem; }
+[data-testid="stCaptionContainer"], .stApp small {
+    font-size: .92rem !important;
+}
+h1 { font-size: 2.1rem !important; }
+h2 { font-size: 1.65rem !important; }
+h3 { font-size: 1.35rem !important; }
+h4 { font-size: 1.15rem !important; }
+/* Tables: larger cell text. */
+[data-testid="stDataFrame"] { font-size: .98rem; }
+[data-testid="stTable"] td, [data-testid="stTable"] th {
+    font-size: 1rem !important;
+    padding: .45rem .6rem !important;
+}
+/* Metrics: larger values. */
+[data-testid="stMetricValue"] { font-size: 1.9rem !important; }
+[data-testid="stMetricLabel"] { font-size: 1rem !important; }
+/* Expander headers read as section openers. */
+[data-testid="stExpander"] summary {
+    font-size: 1.12rem !important;
+    font-weight: 700;
+    padding: .55rem .8rem;
+}
+/* Sidebar: VERY watery glass — clearly see-through (user
+   order 2026-11-28 round 2). */
+section[data-testid="stSidebar"] {
+    background: rgba(255,255,255,.16) !important;
+    backdrop-filter: blur(22px) saturate(1.6);
+    -webkit-backdrop-filter: blur(22px) saturate(1.6);
+    border-right: 1px solid rgba(255,255,255,.35);
+}
+@media (prefers-color-scheme: dark) {
+    section[data-testid="stSidebar"] {
+        background: rgba(15,23,42,.30) !important;
+    }
+}
+/* Click effects (CSS only): hover lift + active press on
+   buttons, cards, expanders; smooth everywhere. */
+.stButton > button, .stDownloadButton > button {
+    transition: transform .13s ease, box-shadow .13s ease,
+                background .13s ease;
+}
+.stButton > button:hover, .stDownloadButton > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(2,6,23,.22);
+}
+.stButton > button:active, .stDownloadButton > button:active {
+    transform: translateY(1px) scale(.98);
+    box-shadow: 0 1px 4px rgba(2,6,23,.18);
+}
+[data-testid="stExpander"] {
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+[data-testid="stExpander"]:hover {
+    box-shadow: 0 6px 18px rgba(2,6,23,.16);
+}
+[data-testid="stMetric"] {
+    transition: transform .13s ease, box-shadow .13s ease;
+}
+[data-testid="stMetric"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(2,6,23,.16);
+}
+/* Subtle section-open animation for expanders. */
+@keyframes fxFadeSlide {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+[data-testid="stExpander"] > div[role="group"] {
+    animation: fxFadeSlide .18s ease;
+}
+/* Widen toggle: expand the main container (and back). */
+html.fx-wide-on .block-container,
+html.fx-wide-on [data-testid="stAppViewContainer"] .main
+.block-container {
+    max-width: 96vw !important;
+    padding-left: 1.2rem !important;
+    padding-right: 1.2rem !important;
+}
+/* Display modes: density + single/multi column behaviour.
+   Phone = roomier touch targets, everything stacked;
+   Laptop = denser. Auto (no class) follows the viewport. */
+html.fx-mode-phone .block-container {
+    max-width: 100vw !important;
+    padding-left: .6rem !important;
+    padding-right: .6rem !important;
+}
+html.fx-mode-phone .stButton > button { min-height: 48px; }
+html.fx-mode-phone [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap;
+}
+html.fx-mode-phone [data-testid="stColumn"] {
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+}
+html.fx-mode-laptop [data-testid="stMetricValue"] {
+    font-size: 1.7rem !important;
+}
+@media (max-width: 760px) {
+    .stApp, .stApp p, .stApp li, .stApp label {
+        font-size: 1.08rem;
+    }
+    .stButton > button { min-height: 46px; }
+    [data-testid="stMetricValue"] { font-size: 1.6rem !important; }
+}
+/* Responsive card grid for the new sections (MT5 Live):
+   2 across on laptop, 1 across on phone; the mode classes
+   force the same behaviour when manually chosen. */
+.fx-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 6px 0;
+}
+@media (max-width: 760px) {
+    .fx-card-grid { grid-template-columns: 1fr; }
+}
+html.fx-mode-phone .fx-card-grid { grid-template-columns: 1fr; }
+html.fx-mode-laptop .fx-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+}
+.fx-pos-card {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 14px;
+    padding: 10px 12px;
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    box-shadow: 0 4px 14px rgba(2,6,23,.12);
+    transition: transform .13s ease, box-shadow .13s ease;
+}
+.fx-pos-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(2,6,23,.18);
+}
+@media (prefers-color-scheme: light) {
+    .fx-pos-card {
+        background: rgba(255,255,255,.55);
+        border-color: rgba(15,23,42,.10);
+    }
+}
 </style>
 """
 

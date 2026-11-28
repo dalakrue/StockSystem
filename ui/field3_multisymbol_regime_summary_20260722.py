@@ -4776,22 +4776,42 @@ _FLOAT_BAR_CSS = (
     "<style>"
     "div[data-testid='stVerticalBlock']:has(>"
     "div[data-testid='stElementContainer'] .fx-float-anchor){"
-    # SMALL floating bar (user order 2026-11-25): compact, top-right,
-    # never covering the page. Was 440px wide / 74vh tall.
+    # Floating bar (user orders 2026-11-25 + 2026-11-28 round 2):
+    # WATERY GLASS — strong backdrop blur + high transparency,
+    # the dashboard faintly visible through it; compact top-right.
     "position:fixed;right:10px;top:10px;z-index:999990;"
-    "width:300px;max-width:86vw;max-height:52vh;overflow-y:auto;"
-    "background:rgba(255,255,255,.94);"
-    "border:2px solid #0f172a;border-radius:12px;"
-    "box-shadow:0 8px 22px rgba(15,23,42,.20);"
-    "padding:6px 8px;}"
+    "width:308px;max-width:86vw;max-height:56vh;overflow-y:auto;"
+    "background:rgba(255,255,255,.42);"
+    "backdrop-filter:blur(16px) saturate(1.5);"
+    "-webkit-backdrop-filter:blur(16px) saturate(1.5);"
+    "border:1px solid rgba(255,255,255,.55);border-radius:14px;"
+    "box-shadow:0 10px 28px rgba(15,23,42,.22);"
+    "padding:8px 10px;}"
     "div[data-testid='stVerticalBlock']:has(>"
     "div[data-testid='stElementContainer'] .fx-float-anchor) button{"
-    "min-height:32px!important;font-size:.78rem!important;"
-    "padding:.15rem .3rem!important;}"
+    "min-height:38px!important;font-size:.92rem!important;"
+    "padding:.25rem .4rem!important;border-radius:10px!important;"
+    "transition:transform .12s ease,box-shadow .12s ease;}"
+    "div[data-testid='stVerticalBlock']:has(>"
+    "div[data-testid='stElementContainer'] .fx-float-anchor)"
+    " button:hover{transform:translateY(-1px);"
+    "box-shadow:0 4px 12px rgba(15,23,42,.18);}"
+    "div[data-testid='stVerticalBlock']:has(>"
+    "div[data-testid='stElementContainer'] .fx-float-anchor)"
+    " button:active{transform:translateY(1px) scale(.98);}"
+    # The open/close toggle is a single checkbox styled as a
+    # pill (freeze fix 2026-11-28: one widget, one rerun — the
+    # old button + flag + st.rerun() ran the app twice per tap).
+    "div[data-testid='stVerticalBlock']:has(>"
+    "div[data-testid='stElementContainer'] .fx-float-anchor)"
+    " div[data-testid='stCheckbox'] label{"
+    "background:rgba(14,165,233,.16);border:1px solid "
+    "rgba(14,165,233,.45);border-radius:999px;"
+    "padding:.3rem .7rem;font-weight:700;font-size:.95rem;}"
     "@media (max-width:760px){"
     "div[data-testid='stVerticalBlock']:has(>"
     "div[data-testid='stElementContainer'] .fx-float-anchor){"
-    "top:64px;width:272px;}}"
+    "top:64px;width:280px;}}"
     "</style>")
 
 
@@ -4823,6 +4843,72 @@ def _render_signal_system_selectbox(st):
         pass
 
 
+def _render_display_mode_marker(st):
+    """Tiny dependency-free JS (user order 2026-11-28 round 2):
+    mirrors the session's display mode + widen choice onto
+    classes on the app document, where the glass theme's CSS
+    reads them (fx-mode-phone / fx-mode-laptop / fx-wide-on).
+    Auto mode sets neither mode class — the CSS media queries
+    then decide by viewport width. Runs every render, costs
+    nothing, fetches nothing. Never raises."""
+    try:
+        import streamlit.components.v1 as _comp
+        _mode = str(st.session_state.get(
+            "fx_display_mode", "auto")).lower()
+        _wide = bool(st.session_state.get("fx_wide_layout",
+                                          False))
+        _comp.html(
+            "<script>(function(){"
+            "var r=window.parent.document.documentElement;"
+            f"r.classList.toggle('fx-mode-phone',"
+            f"{str(_mode == 'phone').lower()});"
+            f"r.classList.toggle('fx-mode-laptop',"
+            f"{str(_mode == 'laptop').lower()});"
+            f"r.classList.toggle('fx-wide-on',"
+            f"{str(_wide).lower()});"
+            "})();</script>", height=0)
+    except Exception:
+        pass
+
+
+def _render_sidebar_buttons(st):
+    """Sidebar open/close buttons inside the floating box
+    (user order 2026-11-28 round 2): a dependency-free JS
+    snippet that clicks Streamlit's own native sidebar
+    collapse/expand control in the parent document. If the
+    native control is not found (layout changed), the buttons
+    simply do nothing — graceful degradation. Never raises."""
+    try:
+        import streamlit.components.v1 as _comp
+        _comp.html(
+            "<div style='display:flex;gap:6px;"
+            "font-family:sans-serif;'>"
+            "<button onclick='fxSidebar()' style='flex:1;"
+            "padding:7px 4px;border-radius:9px;border:1px "
+            "solid rgba(100,116,139,.5);background:rgba(255,"
+            "255,255,.55);font-size:13px;cursor:pointer;'>"
+            "◀ Hide sidebar</button>"
+            "<button onclick='fxSidebar()' style='flex:1;"
+            "padding:7px 4px;border-radius:9px;border:1px "
+            "solid rgba(100,116,139,.5);background:rgba(255,"
+            "255,255,.55);font-size:13px;cursor:pointer;'>"
+            "Show sidebar ▶</button></div>"
+            "<script>function fxSidebar(){"
+            "var d=window.parent.document;"
+            "var sels=['[data-testid=\"stSidebarCollapse"
+            "Button\"] button','[data-testid=\"stSidebar"
+            "CollapseButton\"]','[data-testid=\"stSidebar"
+            "CollapsedControl\"] button','[data-testid="
+            "\"stSidebarCollapsedControl\"]','[data-testid="
+            "\"collapsedControl\"]'];"
+            "for(var i=0;i<sels.length;i++){"
+            "var el=d.querySelector(sels[i]);"
+            "if(el){el.click();return;}}}</script>",
+            height=44)
+    except Exception:
+        pass
+
+
 def _render_floating_controls(st, state):
     """Floating control bar (user order 2026-11-16 ~20:56 MMT,
     moved to the upper right 23:10 MMT the same day):
@@ -4844,37 +4930,40 @@ def _render_floating_controls(st, state):
         with st.container():
             st.markdown("<span class='fx-float-anchor'></span>",
                         unsafe_allow_html=True)
-            # CLOSE / OPEN for the whole floating bar (fix
-            # 2026-11-25: the bar had no close button and covered
-            # the page). Closed = one small button only.
-            # Collapsed by default (user order 2026-11-28).
-            if not bool(st.session_state.get("fx_float_open", False)):
-                if st.button("⚙ Controls — tap to open",
-                             key="fx_float_open_btn",
-                             use_container_width=True):
-                    st.session_state["fx_float_open"] = True
-                    try:
-                        st.rerun()
-                    except Exception:
-                        pass
+            # OPEN / CLOSE for the whole floating bar — FREEZE
+            # FIX (user complaint 2026-11-28: opening/closing
+            # froze 5-10 s): the old button set a flag and then
+            # called st.rerun() ON TOP of the click's own rerun,
+            # so the whole app executed TWICE per tap. The
+            # toggle is now ONE checkbox widget: its value is
+            # read in the same single run, no explicit rerun,
+            # and toggling flips session state only — no data
+            # load, restore, migration or calculation is gated
+            # on it. Collapsed by default (user order
+            # 2026-11-28). Untick the pill to close the box.
+            _open = st.checkbox("⚙ Controls", key="fx_float_open")
+            _render_display_mode_marker(st)
+            if not _open:
                 return
-            _h1, _h2 = st.columns([4, 1])
-            with _h1:
-                st.markdown("**⚙ Controls**")
-            with _h2:
-                if st.button("✕", key="fx_float_close_btn",
-                             use_container_width=True,
-                             help="Close this floating box"):
-                    st.session_state["fx_float_open"] = False
-                    try:
-                        st.rerun()
-                    except Exception:
-                        pass
-                    return
             # Signal-system (month/cycle) selector — in the
             # floating box beside Refresh (user order
             # 2026-11-28).
             _render_signal_system_selectbox(st)
+            st.markdown("---")
+            # Display controls (user order 2026-11-28 round 2):
+            # phone/laptop mode override + widen toggle +
+            # sidebar open/close — all session-state / CSS
+            # only, zero data work.
+            st.caption("📐 Display")
+            st.radio("Mode", ["auto", "phone", "laptop"],
+                     format_func=lambda v: {
+                         "auto": "🖥 Auto (by screen width)",
+                         "phone": "📱 Phone",
+                         "laptop": "💻 Laptop"}[v],
+                     key="fx_display_mode", horizontal=True)
+            st.checkbox("↔ Widen layout (wider page)",
+                        key="fx_wide_layout")
+            _render_sidebar_buttons(st)
             st.markdown("---")
             _c1, _c2 = st.columns(2)
             with _c1:
@@ -13997,6 +14086,15 @@ def render_multisymbol_regime_summary(
         _gsb_boot.restore_history_files_async()
     except Exception:
         pass
+    # MT5 Live snapshot restore (user order 2026-11-28):
+    # same pattern — a background thread keeps the local
+    # data/mt5_live.json fresh from the synced copy so
+    # Section 6 below renders from disk only.
+    try:
+        from core.data import mt5_live as _mt5_boot
+        _mt5_boot.ensure_snapshot_async()
+    except Exception:
+        pass
     from ui.monthly_equation_panel import render_monthly_panel
     # Shared data pipeline only (its expander UI is hidden); the signal
     # panels fetch their own H1/M15 frames via the provider chain.
@@ -14294,6 +14392,38 @@ def render_multisymbol_regime_summary(
         _render_hist(st)
     except Exception:
         pass
+
+    # ===== Section 6: MT5 Live Result (user order
+    # 2026-11-28) =====
+    # The laptop bridge's snapshot, rendered from the local
+    # synced file only — zero fetches in the section.
+    try:
+        from core.mt5_live_section import (
+            render_mt5_live_section as _render_mt5)
+        _render_mt5(st)
+    except Exception as _mt5_exc:
+        try:
+            st.error(f"📟 MT5 LIVE RESULT section failed to "
+                     f"render: {type(_mt5_exc).__name__}: "
+                     f"{_mt5_exc}")
+        except Exception:
+            pass
+
+    # ===== Section 7: Performance Analytics (user order
+    # 2026-11-28) =====
+    # Statistics + visualization from the app's own stored
+    # records only — zero fetches in the section.
+    try:
+        from core.performance_analytics import (
+            render_performance_analytics as _render_perf)
+        _render_perf(st)
+    except Exception as _perf_exc:
+        try:
+            st.error(f"📈 PERFORMANCE ANALYTICS section "
+                     f"failed to render: "
+                     f"{type(_perf_exc).__name__}: {_perf_exc}")
+        except Exception:
+            pass
 
     # Check-time reminders: rendered inside the floating control
     # bar above (migrated from the page bottom, user order

@@ -11,11 +11,18 @@ a throwaway file, so the app's live ledgers are never touched
 that month-year and offers the result as an XLSX download (and
 the walked state as JSON).
 
-Data basis is Twelve Data throughout; the gate is the Signal
-Law's: every slot must read 28/28 or the build stops with a
-DATA ERROR naming the slot and the missing symbols. Nothing
-here reads the Dukascopy store for the calculation; the stored
-past is read only AFTER the walk, for the comparison.
+Data basis is Twelve Data throughout. Hardening (user order
+2026-11-28): a build must NEVER die mid-run on a data hole.
+Every slot is gated 28/28, but an incomplete slot is first
+HEALED (one fresh Twelve re-fetch of the missing window, then
+M5->M15 assembly for M15 gaps); a slot that still cannot be
+completed is recorded DATA ERROR with its reason and the walk
+CONTINUES with the next slot in order — the same pattern as
+the market-closed skip. (The live check/precheck gates
+elsewhere in the app are unchanged; this applies only to
+this memory-building section.) Nothing here reads the
+Dukascopy store for the calculation; the stored past is read
+only AFTER the walk, for the comparison.
 """
 import io
 import json
@@ -164,6 +171,58 @@ def _refetch_window(pool, sym, tf, end_ts, bars=500):
     return frame
 
 
+class BuildInterrupted(Exception):
+    """Raised only by the explicit _interrupt_after_walked
+    test/stop hook in build_memory — the simulated crash.
+    Data errors never raise it; they are recorded per slot."""
+
+
+_PROGRESS_DIR = "data/twelve_memory_progress"
+
+
+def _progress_rel(cycle, year):
+    return f"{_PROGRESS_DIR}/{cycle}_{year}.json"
+
+
+def _progress_local_path(cycle, year):
+    here = os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__)))
+    return os.path.join(here, *_progress_rel(cycle, year
+                                              ).split("/"))
+
+
+def load_progress_record(cycle, year, try_github=True):
+    """The resumable progress record for a month-year: the
+    local copy first, else restored from GitHub through the
+    save-back machinery (and cached locally), exactly like
+    the other synced files. Returns the record dict or None.
+    Never raises."""
+    path = _progress_local_path(cycle, year)
+    try:
+        if os.path.exists(path):
+            with open(path) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    if try_github:
+        try:
+            from core.data import github_saveback as _gsb
+            token = _gsb._secret_token()
+            if token:
+                raw = _gsb._fetch_bytes(
+                    _progress_rel(cycle, year), token)
+                if raw:
+                    rec = json.loads(raw.decode("utf-8"))
+                    os.makedirs(os.path.dirname(path),
+                                exist_ok=True)
+                    with open(path, "wb") as f:
+                        f.write(raw)
+                    return rec
+        except Exception:
+            pass
+    return None
+
+
 def _past_ledger(cycle, year, month):
     """The stored past for this month-year, read AFTER the walk
     for comparison only: the 2026 walk ledgers, else the
@@ -228,7 +287,8 @@ def _compare(built_state, past):
 
 
 def _xlsx_bytes(month, year, cycle, built_state, compare,
-                past_name, skipped=(), note=None):
+                past_name, skipped=(), note=None,
+                skip_reasons=None, healed=0):
     buf = io.BytesIO()
     delivered = built_state.get("delivered", [])
     processed = [str(t).replace("T", " ")[:19]
@@ -243,8 +303,8 @@ def _xlsx_bytes(month, year, cycle, built_state, compare,
         ("Data basis", "Twelve Data API (downloaded at build "
                        "time)"),
         ("Slots walked", len(processed)),
-        ("Slots skipped — DATA ERROR (market closed)",
-         len(skipped)),
+        ("Slots skipped — DATA ERROR", len(skipped)),
+        ("Slots healed (re-fetch / M5 assembly)", healed),
         ("Picks delivered", len(delivered)),
         ("Result note", note or "complete run"),
         ("Compared against", past_name or "no stored past found"),
@@ -273,7 +333,8 @@ def _xlsx_bytes(month, year, cycle, built_state, compare,
                  if s in by_slot else "—"),
     } for s in processed] + [{
         "slot_utc": s,
-        "pick": "DATA ERROR (market closed)",
+        "pick": ("DATA ERROR — "
+                 f"{(skip_reasons or {}).get(s, 'market closed')}"),
     } for s in skipped]).sort_values("slot_utc")
     with pd.ExcelWriter(buf, engine="openpyxl") as xw:
         summary.to_excel(xw, sheet_name="Summary", index=False)
@@ -292,14 +353,19 @@ def _xlsx_bytes(month, year, cycle, built_state, compare,
     return buf.getvalue()
 
 
-def build_memory(month, year, state=None, progress=None):
+def build_memory(month, year, state=None, progress=None,
+                 resume=True, _interrupt_after_walked=None):
     """Download the month's candles from Twelve Data and walk
     its cycle over them. progress(frac, text) is called as work
-    advances. Returns a result dict; if a gate fails partway
-    through the walk, the status is DATA ERROR and the memory
-    walked up to that point is returned with it as a partial
-    result (user request 2026-11-27: show the table as far as
-    it got, do not wait for 100%)."""
+    advances. Returns a result dict. Hardening (2026-11-28):
+    the walk never stops early on a data hole — an incomplete
+    slot is healed (fresh re-fetch, then M5->M15 assembly) or
+    recorded DATA ERROR with its reason in skip_reasons /
+    slot_errors while the walk continues in order, so the
+    result always covers the whole month: walked N, healed H,
+    skipped S. A DATA ERROR status is returned only when the
+    build cannot start at all (no slots, no key pool) or the
+    walk machinery itself produced no state."""
     def report(frac, text):
         if progress is not None:
             progress(frac, text)
@@ -326,29 +392,90 @@ def build_memory(month, year, state=None, progress=None):
                 "missing": f"Twelve Data key pool unavailable: "
                            f"{exc}"}
 
+    # ---- Resume (user order 2026-11-28): a saved progress
+    # record for this month-year means the build continues
+    # from where it stopped — already-walked slots are not
+    # re-walked and recorded DATA ERROR slots stay recorded.
+    events: list = []
+    resume_rec = None
+    done_slots = set()
+    if resume:
+        try:
+            rec = load_progress_record(cycle, year)
+        except Exception:
+            rec = None
+        if rec and not rec.get("complete") \
+                and int(rec.get("year", 0)) == int(year) \
+                and int(rec.get("month", 0)) == int(month) \
+                and rec.get("state"):
+            resume_rec = rec
+            done_slots = set(rec.get("processed", [])) \
+                | set(rec.get("skipped", []))
+            events.append(
+                f"↻ Resuming from saved progress: "
+                f"{len(done_slots)} of {len(slots)} slots "
+                f"already built "
+                f"({len(rec.get('processed', []))} walked, "
+                f"{len(rec.get('skipped', []))} recorded "
+                f"DATA ERROR) — continuing in order.")
+
     # ---- Phase 1: download the month (0% -> 30%) ----
+    # Hardening 2026-11-28: a missing series no longer aborts
+    # the build. Each missing series gets ONE retry fetch; a
+    # series still missing becomes an empty frame, so every
+    # slot that needs it goes through the walk's heal-then-
+    # skip path and is recorded DATA ERROR individually while
+    # the rest of the month still builds.
     errors: list = []
     data = {tf: {} for tf in ("H1", "M15", "M5")}
     total = len(symbols) * 3
     done = 0
     for tf in ("H1", "M15", "M5"):
         for sym in symbols:
-            frame = _fetch_window(pool, sym, tf, start, end,
-                                  errors)
+            try:
+                frame = _fetch_window(pool, sym, tf, start, end,
+                                      errors)
+            except Exception as exc:
+                errors.append(f"{sym} {tf}: {exc}")
+                frame = None
             if frame is not None:
                 data[tf][sym] = frame
             done += 1
             report(0.30 * done / total,
                    f"Downloading Twelve Data candles: {sym} {tf} "
                    f"({done}/{total})")
-    missing = [f"{sym} {tf}" for tf in ("H1", "M15", "M5")
-               for sym in symbols if sym not in data[tf]]
-    if missing:
-        note = f"; {errors[0]}" if errors else ""
-        return {"status": "DATA ERROR",
-                "missing": (f"Twelve Data download incomplete for "
-                            f"{len(missing)} symbol/timeframes: "
-                            f"{', '.join(missing[:10])}{note}")}
+    download_missing = []
+    for tf in ("H1", "M15", "M5"):
+        for sym in symbols:
+            if sym in data[tf]:
+                continue
+            try:
+                frame = _fetch_window(pool, sym, tf, start, end,
+                                      errors)
+            except Exception:
+                frame = None
+            if frame is not None and len(frame):
+                data[tf][sym] = frame
+                continue
+            download_missing.append(f"{sym} {tf}")
+            empty = pd.DataFrame(
+                {"Open": pd.Series(dtype=float),
+                 "High": pd.Series(dtype=float),
+                 "Low": pd.Series(dtype=float),
+                 "Close": pd.Series(dtype=float),
+                 "Volume": pd.Series(dtype=float)},
+                index=pd.DatetimeIndex([]))
+            if tf in ("M15", "M5"):
+                empty = empty.assign(Datetime=empty.index)
+            data[tf][sym] = empty
+
+    if download_missing:
+        events.append(
+            f"⚠ Download incomplete for "
+            f"{len(download_missing)} symbol/timeframes after "
+            f"one retry ({', '.join(download_missing[:10])}) — "
+            f"affected slots will be healed per slot or "
+            f"recorded DATA ERROR; the build continues.")
 
     # ---- Phase 2: the walk (30% -> 95%) ----
     import core.signal_mode as sm
@@ -359,11 +486,99 @@ def build_memory(month, year, state=None, progress=None):
     prev_saveback = sm._saveback_ledgers
     built_state = None
     skipped = []
-    stop_missing = None
+    skip_reasons = {}
+    healed_slots = []
+    if resume_rec:
+        skipped = [str(s) for s in resume_rec.get("skipped",
+                                                  [])]
+        skip_reasons = {str(k): v for k, v in
+                        (resume_rec.get("skip_reasons")
+                         or {}).items()}
+        healed_slots = [str(s) for s in
+                        resume_rec.get("healed_slots", [])]
+        events = list(resume_rec.get("events", [])) + events
+
+    _push_gate = {"last": 0.0}
+
+    def _save_progress(complete=False, force_push=False):
+        """Persist the resumable progress record: local file
+        synchronously, GitHub via the save-back machinery on
+        a daemon thread (hash-gated there; throttled here to
+        one push per 20 s plus the final save). The record
+        MAY be overwritten as progress advances — it is a
+        work record, distinct from the finished hist archive.
+        Never raises."""
+        try:
+            state_now = None
+            if os.path.exists(state_path):
+                with open(state_path) as f:
+                    state_now = json.load(f)
+            rec = {
+                "cycle": cycle, "year": int(year),
+                "month": int(month),
+                "total_slots": len(slots),
+                "processed": (state_now or {}).get(
+                    "processed", []),
+                "skipped": list(skipped),
+                "skip_reasons": dict(skip_reasons),
+                "healed_slots": list(healed_slots),
+                "events": list(events),
+                "state": state_now,
+                "complete": bool(complete),
+                "updated_at_utc": dt.datetime.now(
+                    dt.timezone.utc).strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"),
+            }
+            path = _progress_local_path(cycle, year)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as f:
+                json.dump(rec, f, indent=1)
+            now = time.time()
+            if force_push or now - _push_gate["last"] >= 20:
+                _push_gate["last"] = now
+                import threading
+
+                def _push(p=path, r=_progress_rel(cycle, year)):
+                    try:
+                        from core.data import github_saveback \
+                            as _gsb
+                        _gsb.saveback_file(p, r)
+                    except Exception:
+                        pass
+
+                threading.Thread(target=_push,
+                                 daemon=True).start()
+        except Exception:
+            pass
+
+    def _record_skip(slot, reason):
+        skipped.append(str(slot))
+        skip_reasons[str(slot)] = reason
+        events.append(
+            f"⛔ {slot:%Y-%m-%d %H:%M} UTC — DATA ERROR: "
+            f"{reason} (recorded; build continues)")
+        report(0.30 + 0.65 * (slots.index(slot) + 1) / len(slots),
+               f"Walking {_MONTH_NAMES[month - 1]} {year}: "
+               f"slot {slots.index(slot) + 1}/{len(slots)} "
+               f"({slot:%Y-%m-%d %H:%M} UTC) — DATA ERROR "
+               f"({reason}), skipped")
+        _save_progress()
+
+    walked_this_run = 0
     try:
         sm._saveback_ledgers = lambda: None
+        if resume_rec and resume_rec.get("state"):
+            with open(state_path, "w") as f:
+                json.dump(resume_rec["state"], f)
         mod._STATE = mod.load_state_form(path=state_path)
         for i, slot in enumerate(slots):
+            if str(slot) in done_slots:
+                report(0.30 + 0.65 * (i + 1) / len(slots),
+                       f"Walking {_MONTH_NAMES[month - 1]} "
+                       f"{year}: slot {i + 1}/{len(slots)} "
+                       f"({slot:%Y-%m-%d %H:%M} UTC) — already "
+                       f"built (saved progress)")
+                continue
             sig = slot - pd.Timedelta(hours=1, minutes=30)
             ent = slot - pd.Timedelta(minutes=30)
             entry_bar = slot - pd.Timedelta(minutes=15)
@@ -377,6 +592,39 @@ def build_memory(month, year, state=None, progress=None):
             h1_missing = [s for s in symbols
                           if sig not in frames[s].index
                           or ent not in frames[s].index]
+            if h1_missing:
+                # Heal first (2026-11-28): ONE fresh Twelve
+                # re-fetch of each missing symbol's H1 window
+                # ending at the entry stamp, merged into the
+                # month data (later slots benefit too).
+                for sym in h1_missing:
+                    try:
+                        fresh = _refetch_window(pool, sym, "H1",
+                                                ent)
+                    except Exception:
+                        fresh = None
+                    if fresh is not None and len(fresh):
+                        data["H1"][sym] = _merge_frames(
+                            data["H1"].get(sym), fresh)
+                frames = {}
+                for sym in symbols:
+                    f = data["H1"][sym].loc[:ent]
+                    if len(f) > 450:
+                        f = f.iloc[-450:]
+                    frames[sym] = f
+                still = [s for s in symbols
+                         if sig not in frames[s].index
+                         or ent not in frames[s].index]
+                if not still:
+                    healed_slots.append(str(slot))
+                    events.append(
+                        f"🩹 {slot:%Y-%m-%d %H:%M} UTC — H1 hole "
+                        f"healed by a fresh Twelve re-fetch; "
+                        f"slot walked.")
+                    _save_progress()
+                    h1_missing = []
+                else:
+                    h1_missing = still
             if h1_missing and len(h1_missing) == len(symbols) \
                     and all(_feed_ended_or_continues(
                         data["H1"][s].index, sig, ent)
@@ -385,20 +633,20 @@ def build_memory(month, year, state=None, progress=None):
                 # candles do not exist, but the downloaded data
                 # continues past the slot. Record DATA ERROR
                 # for the slot and walk on.
-                skipped.append(str(slot))
-                report(0.30 + 0.65 * (i + 1) / len(slots),
-                       f"Walking {_MONTH_NAMES[month - 1]} {year}: "
-                       f"slot {i + 1}/{len(slots)} "
-                       f"({slot:%Y-%m-%d %H:%M} UTC) — DATA ERROR "
-                       f"(market closed), skipped")
+                _record_skip(
+                    slot, "market closed — no H1 candles exist "
+                          "for this slot; data continues past it")
                 continue
             if h1_missing:
-                stop_missing = (
-                    f"{slot}: H1 sig/entry candles from "
-                    f"Twelve Data missing for "
-                    f"{len(h1_missing)} symbols: "
+                # Heal failed: record this slot DATA ERROR and
+                # CONTINUE with the next slot (2026-11-28) —
+                # never abort the whole run for one slot.
+                _record_skip(
+                    slot,
+                    f"H1 sig/entry candles missing for "
+                    f"{len(h1_missing)} symbols after re-fetch: "
                     f"{', '.join(h1_missing)}")
-                break
+                continue
             m15_frames = {}
             m5_frames = {}
             for sym in symbols:
@@ -414,6 +662,7 @@ def build_memory(month, year, state=None, progress=None):
             _ok, m15_missing = _window_ok(bars, slot)
             absent = [s for s in symbols if s not in bars]
             bad = sorted(set(m15_missing) | set(absent))
+            m15_was_bad = bool(bad)
             if bad:
                 for sym in bad:
                     filled, n_asm = _assemble_m15_from_twelve_m5(
@@ -472,6 +721,14 @@ def build_memory(month, year, state=None, progress=None):
                 _ok, m15_missing = _window_ok(bars, slot)
                 absent = [s for s in symbols if s not in bars]
                 bad = sorted(set(m15_missing) | set(absent))
+            if not bad and m15_was_bad \
+                    and str(slot) not in healed_slots:
+                healed_slots.append(str(slot))
+                events.append(
+                    f"🩹 {slot:%Y-%m-%d %H:%M} UTC — M15 window "
+                    f"healed (re-fetch / M5 assembly); slot "
+                    f"walked.")
+                _save_progress()
             if bad:
                 if len(bad) == len(symbols) and all(
                         _feed_ended_or_continues(
@@ -484,20 +741,40 @@ def build_memory(month, year, state=None, progress=None):
                     # the downloaded data continues past the
                     # slot. Record DATA ERROR for the slot and
                     # walk on.
-                    skipped.append(str(slot))
-                    report(0.30 + 0.65 * (i + 1) / len(slots),
-                           f"Walking {_MONTH_NAMES[month - 1]} "
-                           f"{year}: slot {i + 1}/{len(slots)} "
-                           f"({slot:%Y-%m-%d %H:%M} UTC) — DATA "
-                           f"ERROR (market closed), skipped")
+                    _record_skip(
+                        slot, "market closed — no M15 session "
+                              "for this slot; data continues "
+                              "past it")
                     continue
-                stop_missing = (
-                    f"{slot}: M15 entry window from Twelve "
-                    f"Data missing for {len(bad)} symbols: "
-                    f"{', '.join(bad)}")
-                break
-            mod.panel_entries(frames, slot, m15_frames=m15_frames,
-                              open_symbols=(), m5_frames=m5_frames)
+                # Heal failed: record this slot DATA ERROR and
+                # CONTINUE with the next slot (2026-11-28) —
+                # never abort the whole run for one slot.
+                _record_skip(
+                    slot,
+                    f"M15 entry window incomplete for "
+                    f"{len(bad)} symbols after re-fetch + M5 "
+                    f"assembly: {', '.join(bad)}")
+                continue
+            try:
+                mod.panel_entries(frames, slot,
+                                  m15_frames=m15_frames,
+                                  open_symbols=(),
+                                  m5_frames=m5_frames)
+            except Exception as exc:
+                # One slot's evaluation failure must not kill
+                # the run either (2026-11-28): record it and
+                # walk on in order.
+                _record_skip(slot, f"evaluation error: {exc}")
+                continue
+            walked_this_run += 1
+            if walked_this_run % 10 == 0:
+                _save_progress()
+            if _interrupt_after_walked \
+                    and walked_this_run >= _interrupt_after_walked:
+                _save_progress(force_push=True)
+                raise BuildInterrupted(
+                    f"simulated stop after {walked_this_run} "
+                    f"walked slots (progress saved)")
             report(0.30 + 0.65 * (i + 1) / len(slots),
                    f"Walking {_MONTH_NAMES[month - 1]} {year}: "
                    f"slot {i + 1}/{len(slots)} "
@@ -509,36 +786,60 @@ def build_memory(month, year, state=None, progress=None):
         sm._saveback_ledgers = prev_saveback
         mod._STATE = prev_form
     if not built_state:
-        return {"status": "DATA ERROR",
-                "missing": stop_missing
-                           or "the walk produced no state"}
+        if skipped and len(skipped) == len(slots):
+            # Every slot was recorded DATA ERROR individually
+            # (e.g. a whole series missing): the run still
+            # completed — return the empty walked state with
+            # the full skip record instead of a hard error.
+            built_state = {"processed": [], "delivered": []}
+        else:
+            return {"status": "DATA ERROR",
+                    "missing": "the walk produced no state"}
 
     # ---- Phase 3: compare + files (95% -> 100%) ----
-    if stop_missing:
-        report(0.97, "Stopped at a DATA ERROR — preparing "
-                     "the partial result…")
-    else:
-        report(0.97, "Comparing against the stored past…")
+    # The slot loop now always runs to the end of the month
+    # (heal-then-skip, 2026-11-28): there is no early stop, so
+    # progress truthfully reaches 100% with the end summary
+    # naming walked / healed / skipped counts.
+    report(0.97, "Comparing against the stored past…")
     past, past_name = _past_ledger(cycle, year, month)
     compare = _compare(built_state, past) if past else None
+    slot_errors = [{"slot": s, "reason": skip_reasons[s]}
+                   for s in skipped
+                   if not skip_reasons.get(
+                       s, "").startswith("market closed")]
+    walked_n = len(built_state.get("processed", []))
+    if slot_errors:
+        note = (f"complete run — {walked_n} walked, "
+                f"{len(healed_slots)} healed, "
+                f"{len(skipped)} skipped as DATA ERROR "
+                f"(reasons in the Slots sheet)")
+    elif skipped:
+        note = (f"complete run — {walked_n} walked, "
+                f"{len(healed_slots)} healed, "
+                f"{len(skipped)} skipped (market closed)")
+    elif healed_slots:
+        note = (f"complete run — {walked_n} walked, "
+                f"{len(healed_slots)} healed")
+    else:
+        note = None
     xlsx = _xlsx_bytes(month, year, cycle, built_state, compare,
                        past_name, skipped=skipped,
-                       note=(f"PARTIAL — stopped early: "
-                             f"{stop_missing}"
-                             if stop_missing else None))
-    if stop_missing:
-        # Progress truth (fix 2026-11-27): a partial run must
-        # never show 100% / "Done" — the bar and the % text
-        # show the true walked share: slots walked plus slots
-        # recorded skipped, out of the month's slots.
-        walked = len(built_state.get("processed", [])) \
-            + len(skipped)
-        frac = walked / len(slots) if slots else 0.0
-        report(frac,
-               f"Partial — {int(round(100 * frac))}% "
-               f"({walked} of {len(slots)} slots walked)")
+                       skip_reasons=skip_reasons,
+                       healed=len(healed_slots), note=note)
+    if slot_errors or skipped:
+        report(1.0,
+               f"Done — {walked_n} walked, "
+               f"{len(healed_slots)} healed, "
+               f"{len(skipped)} skipped as DATA ERROR")
     else:
         report(1.0, "Done")
+    events.append(
+        f"🏁 Build finished: {walked_n} walked, "
+        f"{len(healed_slots)} healed, {len(skipped)} skipped "
+        f"as DATA ERROR — {walked_n + len(skipped)} of "
+        f"{len(slots)} slots processed (100%).")
+    _save_progress(complete=True, force_push=True)
     # ---- Persistent memory (user order 2026-11-28): the
     # built month is saved into the GitHub-synced store as
     # data/walk_ledgers_hist/<cycle>_<year>.json, so a month
@@ -555,13 +856,20 @@ def build_memory(month, year, state=None, progress=None):
             f"data/walk_ledgers_hist/{cycle}_{year}.json")
     except Exception:
         persistent_status = None
-    return {"status": "DATA ERROR" if stop_missing else "OK",
-            "missing": stop_missing,
-            "partial": bool(stop_missing),
+    return {"status": "OK",
+            "missing": None,
+            "partial": False,
             "total_slots": len(slots),
             "cycle": cycle,
             "slots": len(built_state.get("processed", [])),
             "skipped": skipped,
+            "skip_reasons": skip_reasons,
+            "slot_errors": slot_errors,
+            "healed": len(healed_slots),
+            "healed_slots": healed_slots,
+            "events": events,
+            "progress_record": _progress_rel(cycle, year),
+            "download_missing": download_missing,
             "delivered": len(built_state.get("delivered", [])),
             "state": built_state, "compare": compare,
             "past_name": past_name, "xlsx": xlsx,
@@ -605,8 +913,34 @@ def render_twelve_memory_section(st):
             index=1, key="twmem_year")
     month = _MONTH_NAMES.index(month_name) + 1
     store_key = f"twmem_result_{year}_{month}"
-    if st.button("▶ Start building memory (Twelve Data)",
-                 key="twmem_start"):
+    # Saved-progress state (user order 2026-11-28): a partial
+    # progress record for the chosen month-year — local copy
+    # checked every render (cheap), GitHub restore attempted
+    # once per session per month-year — readies the
+    # Recalculate (resume) button.
+    _cycle_name = _month_module(month)[0]
+    _rec = load_progress_record(_cycle_name, int(year),
+                                try_github=False)
+    _gh_key = f"twmem_progress_checked_{_cycle_name}_{year}"
+    if _rec is None and not st.session_state.get(_gh_key):
+        st.session_state[_gh_key] = True
+        _rec = load_progress_record(_cycle_name, int(year),
+                                    try_github=True)
+    _partial_rec = (_rec if _rec and not _rec.get("complete")
+                    else None)
+    if _partial_rec:
+        _done_n = len(_partial_rec.get("processed", [])) \
+            + len(_partial_rec.get("skipped", []))
+        st.info(
+            f"💾 **Saved progress found — {_done_n} of "
+            f"{_partial_rec.get('total_slots', '?')} slots "
+            f"already built** for "
+            f"{_MONTH_NAMES[month - 1]} {year}. Start or "
+            f"Recalculate continues from there — finished "
+            f"slots are not re-walked and recorded DATA ERROR "
+            f"slots stay recorded.")
+
+    def _run_build():
         bar = st.progress(0.0)
         note = st.empty()
 
@@ -616,10 +950,22 @@ def render_twelve_memory_section(st):
                 f"{text} — **{int(round(100 * frac))}%**")
 
         with st.spinner("Building memory from Twelve Data…"):
-            result = build_memory(month, int(year),
-                                  state=st.session_state,
-                                  progress=_prog)
-        st.session_state[store_key] = result
+            _res = build_memory(month, int(year),
+                                state=st.session_state,
+                                progress=_prog)
+        st.session_state[store_key] = _res
+        st.session_state.pop(_gh_key, None)
+
+    bc1, bc2 = st.columns(2)
+    with bc1:
+        if st.button("▶ Start building memory (Twelve Data)",
+                     key="twmem_start"):
+            _run_build()
+    with bc2:
+        if _partial_rec and st.button(
+                "↻ Recalculate (resume)",
+                key="twmem_resume"):
+            _run_build()
     result = st.session_state.get(store_key)
     if not result:
         return
@@ -642,9 +988,33 @@ def render_twelve_memory_section(st):
             f"({result['cycle']}) from Twelve Data: "
             f"{result['slots']} slots walked, "
             f"{result['delivered']} picks delivered."
+            + (f" {result['healed']} slot(s) healed by "
+               f"re-fetch / M5 assembly."
+               if result.get("healed") else "")
             + (f" {len(result['skipped'])} slot(s) recorded "
-               f"DATA ERROR (market closed) and skipped."
+               f"DATA ERROR and skipped (see below)."
                if result.get("skipped") else ""))
+    if result.get("slot_errors"):
+        _errs = result["slot_errors"]
+        st.warning(
+            f"**{len(_errs)} slot(s) could not be completed "
+            f"even after healing** — recorded DATA ERROR, the "
+            f"build continued past them:\n"
+            + "\n".join(
+                f"- {e['slot']} UTC — {e['reason']}"
+                for e in _errs[:10])
+            + (f"\n- …and {len(_errs) - 10} more (full list "
+               f"in the XLSX Slots sheet)."
+               if len(_errs) > 10 else ""))
+    if result.get("events"):
+        # The build's text log (user order 2026-11-28): every
+        # error, heal and skip event, in order — errors are
+        # text in a log, never a dead run.
+        with st.expander(
+                "🧾 Build log — every error, heal and skip",
+                expanded=bool(result.get("slot_errors"))):
+            st.text("\n".join(str(e) for e in
+                              result["events"]))
     if result.get("persistent_status") == "saved":
         st.caption(
             "💾 Saved to persistent memory — this month-year "
